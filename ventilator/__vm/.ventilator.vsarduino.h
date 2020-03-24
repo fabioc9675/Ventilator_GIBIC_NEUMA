@@ -415,5 +415,6 @@ char 	*strchrnul(const char *, int) {
 #endif
 
 #include "ventilator.ino"
+#include "lcd.ino"
 #endif
 #endif

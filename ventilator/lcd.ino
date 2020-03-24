@@ -53,7 +53,7 @@ void lcd_show() {
         lcd.setCursor(16, 2);
         lcd.print(frecRespiratoria);
         lcd.setCursor(0, 3);
-        lcd.print("Relacion IE:        ");
+        lcd.print("Relacion I:E:        ");
         lcd.setCursor(16, 3);
         lcd.print(relacionIE);
         delay(100);
@@ -66,19 +66,19 @@ void lcd_show() {
         lcd.setCursor(0, 2);
         lcd.print("  Frec:             ");
         lcd.setCursor(10, 2);
-        lcd.print(frecRespiratoria); // Escribimos el n�mero de segundos trascurridos
+        lcd.print(frecRespiratoria); // Escribimos el numero de segundos trascurridos
         lcd.setCursor(0, 3);
         lcd.print("                    ");
         break;
     case 2:
         lcd.setCursor(0, 0);
-        lcd.print(" Relacion Insp Exp  ");
+        lcd.print("    Relacion I:E    ");
         lcd.setCursor(0, 1);
         lcd.print("                    ");
         lcd.setCursor(0, 2);
-        lcd.print("  RIE:              ");
+        lcd.print("  I:E:              ");
         lcd.setCursor(10, 2);
-        lcd.print(relacionIE); // Escribimos el n�mero de segundos trascurridos
+        lcd.print(relacionIE); // Escribimos el numero de segundos trascurridos
         lcd.setCursor(0, 3);
         lcd.print("                    ");
         break;
@@ -89,15 +89,13 @@ void lcd_show() {
         lcd.print("                    ");
         lcd.setCursor(0, 2);
         lcd.print("Default: ");
-        lcd.print(12); // Escribimos el n�mero de segundos trascurridos
+        lcd.print(12); // Escribimos el numero de segundos trascurridos
         lcd.print("           ");
         lcd.setCursor(0, 3);
         lcd.print("                    ");
         SerialUSB.println("estoy en default");
         break;
     }
-
-
 }
 
 void swInterrupt() {

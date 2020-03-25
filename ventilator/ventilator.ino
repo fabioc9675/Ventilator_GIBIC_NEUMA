@@ -35,7 +35,8 @@ int numeroPulsos = 0;
 // Some global variables available anywhere in the program
 volatile unsigned long startMillis;
 volatile unsigned long currentMillis;
-
+volatile unsigned int inspirationTime = 0;
+volatile unsigned int expirationTime = 0;
 // definiciones del timer
 volatile int interruptCounter = 0;
 
@@ -59,7 +60,8 @@ void setup() {
 void loop() {
     lcd_show();
     currentMillis = millis();
-    if (currentMillis - startMillis > 50) {
+
+    if (currentMillis - startMillis > 50) { // Ingresa cada 50 ms (20Hz)
         startMillis = millis();
         onTimer();
         SerialUSB.println("I am here bb");    
@@ -99,15 +101,15 @@ void onTimer() {
         digitalWrite(EV_02_P2, LOW);    // turn the LED on (HIGH is the voltage level)
     }
     else
-        if (interruptCounter == 1000 / 50) {  // espera 1 segundo y cierra electrovalvula de entrada y abre electrovalvula de salida
-            digitalWrite(EV_02_P1, HIGH);    // turn the LED off by making the voltage LOW
-            digitalWrite(EV_02_P2, HIGH);   // turn the LED on (HIGH is the voltage level)
+        if (interruptCounter == inspirationTime/50) {  // espera 1 segundo y cierra electrovalvula de entrada y abre electrovalvula de salida
+            digitalWrite(EV_02_P1, HIGH);     // turn the LED off by making the voltage LOW
+            digitalWrite(EV_02_P2, HIGH);     // turn the LED on (HIGH is the voltage level)
 
             digitalWrite(EV_01_P2, LOW);    // turn the LED off by making the voltage LOW
             digitalWrite(EV_01_P1, LOW);   // turn the LED on (HIGH is the voltage level)
         }
         else
-            if (interruptCounter == 3000 / 50) {
+            if (interruptCounter == expirationTime / 50) {
                 interruptCounter = 0;
             }
 }

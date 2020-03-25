@@ -3,7 +3,7 @@
 //**********VALORES MAXIMOS**********
 #define MENU_QUANTITY 3
 #define MAX_FREC 20
-#define MAX_RIE 10
+#define MAX_RIE 16
 
 
 //********DEFINICION DE PINES***********
@@ -11,17 +11,12 @@
 #define B     4      //variable B a pin digital 4 (CLK en modulo)
 #define SW    3      //sw a pin digital 3 (SW en modulo)  
 
-
-char *relacion_IE[] = {"1:9", "1:8", "1:7", "1:6", "1:5", "1:4", "1:3", "1:2", "1:1", 
-                       "2:1", "3:1", "4:1"};
+char *relacion_IE[] = {"1:9", "1:8", "1:7", "1:6", "1:5", "1:4", "1:3", "1:2", "1:1",
+                       "2:1", "3:1", "4:1", "5:1", "6:1", "7:1", "8:1", "9:1"};
 volatile int POSICION = 50;
 int ANTERIOR = 50;    // almacena valor anterior de la variable POSICION
-int inspirationTime = 60;
-int expirationTime = 120;
 
 volatile unsigned int menu = 0;
-volatile unsigned int countEncoderInterrupt = 0;
-volatile unsigned int countSWInterrupt = 0;
 // como global al ser usada en loop e ISR (encoder)
 unsigned long tiempo1 = 0;
 unsigned int relacionIE = 0;
@@ -41,7 +36,6 @@ void lcd_setup() {
     attachInterrupt(digitalPinToInterrupt(SW), swInterrupt, LOW);
     lcd.begin(20, 4);
 }
-
 
 void lcd_show() {
     switch (menu) {
@@ -92,7 +86,7 @@ void lcd_show() {
         lcd.print("                    ");
         lcd.setCursor(0, 2);
         lcd.print("Default: ");
-        lcd.print(12); // Escribimos el numero de segundos trascurridos
+        lcd.print(12);                      // Escribimos el numero de segundos trascurridos
         lcd.print("           ");
         lcd.setCursor(0, 3);
         lcd.print("                    ");
@@ -120,7 +114,6 @@ void encoderInterrupt() {
 
     if (tiempoInterrupcion - ultimaInterrupcion > 5) {  // rutina antirebote desestima
         SerialUSB.println("I am in encoderInterrupt");
-        countEncoderInterrupt = 0;
         if (insideMenuFlag == false)
             menu++;
         else {

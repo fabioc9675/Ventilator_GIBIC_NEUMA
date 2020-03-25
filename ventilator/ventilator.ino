@@ -33,8 +33,8 @@ int ADC2_Value = 0;
 int numeroPulsos = 0;
 
 // Some global variables available anywhere in the program
-unsigned long startMillis;
-unsigned long currentMillis;
+volatile unsigned long startMillis;
+volatile unsigned long currentMillis;
 
 // definiciones del timer
 volatile int interruptCounter = 0;
@@ -43,48 +43,51 @@ volatile int interruptCounter = 0;
 //hw_timer_t* timer = NULL;
 //portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
-
-// definicion de interrupciones
-void onTimer();  // funcion de interrupcion
-
 void setup() {
-    SerialUSB.begin(9600);   // incializacion de comunicacion serie a 9600 bps
+    SerialUSB.begin(19200);   // incializacion de comunicacion serie a 9600 bps
+    // configuracion del pin de interrupcion
+    pinMode(fan1.PIN, INPUT_PULLUP);
+    //attachInterrupt(fan1.PIN, isr, RISING);
+    // inicializacion de los pines controladores de las EV como salidas
+    pinMode(EV_01_P1, OUTPUT);  // PIN 3   velocidad
+    pinMode(EV_01_P2, OUTPUT);  // PIN 4   direccion
+    pinMode(EV_02_P1, OUTPUT);  // PIN 6   velocidad
+    pinMode(EV_02_P2, OUTPUT);  // PIN 7   direccion
     lcd_setup();
 }
+
 void loop() {
     lcd_show();
-
-    if (millis() - startMillis > 50) {
+    currentMillis = millis();
+    if (currentMillis - startMillis > 1000) {
+        startMillis = millis();
         onTimer();
+        SerialUSB.println("I am here bb");    
     }
+    if (fl_ADC) {
+        fl_ADC = false;
+        ADC1_Value = analogRead(ADC_PRESS_1);
+        ADC2_Value = analogRead(ADC_PRESS_2);
+        // falta realizar la conversion de adc a presion
 
-    //if (fl_ADC) {
-    //    fl_ADC = false;
-    //    ADC1_Value = analogRead(ADC_PRESS_1);
-    //    ADC2_Value = analogRead(ADC_PRESS_2);
-    //    // falta realizar la conversion de adc a presion
+        // conteo de los pulsos
+        numeroPulsos = fan1.numberOfPulses;  //Numero de pulsos en 50ms  
+        fan1.numberOfPulses = 0;
+        numeroPulsos = (numeroPulsos * 2000 / 75); //(#pulsos/1 s)=7.5*Q [L/min] (considera un decimal)
 
-    //    // conteo de los pulsos
-    //    numeroPulsos = fan1.numberOfPulses;  //Numero de pulsos en 50ms  
-    //    fan1.numberOfPulses = 0;
-    //    numeroPulsos = (numeroPulsos * 2000 / 75); //(#pulsos/1 s)=7.5*Q [L/min] (considera un decimal)
-
-
-    //    Serial.print("Pres1 = ");
-    //    Serial.print(ADC1_Value);
-    //    Serial.print(", Pres2 = ");
-    //    Serial.println(ADC2_Value + 180);
-    //    //Serial.print(", Puls = ");
-    //    //Serial.println(numeroPulsos);
-    //}
+        /*SerialUSB.print("Pres1 = ");
+        SerialUSB.print(ADC1_Value);
+        SerialUSB.print(", Pres2 = ");
+        SerialUSB.println(ADC2_Value + 180);
+        SerialUSB.print(", Puls = ");
+        SerialUSB.println(numeroPulsos);*/
+    }
 }
 
-
 void onTimer() {
-
+    SerialUSB.println("I am inside onTimer");
     interruptCounter++;
     contADC++;
-
     fl_ADC = true;
     contADC = 0;
 

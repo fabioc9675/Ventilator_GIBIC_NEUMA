@@ -19,6 +19,8 @@ int expirationTime = 120;
 
 volatile int POSICION = 50; // variable POSICION con valor inicial de 50 y definida
 volatile unsigned int menu = 0;
+volatile unsigned int countEncoderInterrupt = 0;
+volatile unsigned int countSWInterrupt = 0;
 // como global al ser usada en loop e ISR (encoder)
 unsigned long tiempo1 = 0;
 unsigned int relacionIE = 0;
@@ -26,17 +28,17 @@ unsigned int frecRespiratoria = 0;
 boolean insideMenuFlag = false;
 
 
-//Crear el objeto LCD con los n�meros correspondientes (rs, en, d4, d5, d6, d7)
+//Crear el objeto LCD con los numeros correspondientes (rs, en, d4, d5, d6, d7)
 LiquidCrystal lcd(11, 12, 7, 8, 9, 10);
 void lcd_setup() {
     pinMode(A, INPUT);    // A como entrada
     pinMode(B, INPUT);    // B como entrada
     pinMode(SW, INPUT);   // SW como entrada
-    attachInterrupt(digitalPinToInterrupt(A), encoderInterrupt, LOW);// interrupcion sobre pin A con
+    // interrupcion sobre pin A con
+    attachInterrupt(digitalPinToInterrupt(A), encoderInterrupt, LOW);
     // funcion ISR encoder y modo LOW
     attachInterrupt(digitalPinToInterrupt(SW), swInterrupt, LOW);
     lcd.begin(20, 4);
-
 }
 
 
@@ -93,30 +95,31 @@ void lcd_show() {
         lcd.print("           ");
         lcd.setCursor(0, 3);
         lcd.print("                    ");
-        SerialUSB.println("estoy en default");
         break;
     }
+    SerialUSB.println("I am in lcd_show()");
 }
 
 void swInterrupt() {
-    static unsigned long ultimaInterrupcion = 0;  // variable static con ultimo valor de
-    // tiempo de interrupcion
-    unsigned long tiempoInterrupcion = millis();  // variable almacena valor de func. millis
+    static unsigned long ultimaInterrupcion = 0;
+    unsigned long tiempoInterrupcion = millis();
+
     if (tiempoInterrupcion - ultimaInterrupcion > 5) {
+        SerialUSB.println("I am in swInterrupt");
         if (menu != 0)
             insideMenuFlag = !insideMenuFlag;
-        ultimaInterrupcion = tiempoInterrupcion;  // guarda valor actualizado del tiempo
-    }
+        }
+    ultimaInterrupcion = tiempoInterrupcion;
 }
 
-
 void encoderInterrupt() {
-    static unsigned long ultimaInterrupcion = 0;  // variable static con ultimo valor de
-    // tiempo de interrupcion
-    unsigned long tiempoInterrupcion = millis();  // variable almacena valor de func. millis
+    
+    static unsigned long ultimaInterrupcion = 0;
+    unsigned long tiempoInterrupcion = millis();
+
     if (tiempoInterrupcion - ultimaInterrupcion > 5) {  // rutina antirebote desestima
-      //lcd.clear();
-      // if (digitalRead(SW))SerialUSB.println("�push pressed");
+        SerialUSB.println("I am in encoderInterrupt");
+        countEncoderInterrupt = 0;
         if (insideMenuFlag == false)
             menu++;
         else {
@@ -154,13 +157,12 @@ void encoderInterrupt() {
         }
         if (menu > MENU_QUANTITY - 1)
             menu = 0;
-        SerialUSB.println(menu);
+        SerialUSB.println("menu = " + String(menu));
 
-
-
-        POSICION = min(100, max(0, POSICION));      // establece limite inferior de 0 y
-        // superior de 100 para POSICION
-        ultimaInterrupcion = tiempoInterrupcion;    // guarda valor actualizado del tiempo
-    }                                               // de la interrupcion en variable static
+        POSICION = min(100, max(0, POSICION));  // Establece limite inferior de 0 y
+                                                // superior de 100 para POSICION
+    }  
+    ultimaInterrupcion = tiempoInterrupcion;                                         
+    
 }
 

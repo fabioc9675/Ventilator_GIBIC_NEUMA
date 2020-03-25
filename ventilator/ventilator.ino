@@ -59,7 +59,7 @@ void setup() {
 void loop() {
     lcd_show();
     currentMillis = millis();
-    if (currentMillis - startMillis > 1000) {
+    if (currentMillis - startMillis > 50) {
         startMillis = millis();
         onTimer();
         SerialUSB.println("I am here bb");    
@@ -91,7 +91,7 @@ void onTimer() {
     fl_ADC = true;
     contADC = 0;
 
-    if (interruptCounter == 1) {        // inicia el ciclado abriendo electrovalvula de entrada y cerrando electrovalvula de salida
+    if (interruptCounter == 1) {        // Inicia el ciclado abriendo electrovalvula de entrada y cerrando electrovalvula de salida
         digitalWrite(EV_01_P2, HIGH);   // turn the LED on (HIGH is the voltage level)
         digitalWrite(EV_01_P1, HIGH);   // turn the LED on (HIGH is the voltage level)
 

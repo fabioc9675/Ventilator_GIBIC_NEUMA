@@ -3,21 +3,22 @@
 //**********VALORES MAXIMOS**********
 #define MENU_QUANTITY 3
 #define MAX_FREC 20
-#define MAX_RIE 20
+#define MAX_RIE 10
 
 
 //********DEFINICION DE PINES***********
-#define A     2       //variable A a pin digital 2 (DT en modulo)
-#define B     4       //variable B a pin digital 4 (CLK en modulo)
+#define A     2      //variable A a pin digital 2 (DT en modulo)
+#define B     4      //variable B a pin digital 4 (CLK en modulo)
 #define SW    3      //sw a pin digital 3 (SW en modulo)  
 
 
+char *relacion_IE[] = {"1:9", "1:8", "1:7", "1:6", "1:5", "1:4", "1:3", "1:2", "1:1", 
+                       "2:1", "3:1", "4:1"};
+volatile int POSICION = 50;
 int ANTERIOR = 50;    // almacena valor anterior de la variable POSICION
 int inspirationTime = 60;
 int expirationTime = 120;
 
-
-volatile int POSICION = 50; // variable POSICION con valor inicial de 50 y definida
 volatile unsigned int menu = 0;
 volatile unsigned int countEncoderInterrupt = 0;
 volatile unsigned int countSWInterrupt = 0;
@@ -57,7 +58,7 @@ void lcd_show() {
         lcd.setCursor(0, 3);
         lcd.print("Relacion I:E:        ");
         lcd.setCursor(16, 3);
-        lcd.print(relacionIE);
+        lcd.print(relacion_IE[relacionIE]);
         delay(100);
         break;
     case 1:
@@ -80,7 +81,7 @@ void lcd_show() {
         lcd.setCursor(0, 2);
         lcd.print("  I:E:              ");
         lcd.setCursor(10, 2);
-        lcd.print(relacionIE); // Escribimos el numero de segundos trascurridos
+        lcd.print(relacion_IE[relacionIE]); // Escribimos el numero de segundos trascurridos
         lcd.setCursor(0, 3);
         lcd.print("                    ");
         break;

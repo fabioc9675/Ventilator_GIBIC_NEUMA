@@ -32,6 +32,9 @@ float maxFlujo = 4;
 unsigned int frecRespiratoria = 10;
 boolean insideMenuFlag = false;
 boolean flagAlarmas = false;
+boolean flagPresion = false;
+boolean flagFlujo = false;
+boolean flagFrecuencia = false;
 
 volatile unsigned long miTiempo = 0;
 
@@ -46,8 +49,8 @@ void lcd_setup() {
     pinMode(B, INPUT_PULLUP);    // B como entrada
     pinMode(SW, INPUT_PULLUP);   // SW como entrada
     // interrupcion sobre pin A con
-    attachInterrupt(A, encoderInterrupt, FALLING);
-    attachInterrupt(SW, swInterrupt, FALLING);
+    attachInterrupt(A, encoderInterrupt, RISING);
+    attachInterrupt(SW, swInterrupt, RISING);
     lcd.begin(20, 4);
 }
 
@@ -86,7 +89,14 @@ void lcd_show() {
         lcd.setCursor(0, 1);
         lcd.print("                    ");
         lcd.setCursor(0, 2);
-        lcd.print("  Frec:             ");
+        if (insideMenuFlag) {
+            lcd.print(" ");
+            lcd.write(126);
+            lcd.print("Frec:            ");
+        }
+        else {
+            lcd.print("  Frec:             ");
+        }
         lcd.setCursor(10, 2);
         lcd.print(frecRespiratoria); // Escribimos el numero de segundos trascurridos
         lcd.setCursor(0, 3);
@@ -110,11 +120,26 @@ void lcd_show() {
         lcd.setCursor(0, 1);
         lcd.print("                    ");
         lcd.setCursor(0, 2);
-        lcd.print("  Presion:            ");
+        if (flagPresion) {
+            lcd.print(" ");
+            lcd.write(126);
+            lcd.print("Presion:            ");
+        }
+        else {
+            lcd.print("  Presion:            ");
+        }
         lcd.setCursor(12, 2);
         lcd.print(maxPresion);
         lcd.setCursor(0, 3);
-        lcd.print("  Flujo:            ");
+        if (flagFlujo) {
+            lcd.print(" ");
+            lcd.write(126);
+            lcd.print("Flujo:            ");
+        }
+        else {
+            lcd.print("  Flujo:            ");
+        }
+        
         lcd.setCursor(12, 3);
         lcd.print(maxFlujo);
         break;
@@ -137,7 +162,7 @@ void lcd_show() {
 void IRAM_ATTR swInterrupt() {
     static unsigned long ultimaInterrupcion = 0;
     unsigned long tiempoInterrupcion = millis();
-    if (tiempoInterrupcion - ultimaInterrupcion > 2) {
+    if (tiempoInterrupcion - ultimaInterrupcion > 5) {
         //Serial.println("I am in swInterrupt");
         if (menu != 0 && menu != 3) {
             insideMenuFlag = !insideMenuFlag;
@@ -145,26 +170,29 @@ void IRAM_ATTR swInterrupt() {
         else if (menu == 3 && !insideMenuFlag) {
             insideMenuFlag = !insideMenuFlag;
             flagAlarmas = true;
+            flagPresion = true;
             Serial.println("Config maxPres");
         }
         else if (menu == 3 && flagAlarmas) {
+            flagPresion = false;
+            flagFlujo = true;
             flagAlarmas = false;
             Serial.println("Config maxFlujo");
         }
         else if (menu == 3 && !flagAlarmas) {
             insideMenuFlag = !insideMenuFlag;
             flagAlarmas = false;
+            flagFlujo = false;
         }
-    }
-    ultimaInterrupcion = tiempoInterrupcion;
+        ultimaInterrupcion = tiempoInterrupcion;
+    } 
 }
 
 void IRAM_ATTR encoderInterrupt() {
     static unsigned long ultimaInterrupcion = 0;
     unsigned long tiempoInterrupcion = millis();
-    if (tiempoInterrupcion - ultimaInterrupcion > 2) {  // Antirrebote
-        //Serial.println("I am in encoderInterrupt");
-        
+    if (tiempoInterrupcion - ultimaInterrupcion > 5) {  // Antirrebote
+        Serial.println("I am in encoderInterrupt");
         // Rutina para controlar el menu
         if (insideMenuFlag == false) {
             if (digitalRead(B) == HIGH) {
@@ -177,7 +205,6 @@ void IRAM_ATTR encoderInterrupt() {
                 if (menu < 0 || menu > MENU_QUANTITY - 1)
                     menu = MENU_QUANTITY - 1;
             }
-
             Serial.println("menu = " + String(menu));
         }
         else {
@@ -228,23 +255,39 @@ void IRAM_ATTR encoderInterrupt() {
                 //Serial.println("E :" + String(expirationTime));
                 break;
             case 3:
-                if (digitalRead(B) == HIGH && flagAlarmas) {
-                    maxPresion++;
-                    if (maxPresion > MAX_PRESION) {
-                        maxPresion = MAX_PRESION;
+                if (flagAlarmas) {
+                    if (digitalRead(B) == HIGH) {
+                        maxPresion++;
+                        if (maxPresion > MAX_PRESION) {
+                            maxPresion = MAX_PRESION;
+                        }
+                    }
+                    else {
+                        maxPresion--;
+                        if (maxPresion > MAX_PRESION) {
+                            maxPresion = MAX_PRESION;
+                        }
                     }
                 }
-                else if (digitalRead(B) == HIGH && !flagAlarmas) {
-                    maxFlujo++;
-                    if (maxFlujo > MAX_FLUJO) {
-                        maxFlujo = MAX_FLUJO;
+                else {
+                    if (digitalRead(B) == HIGH) {
+                        maxFlujo++;
+                        if (maxFlujo > MAX_FLUJO) {
+                            maxFlujo = MAX_FLUJO;
+                        }
+                    }
+                    else {
+                        maxFlujo--;
+                        if (maxFlujo > MAX_FLUJO) {
+                            maxFlujo = MAX_FLUJO;
+                        }
                     }
                 }
                 break;
             }
         }
-    }  
-    ultimaInterrupcion = tiempoInterrupcion;                                         
     
+        ultimaInterrupcion = tiempoInterrupcion;
+    }                                           
 }
 

@@ -4,18 +4,18 @@
   Author:	Helber Carvajal
 */
 
-// Control del shield DFRobot quad motor driver
-#define EV_01_P1        A0  // equivale al pin 3 del shield, velocidad motor 1
-#define EV_01_P2        A1  // equivale al pin 4 del shield, direccion motor 1
-#define EV_02_P1        A2  // equivale al pin 6 del shield, velocidad motor 2
-#define EV_02_P2        A3  // equivale al pin 7 del shield, direccion motor 2
+// Definiciones para controlar el shiel DFRobot quad motor driver
+#define EV_01_P1        25  // equivale al pin 3 del shield, velocidad motor 1
+#define EV_01_P2        17  // equivale al pin 4 del shield, direccion motor 1
+#define EV_02_P1        27  // equivale al pin 6 del shield, velocidad motor 2
+#define EV_02_P2        14  // equivale al pin 7 del shield, direccion motor 2
 
-// Manejo del ADC
-#define ADC_PRESS_1     A4  // pin ADC para presion 1
-#define ADC_PRESS_2     A5  // pin ADC para presion 1
+// Definiciones para el manejo del ADC
+#define ADC_PRESS_1     39  // pin ADC para presion 1
+#define ADC_PRESS_2     36  // pin ADC para presion 1
 
-// Sensor de flujo
-#define FLANCO          5  // pin digital numero 2 para deteccion de flujo IRQ
+// Definiciones para controlar el sensor de flujo
+#define FLANCO          26  // pin digital numero 2 para deteccion de flujo IRQ
 
 struct Fan {
     const uint8_t PIN;
@@ -45,7 +45,7 @@ volatile int interruptCounter = 0;
 //portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
 void setup() {
-    SerialUSB.begin(19200);   // incializacion de comunicacion serie a 9600 bps
+    Serial.begin(19200);   // incializacion de comunicacion serie a 9600 bps
     // configuracion del pin de interrupcion
     pinMode(fan1.PIN, INPUT_PULLUP);
     //attachInterrupt(fan1.PIN, isr, RISING);
@@ -64,7 +64,7 @@ void loop() {
     if (currentMillis - startMillis > 10) { // Ingresa cada 10 ms (100Hz)
         startMillis = millis();
         onTimer();
-        //SerialUSB.println("I am here bb");    
+        //Serial.println("I am here bb");    
     }
     if (fl_ADC) {
         fl_ADC = false;
@@ -77,17 +77,17 @@ void loop() {
         fan1.numberOfPulses = 0;
         numeroPulsos = (numeroPulsos * 2000 / 75); //(#pulsos/1 s)=7.5*Q [L/min] (considera un decimal)
 
-        /*SerialUSB.print("Pres1 = ");
-        SerialUSB.print(ADC1_Value);
-        SerialUSB.print(", Pres2 = ");
-        SerialUSB.println(ADC2_Value + 180);
-        SerialUSB.print(", Puls = ");
-        SerialUSB.println(numeroPulsos);*/
+        /*Serial.print("Pres1 = ");
+        Serial.print(ADC1_Value);
+        Serial.print(", Pres2 = ");
+        Serial.println(ADC2_Value + 180);
+        Serial.print(", Puls = ");
+        Serial.println(numeroPulsos);*/
     }
 }
 
 void onTimer() {
-    //SerialUSB.println("I am inside onTimer");
+    //Serial.println("I am inside onTimer");
     interruptCounter++;
     contADC++;
     fl_ADC = true;

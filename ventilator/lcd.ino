@@ -1,38 +1,53 @@
 ﻿#include <LiquidCrystal.h>
 
 //**********VALORES MAXIMOS**********
-#define MENU_QUANTITY 3
+#define MENU_QUANTITY 4
 #define MAX_FREC 20
 #define MAX_RIE 4
-
+#define MAX_PRESION 40
+#define MAX_FLUJO 40
 
 //********DEFINICION DE PINES***********
-#define A     2      //variable A a pin digital 2 (DT en modulo)
-#define B     4      //variable B a pin digital 4 (CLK en modulo)
-#define SW    3      //sw a pin digital 3 (SW en modulo)  
+//#define A     2      //variable A a pin digital 2 (DT en modulo)
+//#define B     4      //variable B a pin digital 4 (CLK en modulo)
+//#define SW    3      //sw a pin digital 3 (SW en modulo)  
+#define A     32      //variable A a pin digital 2 (DT en modulo)
+#define B     33      //variable B a pin digital 4 (CLK en modulo)
+#define SW    34      //sw a pin digital 3 (SW en modulo)  
 
-volatile int POSICION = 50;
-int ANTERIOR = 50;    // almacena valor anterior de la variable POSICION
+//Define pins for LCD
+#define rs 26
+#define en 16
+#define d4 5
+#define d5 23
+#define d6 19
+#define d7 18
 
 volatile unsigned int menu = 0;
 // como global al ser usada en loop e ISR (encoder)
 unsigned long tiempo1 = 0;
 float relacionIE = 4;
+float maxPresion = 4;
+float maxFlujo = 4;
 unsigned int frecRespiratoria = 10;
 boolean insideMenuFlag = false;
+boolean flagAlarmas = false;
 
 volatile unsigned long miTiempo = 0;
 
+void IRAM_ATTR swInterrupt();
+void IRAM_ATTR encoderInterrupt();
+
 //Crear el objeto LCD con los numeros correspondientes (rs, en, d4, d5, d6, d7)
-LiquidCrystal lcd(11, 12, 7, 8, 9, 10);
+//LiquidCrystal lcd(11, 12, 7, 8, 9, 10);
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 void lcd_setup() {
-    pinMode(A, INPUT);    // A como entrada
-    pinMode(B, INPUT);    // B como entrada
-    pinMode(SW, INPUT);   // SW como entrada
+    pinMode(A, INPUT_PULLUP);    // A como entrada
+    pinMode(B, INPUT_PULLUP);    // B como entrada
+    pinMode(SW, INPUT_PULLUP);   // SW como entrada
     // interrupcion sobre pin A con
-    attachInterrupt(digitalPinToInterrupt(A), encoderInterrupt, LOW);
-    // funcion ISR encoder y modo LOW
-    attachInterrupt(digitalPinToInterrupt(SW), swInterrupt, LOW);
+    attachInterrupt(A, encoderInterrupt, FALLING);
+    attachInterrupt(SW, swInterrupt, FALLING);
     lcd.begin(20, 4);
 }
 
@@ -46,7 +61,7 @@ void lcd_show() {
     }
     if (millis() - miTiempo > 500) {
         miTiempo = millis();
-        SerialUSB.println(relacion_IE);
+        //Serial.println(relacion_IE);
     }
     switch (menu) {
     case 0:
@@ -89,6 +104,20 @@ void lcd_show() {
         lcd.setCursor(0, 3);
         lcd.print("                    ");
         break;
+    case 3:
+        lcd.setCursor(0, 0);
+        lcd.print("      Alarmas       ");
+        lcd.setCursor(0, 1);
+        lcd.print("                    ");
+        lcd.setCursor(0, 2);
+        lcd.print("  Presion:            ");
+        lcd.setCursor(12, 2);
+        lcd.print(maxPresion);
+        lcd.setCursor(0, 3);
+        lcd.print("  Flujo:            ");
+        lcd.setCursor(12, 3);
+        lcd.print(maxFlujo);
+        break;
     default:
         lcd.setCursor(0, 0);
         lcd.print("                    ");
@@ -102,30 +131,55 @@ void lcd_show() {
         lcd.print("                    ");
         break;
     }
-    //SerialUSB.println("I am in lcd_show()");
+    //Serial.println("I am in lcd_show()");
 }
 
-void swInterrupt() {
+void IRAM_ATTR swInterrupt() {
     static unsigned long ultimaInterrupcion = 0;
     unsigned long tiempoInterrupcion = millis();
-
-    if (tiempoInterrupcion - ultimaInterrupcion > 5) {
-        //SerialUSB.println("I am in swInterrupt");
-        if (menu != 0)
+    if (tiempoInterrupcion - ultimaInterrupcion > 2) {
+        //Serial.println("I am in swInterrupt");
+        if (menu != 0 && menu != 3) {
             insideMenuFlag = !insideMenuFlag;
         }
+        else if (menu == 3 && !insideMenuFlag) {
+            insideMenuFlag = !insideMenuFlag;
+            flagAlarmas = true;
+            Serial.println("Config maxPres");
+        }
+        else if (menu == 3 && flagAlarmas) {
+            flagAlarmas = false;
+            Serial.println("Config maxFlujo");
+        }
+        else if (menu == 3 && !flagAlarmas) {
+            insideMenuFlag = !insideMenuFlag;
+            flagAlarmas = false;
+        }
+    }
     ultimaInterrupcion = tiempoInterrupcion;
 }
 
-void encoderInterrupt() {
-    
+void IRAM_ATTR encoderInterrupt() {
     static unsigned long ultimaInterrupcion = 0;
     unsigned long tiempoInterrupcion = millis();
+    if (tiempoInterrupcion - ultimaInterrupcion > 2) {  // Antirrebote
+        //Serial.println("I am in encoderInterrupt");
+        
+        // Rutina para controlar el menu
+        if (insideMenuFlag == false) {
+            if (digitalRead(B) == HIGH) {
+                menu++;
+                if (menu < 0 || menu > MENU_QUANTITY - 1)
+                    menu = 0;
+            }
+            else {
+                menu--;
+                if (menu < 0 || menu > MENU_QUANTITY - 1)
+                    menu = MENU_QUANTITY - 1;
+            }
 
-    if (tiempoInterrupcion - ultimaInterrupcion > 5) {  // rutina antirebote desestima
-        //SerialUSB.println("I am in encoderInterrupt");
-        if (insideMenuFlag == false)
-            menu++;
+            Serial.println("menu = " + String(menu));
+        }
         else {
             switch (menu) {
             case 1:
@@ -161,7 +215,6 @@ void encoderInterrupt() {
                         relacionIE = 1;
                     }
                 }
-
                 // Calculo del tiempo I:E
                 if (relacionIE > 0) {
                     inspirationTime = (60 / frecRespiratoria) / (1 + relacionIE);
@@ -171,16 +224,25 @@ void encoderInterrupt() {
                     expirationTime = (60 / frecRespiratoria) / (1 - relacionIE);
                     inspirationTime = -relacionIE * expirationTime;
                 }
-                SerialUSB.println("I :" + String(inspirationTime));
-                SerialUSB.println("E :" + String(expirationTime));
+                //Serial.println("I :" + String(inspirationTime));
+                //Serial.println("E :" + String(expirationTime));
+                break;
+            case 3:
+                if (digitalRead(B) == HIGH && flagAlarmas) {
+                    maxPresion++;
+                    if (maxPresion > MAX_PRESION) {
+                        maxPresion = MAX_PRESION;
+                    }
+                }
+                else if (digitalRead(B) == HIGH && !flagAlarmas) {
+                    maxFlujo++;
+                    if (maxFlujo > MAX_FLUJO) {
+                        maxFlujo = MAX_FLUJO;
+                    }
+                }
                 break;
             }
         }
-        if (menu > MENU_QUANTITY - 1)
-            menu = 0;
-        //SerialUSB.println("menu = " + String(menu));
-        POSICION = min(100, max(0, POSICION));  // Establece limite inferior de 0 y
-                                                // superior de 100 para POSICION
     }  
     ultimaInterrupcion = tiempoInterrupcion;                                         
     

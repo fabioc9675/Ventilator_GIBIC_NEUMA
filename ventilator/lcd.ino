@@ -3,7 +3,7 @@
 //**********VALORES MAXIMOS**********
 #define MENU_QUANTITY 3
 #define MAX_FREC 20
-#define MAX_RIE 16
+#define MAX_RIE 4
 
 
 //********DEFINICION DE PINES***********
@@ -11,18 +11,17 @@
 #define B     4      //variable B a pin digital 4 (CLK en modulo)
 #define SW    3      //sw a pin digital 3 (SW en modulo)  
 
-char *relacion_IE[] = {"1:9", "1:8", "1:7", "1:6", "1:5", "1:4", "1:3", "1:2", "1:1",
-                       "2:1", "3:1", "4:1", "5:1", "6:1", "7:1", "8:1", "9:1"};
 volatile int POSICION = 50;
 int ANTERIOR = 50;    // almacena valor anterior de la variable POSICION
 
 volatile unsigned int menu = 0;
 // como global al ser usada en loop e ISR (encoder)
 unsigned long tiempo1 = 0;
-unsigned int relacionIE = 0;
-unsigned int frecRespiratoria = 0;
+float relacionIE = 4;
+unsigned int frecRespiratoria = 10;
 boolean insideMenuFlag = false;
 
+volatile unsigned long miTiempo = 0;
 
 //Crear el objeto LCD con los numeros correspondientes (rs, en, d4, d5, d6, d7)
 LiquidCrystal lcd(11, 12, 7, 8, 9, 10);
@@ -38,6 +37,17 @@ void lcd_setup() {
 }
 
 void lcd_show() {
+    String relacion_IE = "1:4.1";
+    if (relacionIE > 0) {
+        relacion_IE = "1:" + String(relacionIE, 1);   
+    }
+    else {
+        relacion_IE = String(-relacionIE, 1) + ":1";  
+    }
+    if (millis() - miTiempo > 500) {
+        miTiempo = millis();
+        SerialUSB.println(relacion_IE);
+    }
     switch (menu) {
     case 0:
         lcd.home();
@@ -47,12 +57,12 @@ void lcd_show() {
         lcd.print("                   ");
         lcd.setCursor(0, 2);
         lcd.print("Frecuencia:         ");
-        lcd.setCursor(16, 2);
+        lcd.setCursor(14, 2);
         lcd.print(frecRespiratoria);
         lcd.setCursor(0, 3);
         lcd.print("Relacion I:E:        ");
-        lcd.setCursor(16, 3);
-        lcd.print(relacion_IE[relacionIE]);
+        lcd.setCursor(14, 3);
+        lcd.print(relacion_IE);
         delay(100);
         break;
     case 1:
@@ -75,7 +85,7 @@ void lcd_show() {
         lcd.setCursor(0, 2);
         lcd.print("  I:E:              ");
         lcd.setCursor(10, 2);
-        lcd.print(relacion_IE[relacionIE]); // Escribimos el numero de segundos trascurridos
+        lcd.print(relacion_IE); // Escribimos el numero de segundos trascurridos
         lcd.setCursor(0, 3);
         lcd.print("                    ");
         break;
@@ -92,7 +102,7 @@ void lcd_show() {
         lcd.print("                    ");
         break;
     }
-    SerialUSB.println("I am in lcd_show()");
+    //SerialUSB.println("I am in lcd_show()");
 }
 
 void swInterrupt() {
@@ -100,7 +110,7 @@ void swInterrupt() {
     unsigned long tiempoInterrupcion = millis();
 
     if (tiempoInterrupcion - ultimaInterrupcion > 5) {
-        SerialUSB.println("I am in swInterrupt");
+        //SerialUSB.println("I am in swInterrupt");
         if (menu != 0)
             insideMenuFlag = !insideMenuFlag;
         }
@@ -113,7 +123,7 @@ void encoderInterrupt() {
     unsigned long tiempoInterrupcion = millis();
 
     if (tiempoInterrupcion - ultimaInterrupcion > 5) {  // rutina antirebote desestima
-        SerialUSB.println("I am in encoderInterrupt");
+        //SerialUSB.println("I am in encoderInterrupt");
         if (insideMenuFlag == false)
             menu++;
         else {
@@ -133,26 +143,42 @@ void encoderInterrupt() {
                 }
                 break;
             case 2:
-                SerialUSB.println("inside rie");
                 if (digitalRead(B) == HIGH) {
-                    relacionIE++;
-                    if (relacionIE > MAX_RIE) {
-                        relacionIE = MAX_RIE;
+                    relacionIE = relacionIE - 0.1;
+                    if (relacionIE <= -MAX_RIE) {
+                        relacionIE = -MAX_RIE;
+                    }
+                    if (relacionIE > 0 && relacionIE < 1) {
+                        relacionIE = -1;
                     }
                 }
                 else {
-                    relacionIE--;
-                    if (relacionIE > MAX_RIE) {
-                        relacionIE = 0;
+                    relacionIE = relacionIE + 0.1;
+                    if (relacionIE >= MAX_RIE) {
+                        relacionIE = MAX_RIE;;
+                    }
+                    if (relacionIE > -1.0 && relacionIE < 0) {
+                        relacionIE = 1;
                     }
                 }
+
+                // Calculo del tiempo I:E
+                if (relacionIE > 0) {
+                    inspirationTime = (60 / frecRespiratoria) / (1 + relacionIE);
+                    expirationTime = relacionIE * inspirationTime;
+                }
+                else {
+                    expirationTime = (60 / frecRespiratoria) / (1 - relacionIE);
+                    inspirationTime = -relacionIE * expirationTime;
+                }
+                SerialUSB.println("I :" + String(inspirationTime));
+                SerialUSB.println("E :" + String(expirationTime));
                 break;
             }
         }
         if (menu > MENU_QUANTITY - 1)
             menu = 0;
-        SerialUSB.println("menu = " + String(menu));
-
+        //SerialUSB.println("menu = " + String(menu));
         POSICION = min(100, max(0, POSICION));  // Establece limite inferior de 0 y
                                                 // superior de 100 para POSICION
     }  

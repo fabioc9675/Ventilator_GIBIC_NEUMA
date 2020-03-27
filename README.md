@@ -1,4 +1,4 @@
-# insspiraMED ventilator firmware
+# innspiraMED ventilator firmware
 
-Firmware del sistema electrónico que controla el ventilador mecánico desarrollado para el proyecto insspiraMED.
+Firmware del sistema electrónico que controla el ventilador mecánico desarrollado para el proyecto innspiraMED.
 

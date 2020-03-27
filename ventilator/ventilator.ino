@@ -106,7 +106,7 @@ void onTimer() {
             digitalWrite(EV_02_P2, HIGH);     // turn the LED on (HIGH is the voltage level)
 
             digitalWrite(EV_01_P2, LOW);    // turn the LED off by making the voltage LOW
-            digitalWrite(EV_01_P1, LOW);   // turn the LED on (HIGH is the voltage level)
+            digitalWrite(EV_01_P1, LOW);    // turn the LED on (HIGH is the voltage level)
         }
         else
             if (interruptCounter == int(((inspirationTime + expirationTime)*1000)) / 10) {

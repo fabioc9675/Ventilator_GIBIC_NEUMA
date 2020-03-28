@@ -2,16 +2,8 @@
 #include <LiquidCrystal_I2C.h>
 //********DEFINICION DE PINES***********
 #define A     4//32      //variable A a pin digital 2 (DT en modulo)
-#define B     35//33      //variable B a pin digital 4 (CLK en modulo)
+#define B     35//33     //variable B a pin digital 4 (CLK en modulo)
 #define SW    34      //sw a pin digital 3 (SW en modulo)  
-
-//Define pins for LCD
-#define rs 26
-#define en 16
-#define d4 5
-#define d5 23
-#define d6 19
-#define d7 18
 
 //**********VALORES MAXIMOS**********
 #define MENU_QUANTITY 3
@@ -38,19 +30,16 @@ boolean flagIE = false;
 volatile unsigned long miTiempo = 0;
 
 void IRAM_ATTR swInterrupt();
-void IRAM_ATTR encoderA_Interrupt();
-void IRAM_ATTR encoderB_Interrupt();
+void IRAM_ATTR encoder_Interrupt();
 
-//Crear el objeto LCD con los numeros correspondientes (rs, en, d4, d5, d6, d7)
-//LiquidCrystal_I2C lcd(11, 12, 7, 8, 9, 10);
+//Crear el objeto LCD
 LiquidCrystal_I2C lcd(0x27, 20,4);
 void lcd_setup() {
     pinMode(A, INPUT_PULLUP);    // A como entrada
     pinMode(B, INPUT_PULLUP);    // B como entrada
     pinMode(SW, INPUT_PULLUP);   // SW como entrada
     // interrupcion sobre pin A con
-    attachInterrupt(A, encoderA_Interrupt, FALLING);
-    attachInterrupt(B, encoderB_Interrupt, FALLING);
+    attachInterrupt(A, encoder_Interrupt, FALLING);
     attachInterrupt(SW, swInterrupt, RISING);
     lcd.init();
     lcd.backlight();
@@ -192,143 +181,134 @@ void IRAM_ATTR swInterrupt() {
     } 
 }
 
-void IRAM_ATTR encoderA_Interrupt() {
-    //unsigned long tiempoInterrupcion = millis();
-    if (millis() - ultimaInterrupcionA > 20) {  // Antirrebote
-        Serial.println("I am in encoderA_Interrupt");
-        if (insideMenuFlag == false) {
-            if (ultimaInterrupcionA - ultimaInterrupcionB > 20) {
-                menu--;
-                if (menu < 0 || menu > MENU_QUANTITY - 1)
-                    menu = MENU_QUANTITY - 1;
-            }
-            Serial.println("menu = " + String(menu));
-        }
-        else {
-            switch (menu) {
-            case 1:
-                if (flagFrecuencia) {
-                    if (digitalRead(B) == HIGH) {
-                        frecRespiratoria--;
-                        if (frecRespiratoria > MAX_FREC) {
-                            frecRespiratoria = 0;
-                        }
-                    }
-                }
-                else if (flagIE) {
-                    if (digitalRead(B) == HIGH) {
-                        relacionIE = relacionIE - 0.1;
-                        if (relacionIE <= -MAX_RIE) {
-                            relacionIE = -MAX_RIE;
-                        }
-                        if (relacionIE > 0 && relacionIE < 1) {
-                            relacionIE = -1;
-                        }
-                    }
-                   
-                    // Calculo del tiempo I:E
-                    if (relacionIE > 0) {
-                        inspirationTime = (60 / frecRespiratoria) / (1 + relacionIE);
-                        expirationTime = relacionIE * inspirationTime;
-                    }
-                    else {
-                        expirationTime = (60 / frecRespiratoria) / (1 - relacionIE);
-                        inspirationTime = -relacionIE * expirationTime;
-                    }
-                }
-                //Serial.println("I :" + String(inspirationTime));
-                //Serial.println("E :" + String(expirationTime));
-                break;
-            case 2:
-                if (flagPresion) {
-                    if (digitalRead(B) == HIGH) {
-                        maxPresion--;
-                        if (maxPresion > MAX_PRESION) {
-                            maxPresion = MAX_PRESION;
-                        }
-                    }
-                }
-                else if (flagFlujo) {
-                    if (digitalRead(B) == HIGH) {
-                        maxFlujo--;
-                        if (maxFlujo > MAX_FLUJO) {
-                            maxFlujo = MAX_FLUJO;
-                        }
-                    }
-                }
-                break;
-            }
-        }
-        ultimaInterrupcionA = millis();
-    }
-}
-
-void IRAM_ATTR encoderB_Interrupt() {
-    //unsigned long tiempoInterrupcion = millis();
-    if (millis() - ultimaInterrupcionB > 20) {  // Antirrebote
-        Serial.println("I am in encoderB_Interrupt");
-        if (insideMenuFlag == false) {
-            if (ultimaInterrupcionB - ultimaInterrupcionA > 20) {
+void IRAM_ATTR encoder_Interrupt() {
+    static unsigned long debounceTimer = 0;
+    if ((millis() - debounceTimer) > 100) {
+        debounceTimer = millis();
+        if (digitalRead(B) == HIGH) {
+            Serial.println("derecha");
+            if (insideMenuFlag == false) {
                 menu++;
                 if (menu < 0 || menu > MENU_QUANTITY - 1)
                     menu = 0;
+                Serial.println("menu = " + String(menu));
             }
-            Serial.println("menu = " + String(menu));
-        }
-        else {
-            switch (menu) {
-            case 1:
-                if (flagFrecuencia) {
-                    if (digitalRead(B) == HIGH) {
-                        frecRespiratoria++;
-                        if (frecRespiratoria > MAX_FREC) {
-                            frecRespiratoria = MAX_FREC;
-                        }
+            else {
+                switch (menu) {
+                case 1:
+                    if (flagFrecuencia) {
+                            frecRespiratoria++;
+                            if (frecRespiratoria > MAX_FREC) {
+                                frecRespiratoria = MAX_FREC;
+                            }
                     }
-                }
-                else if (flagIE) {
-                    if (digitalRead(B) == HIGH) {
+                    else if (flagIE) {
+                       
                         relacionIE = relacionIE + 0.1;
                         if (relacionIE >= MAX_RIE) {
                             relacionIE = MAX_RIE;;
                         }
                         if (relacionIE > -1.0 && relacionIE < 0) {
                             relacionIE = 1;
+                            
+                        }
+                        // Calculo del tiempo I:E
+                        if (relacionIE > 0) {
+                            inspirationTime = (60 / frecRespiratoria) / (1 + relacionIE);
+                            expirationTime = relacionIE * inspirationTime;
+                        }
+                        else {
+                            expirationTime = (60 / frecRespiratoria) / (1 - relacionIE);
+                            inspirationTime = -relacionIE * expirationTime;
                         }
                     }
-                    // Calculo del tiempo I:E
-                    if (relacionIE > 0) {
-                        inspirationTime = (60 / frecRespiratoria) / (1 + relacionIE);
-                        expirationTime = relacionIE * inspirationTime;
-                    }
-                    else {
-                        expirationTime = (60 / frecRespiratoria) / (1 - relacionIE);
-                        inspirationTime = -relacionIE * expirationTime;
-                    }
-                }
-                //Serial.println("I :" + String(inspirationTime));
-                //Serial.println("E :" + String(expirationTime));
-                break;
-            case 2:
-                if (flagPresion) {
-                    if (digitalRead(B) == HIGH) {
+                    //Serial.println("I :" + String(inspirationTime));
+                    //Serial.println("E :" + String(expirationTime));
+                    break;
+                case 2:
+                    if (flagPresion) {
+                       
                         maxPresion++;
                         if (maxPresion > MAX_PRESION) {
                             maxPresion = MAX_PRESION;
                         }
+                     
                     }
-                }
-                else if (flagFlujo) {
-                    if (digitalRead(B) == HIGH) {
+                    else if (flagFlujo) {
+                       
                         maxFlujo++;
                         if (maxFlujo > MAX_FLUJO) {
                             maxFlujo = MAX_FLUJO;
                         }
+                       
                     }
+                    break;
                 }
-                break;
+            }
+        }    
+        else {
+            Serial.println("izquierda");
+            if (insideMenuFlag == false) {
+                menu--;
+                if (menu < 0 || menu > MENU_QUANTITY - 1)
+                    menu = MENU_QUANTITY - 1;
+                Serial.println("menu = " + String(menu));
+            }
+            else {
+                switch (menu) {
+                case 1:
+                    if (flagFrecuencia) {
+                        if (digitalRead(B) == HIGH) {
+                            frecRespiratoria--;
+                            if (frecRespiratoria > MAX_FREC) {
+                                frecRespiratoria = 0;
+                            }
+                        }
+                    }
+                    else if (flagIE) {
+                        if (digitalRead(B) == HIGH) {
+                            relacionIE = relacionIE - 0.1;
+                            if (relacionIE <= -MAX_RIE) {
+                                relacionIE = -MAX_RIE;
+                            }
+                            if (relacionIE > 0 && relacionIE < 1) {
+                                relacionIE = -1;
+                            }
+                        }
+
+                        // Calculo del tiempo I:E
+                        if (relacionIE > 0) {
+                            inspirationTime = (60 / frecRespiratoria) / (1 + relacionIE);
+                            expirationTime = relacionIE * inspirationTime;
+                        }
+                        else {
+                            expirationTime = (60 / frecRespiratoria) / (1 - relacionIE);
+                            inspirationTime = -relacionIE * expirationTime;
+                        }
+                    }
+                    //Serial.println("I :" + String(inspirationTime));
+                    //Serial.println("E :" + String(expirationTime));
+                    break;
+                case 2:
+                    if (flagPresion) {
+                        if (digitalRead(B) == HIGH) {
+                            maxPresion--;
+                            if (maxPresion > MAX_PRESION) {
+                                maxPresion = MAX_PRESION;
+                            }
+                        }
+                    }
+                    else if (flagFlujo) {
+                        if (digitalRead(B) == HIGH) {
+                            maxFlujo--;
+                            if (maxFlujo > MAX_FLUJO) {
+                                maxFlujo = MAX_FLUJO;
+                            }
+                        }
+                    }
+                    break;
+                }
             }
         }
-        ultimaInterrupcionB = millis();
-    }
+    }    
 }

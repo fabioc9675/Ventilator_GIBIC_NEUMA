@@ -1,18 +1,8 @@
-﻿#include <LiquidCrystal.h>
-
-//**********VALORES MAXIMOS**********
-#define MENU_QUANTITY 3
-#define MAX_FREC 20
-#define MAX_RIE 4
-#define MAX_PRESION 40
-#define MAX_FLUJO 40
-
+﻿//#include <LiquidCrystal.h>
+#include <LiquidCrystal_I2C.h>
 //********DEFINICION DE PINES***********
-//#define A     2      //variable A a pin digital 2 (DT en modulo)
-//#define B     4      //variable B a pin digital 4 (CLK en modulo)
-//#define SW    3      //sw a pin digital 3 (SW en modulo)  
-#define A     32      //variable A a pin digital 2 (DT en modulo)
-#define B     33      //variable B a pin digital 4 (CLK en modulo)
+#define A     4//32      //variable A a pin digital 2 (DT en modulo)
+#define B     35//33      //variable B a pin digital 4 (CLK en modulo)
 #define SW    34      //sw a pin digital 3 (SW en modulo)  
 
 //Define pins for LCD
@@ -23,7 +13,16 @@
 #define d6 19
 #define d7 18
 
+//**********VALORES MAXIMOS**********
+#define MENU_QUANTITY 3
+#define MAX_FREC 20
+#define MAX_RIE 4
+#define MAX_PRESION 40
+#define MAX_FLUJO 40
+
 volatile unsigned int menu = 0;
+volatile unsigned long ultimaInterrupcionA = 0;
+volatile unsigned long ultimaInterrupcionB = 0;
 // como global al ser usada en loop e ISR (encoder)
 unsigned long tiempo1 = 0;
 float relacionIE = 4;
@@ -39,19 +38,22 @@ boolean flagIE = false;
 volatile unsigned long miTiempo = 0;
 
 void IRAM_ATTR swInterrupt();
-void IRAM_ATTR encoderInterrupt();
+void IRAM_ATTR encoderA_Interrupt();
+void IRAM_ATTR encoderB_Interrupt();
 
 //Crear el objeto LCD con los numeros correspondientes (rs, en, d4, d5, d6, d7)
-//LiquidCrystal lcd(11, 12, 7, 8, 9, 10);
-LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+//LiquidCrystal_I2C lcd(11, 12, 7, 8, 9, 10);
+LiquidCrystal_I2C lcd(0x27, 20,4);
 void lcd_setup() {
     pinMode(A, INPUT_PULLUP);    // A como entrada
     pinMode(B, INPUT_PULLUP);    // B como entrada
     pinMode(SW, INPUT_PULLUP);   // SW como entrada
     // interrupcion sobre pin A con
-    attachInterrupt(A, encoderInterrupt, RISING);
+    attachInterrupt(A, encoderA_Interrupt, FALLING);
+    attachInterrupt(B, encoderB_Interrupt, FALLING);
     attachInterrupt(SW, swInterrupt, RISING);
-    lcd.begin(20, 4);
+    lcd.init();
+    lcd.backlight();
 }
 
 void lcd_show() {
@@ -190,19 +192,12 @@ void IRAM_ATTR swInterrupt() {
     } 
 }
 
-void IRAM_ATTR encoderInterrupt() {
-    static unsigned long ultimaInterrupcion = 0;
-    unsigned long tiempoInterrupcion = millis();
-    if (tiempoInterrupcion - ultimaInterrupcion > 5) {  // Antirrebote
-        Serial.println("I am in encoderInterrupt");
-        // Rutina para controlar el menu
+void IRAM_ATTR encoderA_Interrupt() {
+    //unsigned long tiempoInterrupcion = millis();
+    if (millis() - ultimaInterrupcionA > 20) {  // Antirrebote
+        Serial.println("I am in encoderA_Interrupt");
         if (insideMenuFlag == false) {
-            if (digitalRead(B) == HIGH) {
-                menu++;
-                if (menu < 0 || menu > MENU_QUANTITY - 1)
-                    menu = 0;
-            }
-            else {
+            if (ultimaInterrupcionA - ultimaInterrupcionB > 20) {
                 menu--;
                 if (menu < 0 || menu > MENU_QUANTITY - 1)
                     menu = MENU_QUANTITY - 1;
@@ -214,12 +209,6 @@ void IRAM_ATTR encoderInterrupt() {
             case 1:
                 if (flagFrecuencia) {
                     if (digitalRead(B) == HIGH) {
-                        frecRespiratoria++;
-                        if (frecRespiratoria > MAX_FREC) {
-                            frecRespiratoria = MAX_FREC;
-                        }
-                    }
-                    else {
                         frecRespiratoria--;
                         if (frecRespiratoria > MAX_FREC) {
                             frecRespiratoria = 0;
@@ -236,7 +225,69 @@ void IRAM_ATTR encoderInterrupt() {
                             relacionIE = -1;
                         }
                     }
+                   
+                    // Calculo del tiempo I:E
+                    if (relacionIE > 0) {
+                        inspirationTime = (60 / frecRespiratoria) / (1 + relacionIE);
+                        expirationTime = relacionIE * inspirationTime;
+                    }
                     else {
+                        expirationTime = (60 / frecRespiratoria) / (1 - relacionIE);
+                        inspirationTime = -relacionIE * expirationTime;
+                    }
+                }
+                //Serial.println("I :" + String(inspirationTime));
+                //Serial.println("E :" + String(expirationTime));
+                break;
+            case 2:
+                if (flagPresion) {
+                    if (digitalRead(B) == HIGH) {
+                        maxPresion--;
+                        if (maxPresion > MAX_PRESION) {
+                            maxPresion = MAX_PRESION;
+                        }
+                    }
+                }
+                else if (flagFlujo) {
+                    if (digitalRead(B) == HIGH) {
+                        maxFlujo--;
+                        if (maxFlujo > MAX_FLUJO) {
+                            maxFlujo = MAX_FLUJO;
+                        }
+                    }
+                }
+                break;
+            }
+        }
+        ultimaInterrupcionA = millis();
+    }
+}
+
+void IRAM_ATTR encoderB_Interrupt() {
+    //unsigned long tiempoInterrupcion = millis();
+    if (millis() - ultimaInterrupcionB > 20) {  // Antirrebote
+        Serial.println("I am in encoderB_Interrupt");
+        if (insideMenuFlag == false) {
+            if (ultimaInterrupcionB - ultimaInterrupcionA > 20) {
+                menu++;
+                if (menu < 0 || menu > MENU_QUANTITY - 1)
+                    menu = 0;
+            }
+            Serial.println("menu = " + String(menu));
+        }
+        else {
+            switch (menu) {
+            case 1:
+                if (flagFrecuencia) {
+                    if (digitalRead(B) == HIGH) {
+                        frecRespiratoria++;
+                        if (frecRespiratoria > MAX_FREC) {
+                            frecRespiratoria = MAX_FREC;
+                        }
+                    }
+                }
+                else if (flagIE) {
+                    if (digitalRead(B) == HIGH) {
                         relacionIE = relacionIE + 0.1;
                         if (relacionIE >= MAX_RIE) {
                             relacionIE = MAX_RIE;;
@@ -266,22 +317,10 @@ void IRAM_ATTR encoderInterrupt() {
                             maxPresion = MAX_PRESION;
                         }
                     }
-                    else {
-                        maxPresion--;
-                        if (maxPresion > MAX_PRESION) {
-                            maxPresion = MAX_PRESION;
-                        }
-                    }
                 }
-                else if(flagFlujo){
+                else if (flagFlujo) {
                     if (digitalRead(B) == HIGH) {
                         maxFlujo++;
-                        if (maxFlujo > MAX_FLUJO) {
-                            maxFlujo = MAX_FLUJO;
-                        }
-                    }
-                    else {
-                        maxFlujo--;
                         if (maxFlujo > MAX_FLUJO) {
                             maxFlujo = MAX_FLUJO;
                         }
@@ -290,8 +329,6 @@ void IRAM_ATTR encoderInterrupt() {
                 break;
             }
         }
-    
-        ultimaInterrupcion = tiempoInterrupcion;
-    }                                           
+        ultimaInterrupcionB = millis();
+    }
 }
-

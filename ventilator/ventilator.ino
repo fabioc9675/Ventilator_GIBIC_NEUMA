@@ -45,7 +45,7 @@ volatile int interruptCounter = 0;
 //portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
 void setup() {
-    Serial.begin(19200);   // incializacion de comunicacion serie a 9600 bps
+    Serial.begin(115200);   // incializacion de comunicacion serie a 9600 bps
     // configuracion del pin de interrupcion
     pinMode(fan1.PIN, INPUT_PULLUP);
     //attachInterrupt(fan1.PIN, isr, RISING);

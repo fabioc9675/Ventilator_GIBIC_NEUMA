@@ -15,11 +15,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="ventilator.ino" />
     <None Include="src\arduino folders read me.txt">
       <Filter>Misc Files</Filter>
     </None>
     <None Include="lcd.ino" />
+    <None Include="ventilator.ino" />
+    <None Include="utilities.ino" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.ventilator.vsarduino.h">

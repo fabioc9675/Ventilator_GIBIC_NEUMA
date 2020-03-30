@@ -101,5 +101,6 @@ typedef long pthread_cond_t;
 
 #include "ventilator.ino"
 #include "lcd.ino"
+#include "utilities.ino"
 #endif
 #endif

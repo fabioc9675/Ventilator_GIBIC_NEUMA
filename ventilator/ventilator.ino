@@ -61,12 +61,15 @@ void setup() {
 }
 
 void loop() {
-//  static unsigned long timeToShowLcd = 0;
- // if ((millis() - timeToShowLcd) > 500) {
-  //  timeToShowLcd = millis();
+  //*******refresh display every 0.5 s************
+  static unsigned long timeToShowLcd = 0;
+  if ((millis() - timeToShowLcd) > 500) {
+    timeToShowLcd = millis();
     lcd_show();
-//  }
-  refreshDisplayData();
+  }
+  //********************************************
+  
+  refreshData();
   currentMillis = millis();
 
   if (currentMillis - startMillis > 10) { // Ingresa cada 10 ms (100Hz)

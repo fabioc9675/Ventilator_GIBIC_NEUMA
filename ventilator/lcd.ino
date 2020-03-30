@@ -1,4 +1,3 @@
-//#include <LiquidCrystal.h>
 #include <LiquidCrystal_I2C.h>
 //********DEFINICION DE PINES***********
 #define A     4//32      //variable A a pin digital 2 (DT en modulo)

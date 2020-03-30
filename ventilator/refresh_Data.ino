@@ -1,5 +1,3 @@
-
-
 void IRAM_ATTR swInterrupt() {
     static unsigned long ultimaInterrupcion = 0;
     unsigned long tiempoInterrupcion = millis();
@@ -36,6 +34,7 @@ void IRAM_ATTR swInterrupt() {
 }
 
 void IRAM_ATTR encoder_Interrupt() {
+    Serial.print("encoder_Interrupt");
     static unsigned long debounceTimer = 0;
     if ((millis() - debounceTimer) > 100) {
         debounceTimer = millis();
@@ -49,16 +48,16 @@ void IRAM_ATTR encoder_Interrupt() {
 }
 
 void refreshData() {
-  static int cont=0;
-  if (encoderFlag == 1) {
-    if (insideMenuFlag == false) {
-      menu++;
-      if (menu < 0 || menu > MENU_QUANTITY - 1)
-        menu = 0;
-      //Serial.println("menu = " + String(menu));
-    }
+    static int cont=0;
+    if (encoderFlag == 1) {
+        if (insideMenuFlag == false) {
+            menu++;
+            if (menu < 0 || menu > MENU_QUANTITY - 1)
+            menu = 0;
+            //Serial.println("menu = " + String(menu));
+        }
     else {
-      switch (menu) {
+        switch (menu) {
         case 1:
           if (flagFrecuencia) {
             frecRespiratoria++;

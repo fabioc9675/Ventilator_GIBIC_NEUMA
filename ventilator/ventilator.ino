@@ -63,7 +63,7 @@ void setup() {
 void loop() {
   //*******refresh display every 0.5 s************
   static unsigned long timeToShowLcd = 0;
-  if ((millis() - timeToShowLcd) > 500) {
+  if ((millis() - timeToShowLcd) > 300) {
     timeToShowLcd = millis();
     lcd_show();
   }

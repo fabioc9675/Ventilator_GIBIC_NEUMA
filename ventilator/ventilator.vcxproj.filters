@@ -19,8 +19,8 @@
       <Filter>Misc Files</Filter>
     </None>
     <None Include="lcd.ino" />
-    <None Include="refresh_Data.ino" />
     <None Include="ventilator.ino" />
+    <None Include="utilities.ino" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.ventilator.vsarduino.h">

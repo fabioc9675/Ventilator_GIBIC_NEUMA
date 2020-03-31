@@ -12,10 +12,10 @@ volatile unsigned int menu = 0;
 
 // Global al ser usada en loop e ISR (encoder)
 unsigned long tiempo1 = 0;
-float relacionIE = 4;
+float relacionIE = 2;
 float maxPresion = 4;
 float maxFlujo = 4;
-unsigned int frecRespiratoria = 10;
+unsigned int frecRespiratoria = 12;
 
 // Banderas utilizadas en las interrupciones
 boolean insideMenuFlag = false;
@@ -26,12 +26,11 @@ boolean flagIE = false;
 int flagEncoder = 0;
 
 
-
 LiquidCrystal_I2C lcd(0x27, 20, 4);   // Objeto LCD
 
 void lcd_setup() {
 
-    // LCD setup
+  // LCD setup
   lcd.init();
   lcd.backlight();
 }
@@ -48,7 +47,7 @@ void lcd_show() {
 
   switch (menu) {
     case 0:
-      lcd.home();
+      // lcd.home();
       lcd.setCursor(0, 0);
       lcd.print("  InnspiraMED UdeA  ");
       lcd.setCursor(0, 1);
@@ -63,32 +62,38 @@ void lcd_show() {
       lcd.print("VT                  ");
       break;
     case 1:
+
       lcd.setCursor(0, 0);
       lcd.print("   Configuracion    ");
       lcd.setCursor(0, 1);
       lcd.print("                    ");
       lcd.setCursor(0, 2);
       if (flagFrecuencia) {
+
         lcd.print(" ");
         lcd.write(126);
         lcd.print("Frec:            ");
       }
       else {
+
         lcd.print("  Frec:             ");
       }
       lcd.setCursor(10, 2);
       lcd.print(frecRespiratoria);
       lcd.setCursor(0, 3);
       if (flagIE) {
+
         lcd.print(" ");
         lcd.write(126);
         lcd.print("I:E:              ");
       }
       else {
+
         lcd.print("  I:E:              ");
       }
       lcd.setCursor(10, 3);
       lcd.print(relacion_IE);
+
       break;
     case 2:
       lcd.setCursor(0, 0);

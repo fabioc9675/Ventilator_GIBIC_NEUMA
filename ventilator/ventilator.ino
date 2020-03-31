@@ -93,10 +93,8 @@ int milisecond = 0;
 
 
 // Some global variables available anywhere in the program
-volatile unsigned long startMillis;
-volatile unsigned long currentMillis;
-volatile float inspirationTime = 1.5;
-volatile float expirationTime = 3;
+volatile float inspirationTime = 1.666;
+volatile float expirationTime = 3.333;
 
 // definiciones del timer
 volatile int interruptCounter = 0;
@@ -162,21 +160,13 @@ void setup() {
   RaspberryChain = String("");
   lcd_show();
 
+
+pinMode(14, OUTPUT);
+
 }
 
 
 void loop() {
-  //*******refresh display every 0.5 s************
-  static unsigned long timeToShowLcd = 0;
-  if ((millis() - timeToShowLcd) > 300) {
-    timeToShowLcd = millis();
-    // lcd_show();
-  }
-  //********************************************
-
-  // switchRoutine();
-  // encoderRoutine();
-  currentMillis = millis();
 
 
   // *************************************************
@@ -187,48 +177,12 @@ void loop() {
     interruptCounter++;
     contADC++;
 
-    if (flagDettachInterrupt_A) {
-      if (contDetach == 0 && flagDetach == false) {
-        detachInterrupt(A);  // desactiva la interrupcion A
-        flagDetach = true;
-      }
-      contDetach++;
-      if (contDetach >= 150) {
-        attachInterrupt(digitalPinToInterrupt(A), encoderInterrupt_A, FALLING);
-        flagDettachInterrupt_A = false;
-        flagDetach = false;
-        contDetach = 0;
-      }
-    }
-
-    if (flagDettachInterrupt_B) {
-      if (contDetach == 0 && flagDetach == false) {
-        detachInterrupt(B);  // desactiva la interrupcion A
-        flagDetach = true;
-      }
-      contDetach++;
-      if (contDetach >= 150) {
-        attachInterrupt(digitalPinToInterrupt(B), encoderInterrupt_B, FALLING);
-        flagDettachInterrupt_B = false;
-        flagDetach = false;
-        contDetach = 0;
-      }
-    }
-
-
-    milisecond ++;
-    if (milisecond == 1000) {
-      milisecond = 0;
-      second++;
-      if (second == 60) {
-        second = 0;
-      }
-    }
-
     if (contADC == 50) {
       fl_ADC = true;
       contADC = 0;
     }
+
+
     if (interruptCounter == 1) {        // Inicia el ciclado abriendo electrovalvula de entrada y cerrando electrovalvula de salida
       //  digitalWrite(EV_01_P2, HIGH);   // turn the LED on (HIGH is the voltage level)
       digitalWrite(EV_01_P1, HIGH);   // turn the LED on (HIGH is the voltage level)
@@ -247,9 +201,56 @@ void loop() {
       digitalWrite(EV_03_P1, HIGH);    // turn the LED off by making the voltage LOW
       //  digitalWrite(EV_03_P2, HIGH);   // turn the LED on (HIGH is the voltage level)
     }
-    else if (interruptCounter == int(((inspirationTime + expirationTime) * 1000))) {
+    else if (interruptCounter >= int(((inspirationTime + expirationTime) * 1000))) {
       interruptCounter = 0;
     }
+
+
+    if (flagDettachInterrupt_A) {
+      if (contDetach == 0 && flagDetach == false) {
+        detachInterrupt(A);  // desactiva la interrupcion A
+        flagDetach = true;
+      }
+      contDetach++;
+      if (contDetach >= 150) {
+        attachInterrupt(digitalPinToInterrupt(A), encoderInterrupt_A, FALLING);
+        flagDettachInterrupt_A = false;
+        flagDetach = false;
+        contDetach = 0;
+        digitalWrite(14, HIGH);
+        lcd_show();
+        digitalWrite(14, LOW);
+      }
+    }
+
+    if (flagDettachInterrupt_B) {
+      if (contDetach == 0 && flagDetach == false) {
+        detachInterrupt(B);  // desactiva la interrupcion A
+        flagDetach = true;
+      }
+      contDetach++;
+      if (contDetach >= 150) {
+        attachInterrupt(digitalPinToInterrupt(B), encoderInterrupt_B, FALLING);
+        flagDettachInterrupt_B = false;
+        flagDetach = false;
+        contDetach = 0;
+        digitalWrite(14, HIGH);
+        lcd_show();
+        digitalWrite(14, LOW);
+      }
+    }
+
+
+    milisecond ++;
+    if (milisecond == 1000) {
+      milisecond = 0;
+      second++;
+      if (second == 60) {
+        second = 0;
+      }
+    }
+
+
 
   }
   // Final interrupcion timer
@@ -292,7 +293,7 @@ void loop() {
 
     // Envio de la cadena de datos
     //Serial.println(RaspberryChain);
-    //Serial2.println(RaspberryChain);
+    Serial2.println(RaspberryChain);
 
     /*Serial.print("Pres1 = ");
       Serial.print(ADC1_Value);

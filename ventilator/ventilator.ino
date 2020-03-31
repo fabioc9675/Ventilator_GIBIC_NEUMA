@@ -95,8 +95,6 @@ int milisecond = 0;
 // *********************************
 
 // definiciones del ADC
-float Pressure1 = 0;
-float Pressure2 = 0;
 float Pin[10] = { 0,0,0,0,0,0,0,0,0,0 };
 float Pout[10] = { 0,0,0,0,0,0,0,0,0,0 };
 float SPin = 0;

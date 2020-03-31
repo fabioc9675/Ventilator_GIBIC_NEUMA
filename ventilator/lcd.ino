@@ -1,6 +1,5 @@
 #include <LiquidCrystal_I2C.h>
 
-
 //**********VALORES MAXIMOS**********
 #define MENU_QUANTITY 3
 #define MAX_FREC 40

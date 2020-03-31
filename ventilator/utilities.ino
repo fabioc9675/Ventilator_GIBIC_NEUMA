@@ -7,7 +7,6 @@ extern volatile bool flagDettachInterrupt_B;
 extern volatile bool flagDetach;
 extern volatile unsigned int contDetach;
 
-int sumador = 0;
 
 // variables para la medicion de milisegundos del programa
 unsigned long tiempoInterrupcion = 0;
@@ -50,7 +49,7 @@ void swInterruptAttention() {
   if (tiempoInterrupcion - ultimaInterrupcion > 100) {
     // portENTER_CRITICAL_ISR(&mux);
     switchRoutine();
-    Serial.println(tiempoInterrupcion - ultimaInterrupcion);
+    // Serial.println(tiempoInterrupcion - ultimaInterrupcion);
     // portEXIT_CRITICAL_ISR(&mux);
     ultimaInterrupcion = tiempoInterrupcion;
   }
@@ -64,7 +63,6 @@ void encoderInterruptAttention_A() {
     if ((digitalRead(B) == HIGH) && (digitalRead(A) == LOW)) {
       // portENTER_CRITICAL_ISR(&mux);
       flagEncoder = 0;
-      sumador--;
       flagDettachInterrupt_B = true;
       contDetach = 0;
       encoderRoutine();
@@ -82,7 +80,6 @@ void encoderInterruptAttention_B() {
     if ((digitalRead(A) == HIGH) && (digitalRead(B) == LOW)) {
       // portENTER_CRITICAL_ISR(&mux);
       flagEncoder = 1;
-      sumador++;
       flagDettachInterrupt_A = true;
       contDetach = 0;
       encoderRoutine();
@@ -203,15 +200,12 @@ void encoderRoutine() {
       switch (menu) {
         case 1:
           if (flagFrecuencia) {
-            if (digitalRead(B) == HIGH) {
               frecRespiratoria--;
               if (frecRespiratoria > MAX_FREC) {
                 frecRespiratoria = 0;
               }
-            }
           }
           else if (flagIE) {
-            if (digitalRead(B) == HIGH) {
               relacionIE = relacionIE - 0.1;
               if (relacionIE <= -MAX_RIE) {
                 relacionIE = -MAX_RIE;
@@ -219,7 +213,6 @@ void encoderRoutine() {
               if (relacionIE > 0 && relacionIE < 1) {
                 relacionIE = -1;
               }
-            }
             // Calculo del tiempo I:E
             if (relacionIE > 0) {
               inspirationTime = (60 / frecRespiratoria) / (1 + relacionIE);
@@ -235,20 +228,16 @@ void encoderRoutine() {
           break;
         case 2:
           if (flagPresion) {
-            if (digitalRead(B) == HIGH) {
               maxPresion--;
               if (maxPresion > MAX_PRESION) {
                 maxPresion = MAX_PRESION;
               }
-            }
           }
           else if (flagFlujo) {
-            if (digitalRead(B) == HIGH) {
               maxFlujo--;
               if (maxFlujo > MAX_FLUJO) {
                 maxFlujo = MAX_FLUJO;
               }
-            }
           }
           break;
       }
@@ -258,6 +247,5 @@ void encoderRoutine() {
   flagEncoder = 3;
   //lcd_show();
 
-  Serial.println(sumador);
   // portEXIT_CRITICAL_ISR(&mux);
 }

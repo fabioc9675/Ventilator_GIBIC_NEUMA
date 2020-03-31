@@ -123,10 +123,8 @@ float Sdpmax = 0;
 float Sdpmin = 0;
 
 // Some global variables available anywhere in the program
-volatile unsigned long startMillis;
-volatile unsigned long currentMillis;
-volatile float inspirationTime = 1.5;
-volatile float expirationTime = 3;
+volatile float inspirationTime = 1.666;
+volatile float expirationTime = 3.333;
 
 // definiciones del timer
 volatile int interruptCounter = 0;
@@ -192,94 +190,51 @@ void setup() {
 
 	lcd_show();
 
+
+pinMode(14, OUTPUT);
+
 }
 
 void loop() {
-	//*******refresh display every 0.5 s************
-	static unsigned long timeToShowLcd = 0;
-	if ((millis() - timeToShowLcd) > 300) {
-		timeToShowLcd = millis();
-		lcd_show();
-	}
-	//********************************************
 
-	// switchRoutine();
-	// encoderRoutine();
-	currentMillis = millis();
+  // *************************************************
+  // **** Atencion a rutina de interrupcion por timer
+  // *************************************************
+  if (flagTimerInterrupt) {
+    flagTimerInterrupt = false;
+    interruptCounter++;
+    contADC++;
 
-	// *************************************************
-	// **** Atencion a rutina de interrupcion por timer
-	// *************************************************
-	if (flagTimerInterrupt) {
-		flagTimerInterrupt = false;
-		interruptCounter++;
-		contADC++;
+    if (contADC == 50) {
+      fl_ADC = true;
+      contADC = 0;
+    }
 
-		if (flagDettachInterrupt_A) {
-			if (contDetach == 0 && flagDetach == false) {
-				detachInterrupt(A);  // desactiva la interrupcion A
-				flagDetach = true;
-			}
-			contDetach++;
-			if (contDetach >= 150) {
-				attachInterrupt(digitalPinToInterrupt(A), encoderInterrupt_A, FALLING);
-				flagDettachInterrupt_A = false;
-				flagDetach = false;
-				contDetach = 0;
-			}
-		}
 
-		if (flagDettachInterrupt_B) {
-			if (contDetach == 0 && flagDetach == false) {
-				detachInterrupt(B);  // desactiva la interrupcion A
-				flagDetach = true;
-			}
-			contDetach++;
-			if (contDetach >= 150) {
-				attachInterrupt(digitalPinToInterrupt(B), encoderInterrupt_B, FALLING);
-				flagDettachInterrupt_B = false;
-				flagDetach = false;
-				contDetach = 0;
-			}
-		}
+    if (interruptCounter == 1) {        // Inicia el ciclado abriendo electrovalvula de entrada y cerrando electrovalvula de salida
+      //  digitalWrite(EV_01_P2, HIGH);   // turn the LED on (HIGH is the voltage level)
+      digitalWrite(EV_01_P1, HIGH);   // turn the LED on (HIGH is the voltage level)
 
-		milisecond++;
-		if (milisecond == 1000) {
-			milisecond = 0;
-			second++;
-			if (second == 60) {
-				second = 0;
-			}
-		}
-
-		if (contADC == 50) {
-			fl_ADC = true;
-			contADC = 0;
-		}
-		if (interruptCounter == 1) {        // Inicia el ciclado abriendo electrovalvula de entrada y cerrando electrovalvula de salida
-		  //  digitalWrite(EV_01_P2, HIGH);   // turn the LED on (HIGH is the voltage level)
-			digitalWrite(EV_01_P1, HIGH);   // turn the LED on (HIGH is the voltage level)
-
-			digitalWrite(EV_02_P1, LOW);   // turn the LED on (HIGH is the voltage level)
-			//  digitalWrite(EV_02_P2, LOW);   // turn the LED on (HIGH is the voltage level)
-			digitalWrite(EV_03_P1, LOW);   // turn the LED on (HIGH is the voltage level)
-			//  digitalWrite(EV_03_P2, LOW);   // turn the LED on (HIGH is the voltage level)
-			
-			//Calculos
+      digitalWrite(EV_02_P1, LOW);   // turn the LED on (HIGH is the voltage level)
+      //  digitalWrite(EV_02_P2, LOW);   // turn the LED on (HIGH is the voltage level)
+      digitalWrite(EV_03_P1, LOW);   // turn the LED on (HIGH is the voltage level)
+      //  digitalWrite(EV_03_P2, LOW);   // turn the LED on (HIGH is the voltage level)
+      
+      //Calculos
 			Pin_min = SPin;
 			Pout_min = SPout;
+      
+    }
+    else if (interruptCounter == int(inspirationTime * 1000)) { // espera 1 segundo y cierra electrovalvula de entrada y abre electrovalvula de salida
+      //  digitalWrite(EV_01_P2, LOW);    // turn the LED off by making the voltage LOW
+      digitalWrite(EV_01_P1, LOW);   // turn the LED on (HIGH is the voltage level)
 
-		}
-		else if (interruptCounter == int(inspirationTime * 1000)) { // espera 1 segundo y cierra electrovalvula de entrada y abre electrovalvula de salida
-		  //  digitalWrite(EV_01_P2, LOW);    // turn the LED off by making the voltage LOW
-			digitalWrite(EV_01_P1, LOW);   // turn the LED on (HIGH is the voltage level)
-
-			digitalWrite(EV_02_P1, HIGH);    // turn the LED off by making the voltage LOW
-			//  digitalWrite(EV_02_P2, HIGH);   // turn the LED on (HIGH is the voltage level)
-			digitalWrite(EV_03_P1, HIGH);    // turn the LED off by making the voltage LOW
-			//  digitalWrite(EV_03_P2, HIGH);   // turn the LED on (HIGH is the voltage level)
-
-			//Calculos
+      digitalWrite(EV_02_P1, HIGH);    // turn the LED off by making the voltage LOW
+      //  digitalWrite(EV_02_P2, HIGH);   // turn the LED on (HIGH is the voltage level)
+      digitalWrite(EV_03_P1, HIGH);    // turn the LED off by making the voltage LOW
+      //  digitalWrite(EV_03_P2, HIGH);   // turn the LED on (HIGH is the voltage level)
+      
+      //Calculos
 			Pin_max = SPin;
 			Pout_max = SPout;
 			dpmax = Pin_max - Pin_min;
@@ -290,10 +245,11 @@ void loop() {
 			if (dpmin < 0) {
 				dpmin = -dpmin;
 			}
-		}
-		else if (interruptCounter == int(((inspirationTime + expirationTime) * 1000))) {
-			interruptCounter = 0;
-			Peep = UmbralPeep;
+      
+    }
+    else if (interruptCounter >= int(((inspirationTime + expirationTime) * 1000))) {
+      interruptCounter = 0;
+      Peep = UmbralPeep;
 			UmbralPeep = 100;
 			Ppico = UmbralPpico - 2;
 			UmbralPpico = -100;
@@ -324,15 +280,61 @@ void loop() {
 			Sdpmax = Sdpmax / 10;
 			Sdpmin = Sdpmin / 10;
 			VT = SComp * (Sdpmax - Sdpmin);
-		}	
-	}
-	// Final interrupcion timer
+	
+    }
 
-	// *************************************************
-	// **** Atencion a rutina de adquisicion ADC
-	// *************************************************
-	if (fl_ADC) {
-		fl_ADC = false;
+
+    if (flagDettachInterrupt_A) {
+      if (contDetach == 0 && flagDetach == false) {
+        detachInterrupt(A);  // desactiva la interrupcion A
+        flagDetach = true;
+      }
+      contDetach++;
+      if (contDetach >= 150) {
+        attachInterrupt(digitalPinToInterrupt(A), encoderInterrupt_A, FALLING);
+        flagDettachInterrupt_A = false;
+        flagDetach = false;
+        contDetach = 0;
+        digitalWrite(14, HIGH);
+        lcd_show();
+        digitalWrite(14, LOW);
+      }
+    }
+
+    if (flagDettachInterrupt_B) {
+      if (contDetach == 0 && flagDetach == false) {
+        detachInterrupt(B);  // desactiva la interrupcion A
+        flagDetach = true;
+      }
+      contDetach++;
+      if (contDetach >= 150) {
+        attachInterrupt(digitalPinToInterrupt(B), encoderInterrupt_B, FALLING);
+        flagDettachInterrupt_B = false;
+        flagDetach = false;
+        contDetach = 0;
+        digitalWrite(14, HIGH);
+        lcd_show();
+        digitalWrite(14, LOW);
+      }
+    }
+    
+    milisecond ++;
+    if (milisecond == 1000) {
+      milisecond = 0;
+      second++;
+      if (second == 60) {
+        second = 0;
+      }
+    }
+
+  }
+  // Final interrupcion timer
+
+  // *************************************************
+  // **** Atencion a rutina de adquisicion ADC
+  // *************************************************
+  if (fl_ADC) {
+    fl_ADC = false;
 		ADC1_Value = analogRead(ADC_PRESS_1);
 		ADC2_Value = analogRead(ADC_PRESS_2);
 		ADC3_Value = analogRead(ADC_PRESS_3);
@@ -400,42 +402,42 @@ void loop() {
 		  Serial.print(ADC2_Value + 180);
 		  Serial.print(", Puls = ");
 		  Serial.println(numeroPulsos);*/
-	}
-	// Final muestreo ADC
+  }
+  // Final muestreo ADC
 
 
-	// *************************************************
-	// **** Atencion a rutina de interrupcion por switch
-	// *************************************************
-	if (flagSwInterrupt) {
-		flagSwInterrupt = false;
-		// Atencion a la interrupcion
-		swInterruptAttention();
-	}
-	// Final interrupcion Switch
+  // *************************************************
+  // **** Atencion a rutina de interrupcion por switch
+  // *************************************************
+  if (flagSwInterrupt) {
+    flagSwInterrupt = false;
+    // Atencion a la interrupcion
+    swInterruptAttention();
+  }
+  // Final interrupcion Switch
 
 
-	// *************************************************
-	// **** Atencion a rutina de interrupcion por encoder
-	// *************************************************
-	if (flagEncoderInterrupt_A) {
-		flagEncoderInterrupt_A = false;
-		// Atencion a la interrupcion
-		encoderInterruptAttention_A();
-	}
-	// Final interrupcion encoder
+  // *************************************************
+  // **** Atencion a rutina de interrupcion por encoder
+  // *************************************************
+  if (flagEncoderInterrupt_A) {
+    flagEncoderInterrupt_A = false;
+    // Atencion a la interrupcion
+    encoderInterruptAttention_A();
+  }
+  // Final interrupcion encoder
 
 
-	// *************************************************
-	// **** Atencion a rutina de interrupcion por encoder
-	// *************************************************
-	if (flagEncoderInterrupt_B) {
-		flagEncoderInterrupt_B = false;
-		// Atencion a la interrupcion
-		encoderInterruptAttention_B();
-	}
-	// Final interrupcion encoder
-
+  // *************************************************
+  // **** Atencion a rutina de interrupcion por encoder
+  // *************************************************
+  if (flagEncoderInterrupt_B) {
+    flagEncoderInterrupt_B = false;
+    // Atencion a la interrupcion
+    encoderInterruptAttention_B();
+  }
+  // Final interrupcion encoder
+	         
 }
 
 void IRAM_ATTR onTimer() {

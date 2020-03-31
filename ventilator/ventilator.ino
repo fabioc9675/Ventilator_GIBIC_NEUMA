@@ -23,7 +23,12 @@
 #define SW    5      //sw a pin digital 3 (SW en modulo)  
 
 // Definiciones para controlar el sensor de flujo
-#define FLANCO          26  // pin digital numero 2 para deteccion de flujo IRQ
+#define FLANCO          18  // pin digital numero 2 para deteccion de flujo IRQ
+
+#define AMP1       0.0308
+#define OFFS1      -22.673
+#define AMP2       0.0309
+#define OFFS2      -32.354
 
 // Calibracion de los sensores de presion
 #define AMP1       0.0308
@@ -72,8 +77,6 @@ float Pressure2 = 0;
 float Pressure3 = 0;
 int numeroPulsos = 0;
 
-
-
 // variables para la atencion de interrupciones
 volatile bool flagSwInterrupt = false;
 volatile bool flagEncoderInterrupt_A = false;
@@ -91,6 +94,35 @@ int second = 0;
 int milisecond = 0;
 // *********************************
 
+// definiciones del ADC
+float Pressure1 = 0;
+float Pressure2 = 0;
+float Pin[10] = { 0,0,0,0,0,0,0,0,0,0 };
+float Pout[10] = { 0,0,0,0,0,0,0,0,0,0 };
+float SPin = 0;
+float SPout = 0;
+float Peep = 0;
+float Ppico = 0;
+float UmbralPeep = 100;
+float UmbralPpico = -100;
+
+float Pin_max = 0;
+float Pout_max = 0;
+float Pin_min = 0;
+float Pout_min = 0;
+float dpmin = 0;
+float dpmax = 0;
+float Comp = 0;
+float C1 = 1.3836;
+float C2 = 38.2549;
+float C3 = 291.7069;
+float VT = 0;
+float V_Comp[10] = { 0,0,0,0,0,0,0,0,0,0 };
+float V_dpmax[10] = { 0,0,0,0,0,0,0,0,0,0 };
+float V_dpmin[10] = { 0,0,0,0,0,0,0,0,0,0 };
+float SComp = 0;
+float Sdpmax = 0;
+float Sdpmin = 0;
 
 // Some global variables available anywhere in the program
 volatile unsigned long startMillis;
@@ -214,8 +246,7 @@ void loop() {
         contDetach = 0;
       }
     }
-
-
+    
     milisecond ++;
     if (milisecond == 1000) {
       milisecond = 0;
@@ -249,11 +280,21 @@ void loop() {
     }
     else if (interruptCounter == int(((inspirationTime + expirationTime) * 1000))) {
       interruptCounter = 0;
+      //Calculos
+        Pin_max = SPin;
+        Pout_max = SPout;
+        dpmax = Pin_max - Pin_min;
+        if (dpmax < 0) {
+            dpmax = -dpmax;
+        }
+        dpmin = Pout_max - Pout_min;
+        if (dpmin < 0) {
+            dpmin = -dpmin;
+        }
     }
 
   }
   // Final interrupcion timer
-
 
   // *************************************************
   // **** Atencion a rutina de adquisicion ADC
@@ -335,7 +376,7 @@ void loop() {
     encoderInterruptAttention_B();
   }
   // Final interrupcion encoder
-
+	         
 }
 
 void IRAM_ATTR onTimer() {

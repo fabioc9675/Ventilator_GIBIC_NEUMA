@@ -188,8 +188,8 @@ void setup() {
 	expiTime = String("3.5");
 	frequency = String("20");
 	volume = String("240");
-
 	RaspberryChain = String("");
+
 	lcd_show();
 
 }
@@ -199,14 +199,13 @@ void loop() {
 	static unsigned long timeToShowLcd = 0;
 	if ((millis() - timeToShowLcd) > 300) {
 		timeToShowLcd = millis();
-		// lcd_show();
+		lcd_show();
 	}
 	//********************************************
 
 	// switchRoutine();
 	// encoderRoutine();
 	currentMillis = millis();
-
 
 	// *************************************************
 	// **** Atencion a rutina de interrupcion por timer

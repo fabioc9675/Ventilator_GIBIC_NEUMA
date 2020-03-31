@@ -51,15 +51,21 @@ void lcd_show() {
       lcd.setCursor(0, 0);
       lcd.print("  InnspiraMED UdeA  ");
       lcd.setCursor(0, 1);
-      lcd.print("FR        Ppico     ");
+      lcd.print("FR        PIP     ");
       lcd.setCursor(4, 1);
       lcd.print(frecRespiratoria);
+      lcd.setCursor(14, 1);
+      lcd.print(String(Ppico,1));
       lcd.setCursor(0, 2);
       lcd.print("I:E       PEEP      ");
       lcd.setCursor(4, 2);
       lcd.print(relacion_IE);
+      lcd.setCursor(15, 2);
+      lcd.print(String(Peep, 1));
       lcd.setCursor(0, 3);
       lcd.print("VT                  ");
+      lcd.setCursor(4,3);
+      lcd.print(String(VT, 1));
       break;
     case 1:
       lcd.setCursor(0, 0);

@@ -124,7 +124,6 @@ void switchRoutine() {
 	}
 
 	lcd_show();
-
 }
 
 void encoderRoutine() {

@@ -64,7 +64,7 @@ Fan fan1 = { FLANCO, 0, false };
 // Definiciones del ADC
 volatile int contADC = 0;
 bool fl_ADC = false;
-bool flagTimerInterrupt = false;
+
 int ADC1_Value = 0;     //
 int ADC2_Value = 0;
 int ADC3_Value = 0;
@@ -74,6 +74,7 @@ float Pressure3 = 0;
 int numeroPulsos = 0;
 
 // variables para la atencion de interrupciones
+bool flagTimerInterrupt = false;
 volatile bool flagSwInterrupt = false;
 volatile bool flagEncoderInterrupt_A = false;
 volatile bool flagEncoderInterrupt_B = false;
@@ -192,7 +193,6 @@ void setup() {
 	RaspberryChain = String("");
 
 	lcd_show();
-	pinMode(14, OUTPUT);
 
 	//// Task assigned to Core 1
 	//xTaskCreatePinnedToCore(

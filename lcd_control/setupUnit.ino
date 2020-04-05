@@ -72,7 +72,7 @@ hw_timer_t* timer = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
-// definicion de interrupciones
+// Interrupt routines
 void IRAM_ATTR onTimer();  // funcion de interrupcion
 void IRAM_ATTR swInterrupt();
 void IRAM_ATTR encoderInterrupt_A();

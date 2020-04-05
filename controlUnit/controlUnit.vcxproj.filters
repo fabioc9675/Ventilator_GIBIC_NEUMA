@@ -15,13 +15,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <None Include="controlUnit.ino" />
     <None Include="src\arduino folders read me.txt">
       <Filter>Misc Files</Filter>
     </None>
-    <None Include="setupUnit.ino" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="__vm\.lcd_control.vsarduino.h">
+    <ClInclude Include="__vm\.controlUnit.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

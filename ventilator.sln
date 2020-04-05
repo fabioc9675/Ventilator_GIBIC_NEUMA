@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ventilator", "ventilator\ve
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lcd_control", "lcd_control\lcd_control.vcxproj", "{DA65D88A-92C6-40BA-95B6-B5AF2BFAC533}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "controlUnit", "controlUnit\controlUnit.vcxproj", "{2F910881-582F-43F0-9321-5DD5E99195B9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -21,6 +23,10 @@ Global
 		{DA65D88A-92C6-40BA-95B6-B5AF2BFAC533}.Debug|x86.Build.0 = Debug|Win32
 		{DA65D88A-92C6-40BA-95B6-B5AF2BFAC533}.Release|x86.ActiveCfg = Release|Win32
 		{DA65D88A-92C6-40BA-95B6-B5AF2BFAC533}.Release|x86.Build.0 = Release|Win32
+		{2F910881-582F-43F0-9321-5DD5E99195B9}.Debug|x86.ActiveCfg = Debug|Win32
+		{2F910881-582F-43F0-9321-5DD5E99195B9}.Debug|x86.Build.0 = Debug|Win32
+		{2F910881-582F-43F0-9321-5DD5E99195B9}.Release|x86.ActiveCfg = Release|Win32
+		{2F910881-582F-43F0-9321-5DD5E99195B9}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

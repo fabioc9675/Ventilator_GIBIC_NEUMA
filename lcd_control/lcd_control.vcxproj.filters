@@ -18,7 +18,7 @@
     <None Include="src\arduino folders read me.txt">
       <Filter>Misc Files</Filter>
     </None>
-    <None Include="setupUnit.ino" />
+    <None Include="configurationUnit.ino" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.lcd_control.vsarduino.h">

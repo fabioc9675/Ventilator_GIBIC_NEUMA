@@ -9,8 +9,8 @@
 //**********VALORES MAXIMOS**********
 #define MENU_QUANTITY 3
 #define MAX_FREC 40
-#define MAX_RIE 4
-#define MAX_PRESION 40
+#define MAX_RIE 40
+#define MAX_PRESION 50
 #define MAX_FLUJO 40
 
 // UART Configuration
@@ -37,11 +37,13 @@ volatile unsigned int menu = 0;
 
 // Global al ser usada en loop e ISR (encoder)
 unsigned long tiempo1 = 0;
-float relacionIE = 2;
+int relacionIE = 20;
 String relacion_IE = "1:4.1";
-float maxPresion = 4;
+byte maxPresion = 30;
 float maxFlujo = 4;
-unsigned int frecRespiratoria = 12;
+byte frecRespiratoria = 12;
+byte I = 1;
+byte E = 41;
 
 // Banderas utilizadas en las interrupciones
 boolean insideMenuFlag = false;
@@ -104,8 +106,16 @@ void setup() {
 
 // the loop function runs over and over again until power down or reset
 void loop() {
-    //Serial.print("I am ESP2\n");
-    //delay(500);
+    
+    receiveData();
+
+    // Timer interrupt
+    if (flagTimerInterrupt) {
+        portENTER_CRITICAL(&timerMux);
+        flagTimerInterrupt = false;
+        portEXIT_CRITICAL(&timerMux);
+    }
+
     // *************************************************
     // **** Atencion a rutina de interrupcion por switch
     // *************************************************
@@ -113,8 +123,7 @@ void loop() {
         flagSwInterrupt = false;
         // Atencion a la interrupcion
         swInterruptAttention();
-    }
-    // Final interrupcion Switch
+    }  // Final interrupcion Switch
 
 
     // *************************************************
@@ -136,13 +145,10 @@ void loop() {
         // Atencion a la interrupcion
         encoderInterruptAttention_B();
     }// Final interrupcion encoder
-    
-  
 }
 
 void IRAM_ATTR onTimer() {
     portENTER_CRITICAL(&timerMux);
-    //Serial.println("I am inside onTimer");
     flagTimerInterrupt = true;
     portEXIT_CRITICAL(&timerMux);
 }
@@ -151,11 +157,17 @@ void IRAM_ATTR onTimer() {
 void lcd_show() {
 
     if (relacionIE > 0) {
-        relacion_IE = "1:" + String(relacionIE, 1);
+        relacion_IE = "1:" + String((float)relacionIE/10, 1);
+        I = 1;
+        E = (char)relacionIE;
     }
     else {
-        relacion_IE = String(-relacionIE, 1) + ":1";
+        relacion_IE = String(-(float)relacionIE/10, 1) + ":1";
+        I = (char)(-relacionIE);
+        E = 1;
     }
+    //Serial.println("IE = " + String(I) + ':' + String(E));
+    //Serial.println(relacionIE);
 
     switch (menu) {
     case 0:
@@ -180,7 +192,6 @@ void lcd_show() {
         lcd.print(String(VT, 1));
         break;
     case 1:
-
         lcd.setCursor(0, 0);
         lcd.print("   Configuracion    ");
         lcd.setCursor(0, 1);
@@ -208,7 +219,6 @@ void lcd_show() {
         }
         lcd.setCursor(10, 3);
         lcd.print(relacion_IE);
-
         break;
     case 2:
         lcd.setCursor(0, 0);
@@ -219,25 +229,26 @@ void lcd_show() {
         if (flagPresion) {
             lcd.print(" ");
             lcd.write(126);
-            lcd.print("Presion:            ");
+            lcd.print("PIP:    cmH2O     ");
         }
         else {
-            lcd.print("  Presion:            ");
+            lcd.print("  PIP:    cmH2O     ");
         }
-        lcd.setCursor(12, 2);
+        lcd.setCursor(7, 2);
         lcd.print(maxPresion);
         lcd.setCursor(0, 3);
-        if (flagFlujo) {
-            lcd.print(" ");
-            lcd.write(126);
-            lcd.print("Flujo:            ");
-            Serial.println("Flujo:  ");
-        }
-        else {
-            lcd.print("  Flujo:            ");
-        }
-        lcd.setCursor(12, 3);
-        lcd.print(maxFlujo);
+        lcd.print("                    ");
+        //if (flagFlujo) {
+        //    lcd.print(" ");
+        //    lcd.write(126);
+        //    lcd.print("Flujo:            ");
+        //    //Serial.println("Flujo:  ");
+        //}
+        //else {
+        //    lcd.print("  Flujo:            ");
+        //}
+        //lcd.setCursor(12, 3);
+        //lcd.print(maxFlujo);
         break;
     default:
         lcd.setCursor(0, 0);
@@ -340,13 +351,12 @@ void encoderRoutine() {
                     }
                 }
                 else if (flagIE) {
-
-                    relacionIE = relacionIE + 0.1;
+                    relacionIE = relacionIE + 1;
                     if (relacionIE >= MAX_RIE) {
                         relacionIE = MAX_RIE;;
                     }
-                    if (relacionIE > -1.0 && relacionIE < 0) {
-                        relacionIE = 1;
+                    if (relacionIE > -10 && relacionIE < 0) {
+                        relacionIE = 10;
                     }
                 }
                 break;
@@ -384,12 +394,12 @@ void encoderRoutine() {
                     }
                 }
                 else if (flagIE) {
-                    relacionIE = relacionIE - 0.1;
+                    relacionIE = relacionIE - 1;
                     if (relacionIE <= -MAX_RIE) {
                         relacionIE = -MAX_RIE;
                     }
-                    if (relacionIE > 0 && relacionIE < 1) {
-                        relacionIE = -1;
+                    if (relacionIE > 0 && relacionIE < 10) {
+                        relacionIE = -10;
                     }
                 }
                 break;
@@ -397,7 +407,7 @@ void encoderRoutine() {
                 if (flagPresion) {
                     maxPresion--;
                     if (maxPresion > MAX_PRESION) {
-                        maxPresion = MAX_PRESION;
+                        maxPresion = 0;
                     }
                 }
                 else if (flagFlujo) {
@@ -431,8 +441,7 @@ void switchRoutine() {
     else if (menu == 1 && flagIE) {
         insideMenuFlag = !insideMenuFlag;
         flagIE = false;
-        Serial.println(String(frecRespiratoria) + ";" + relacion_IE);
-        // Serial.println("SW MENU 1_3");
+        sendSerialData();
     }
     else if (menu == 2 && !insideMenuFlag) {
         insideMenuFlag = !insideMenuFlag;
@@ -441,13 +450,53 @@ void switchRoutine() {
     }
     else if (menu == 2 && flagPresion) {
         flagPresion = false;
-        flagFlujo = true;
+        //flagFlujo = true;
+        insideMenuFlag = !insideMenuFlag;
         //Serial.println("Config maxFlujo");
+        sendSerialData();
     }
-    else if (menu == 2 && flagFlujo) {
+    /*else if (menu == 2 && flagFlujo) {
         insideMenuFlag = !insideMenuFlag;
         flagFlujo = false;
-    }
+    }*/
     lcd_show();
 }
+
+// Function to receive data from serial communication
+void receiveData() {
+    if (Serial2.available() > 5) {
+        String dataIn = Serial2.readStringUntil(';');
+        int contComas = 0;
+        for (int i = 0; i < dataIn.length(); i++) {
+            if (dataIn[i] == ',') {
+                contComas++;
+            }
+        }
+        String dataIn2[contComas];
+        for (int i = 0; i < contComas + 1; i++) {
+            dataIn2[i] = dataIn.substring(0, dataIn.indexOf(','));
+            dataIn = dataIn.substring(dataIn.indexOf(',') + 1);
+        }
+        //cargue los datos aqui
+        //para entero
+        //contCiclos =dataIn2[0].toInt();
+        //para float
+        Ppico = dataIn2[0].toFloat();
+        Peep = dataIn2[1].toFloat();
+        VT = dataIn2[2].toFloat();
+
+        Serial2.flush();
+
+        //Serial.println(String(frecRespiratoria) + ',' + String(I) + ',' + String(E));
+        for (int i = 0; i < contComas + 1; i++) {
+            Serial.println(dataIn2[i]);
+        }
+    }
+}
+
+void sendSerialData() {
+    String dataToSend = String(frecRespiratoria) + ',' + String(I) + ',' + String(E) + ',' + String(maxPresion) + ';';
+    Serial2.print(dataToSend);
+}
+
 

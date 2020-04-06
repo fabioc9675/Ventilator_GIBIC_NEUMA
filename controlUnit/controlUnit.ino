@@ -3,12 +3,17 @@
  Created:	4/3/2020 17:28:49
  Author:	Helber Carvajal
 */
+#include <math.h>
 #include <EEPROM.h>
 
 // Definiciones para controlar el shiel DFRobot quad motor driver
-#define EV_01_P1        25  // equivale al pin 3 del shield, velocidad motor 1
-#define EV_02_P1        27  // equivale al pin 6 del shield, velocidad motor 4
-#define EV_03_P1        23  // equivale al pin 11 del shield, velocidad motor 2
+// Definiciones para controlar el shiel DFRobot quad motor driver
+#define EV_INSPIRA   25  // equivale al pin 3 del shield, velocidad motor 1
+#define EV_ESC_CAM   27  // equivale al pin 6 del shield, velocidad motor 4
+#define EV_ESPIRA    23  // equivale al pin 11 del shield, velocidad motor 2
+
+#define EV_IN_CAM    26  // equivale al pin 5 del shield, velocidad motor 3
+#define EV_IN_FLU    14  // equivale al pin 5 del shield, velocidad motor 3
 
 // Definiciones para el manejo del ADC
 #define ADC_PRESS_1     39  // pin ADC para presion 1
@@ -18,18 +23,20 @@
 // Definiciones para controlar el sensor de flujo
 #define FLANCO          18  // pin digital numero 2 para deteccion de flujo IRQ
 
-#define AMP1       0.0308
-#define OFFS1      -22.673
-#define AMP2       0.0309
-#define OFFS2      -32.354
+#define AMP1       0.0281
+#define OFFS1      -28.071
+#define AMP2       0.0303
+#define OFFS2      -22.776
 
 // Calibracion de los sensores de presion
-#define AMP1	0.0308
-#define OFFS1   -22.673
-#define AMP2    0.0309
-#define OFFS2   -32.354
-#define AMP3    0.0309
-#define OFFS3   -32.354
+#define AMP1       0.0298
+#define OFFS1      -28.013-1.4167
+#define AMP2       0.0303
+#define OFFS2      -22.776
+//#define AMP3       0.034
+//#define OFFS3      -22.938
+#define AMP3       0.0339
+#define OFFS3      -21.673-1.16
 
 // Variables de control del protocolo
 #define RXD2 16
@@ -78,8 +85,9 @@ volatile bool flagDettachInterrupt_A = false;
 volatile bool flagDettachInterrupt_B = false;
 volatile bool flagDetach = false;
 volatile unsigned int contDetach = 0;
-
-
+unsigned int contCiclos = 0;
+unsigned int contEscrituraEEPROM = 0;
+unsigned int contUpdateData = 0;
 //***********************************
 // datos para prueba de transmision
 int pruebaDato = 0;
@@ -88,10 +96,12 @@ int milisecond = 0;
 // *********************************
 
 // definiciones del ADC
-float Pin[10] = { 0,0,0,0,0,0,0,0,0,0 };
-float Pout[10] = { 0,0,0,0,0,0,0,0,0,0 };
-float SPin = 0;
-float SPout = 0;
+float Pin[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+float Pout[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+float Ppac[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }; //Vector de acumulación de presiones en el paciente
+float SPin = 0; //Señal filtrada de presión de entada a la camara
+float SPout = 0; //Señal filtrada de presión de salida de la camara
+float SPpac = 0; //Señal filtrada de presión del paciente
 float Peep = 0;
 float Ppico = 0;
 float UmbralPeep = 100;
@@ -101,33 +111,61 @@ float Pin_max = 0;
 float Pout_max = 0;
 float Pin_min = 0;
 float Pout_min = 0;
-float dpmin = 0;
-float dpmax = 0;
+float dpout = 0;
+float dpin = 0;
+float DiffIns = 0;
 float Comp = 0;
-float C1 = 1.3836;
-float C2 = 38.2549;
-float C3 = 291.7069;
+float C1 = 429.69;
+float C2 = -0.862;
+float DifP = 0;
 float VT = 0;
-float V_Comp[10] = { 0,0,0,0,0,0,0,0,0,0 };
-float V_dpmax[10] = { 0,0,0,0,0,0,0,0,0,0 };
-float V_dpmin[10] = { 0,0,0,0,0,0,0,0,0,0 };
+float V_dpin[5] = { 0, 0, 0, 0, 0 };
+float V_dpout[5] = { 0, 0, 0, 0, 0 };
 float SComp = 0;
-float Sdpmax = 0;
-float Sdpmin = 0;
+float Sdpin = 0;
+float Sdpout = 0;
 
 // Some global variables available anywhere in the program
 volatile float inspirationTime = 1.666;
+volatile float Time2 = 1.666;
 volatile float expirationTime = 3.333;
 
 // definiciones del timer
 volatile int interruptCounter = 0;
 
+int frecRespiratoria = 12;
+int I = 1;
+int E = 41;
+int maxPresion = 30;
 // inicializacion del contador del timer
 hw_timer_t* timer = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
 void IRAM_ATTR onTimer();  // funcion de interrupcion
+
+int eeprom_wr_int(int dataIn = 0, char process = 'r') {
+	if (process == 'w') {
+		byte r1 = (dataIn & 0xff);
+		EEPROM.write(0, r1);
+		r1 = (dataIn & 0xff00) >> 8;
+		EEPROM.write(1, r1);
+		r1 = (dataIn & 0xff0000) >> 16;
+		EEPROM.write(2, r1);
+		r1 = (dataIn & 0xff000000) >> 24;
+		EEPROM.write(3, r1);
+		EEPROM.commit();
+		return 0;
+	}
+	else if (process == 'r') {
+		int dataRead = 0;
+		dataRead = EEPROM.read(0);
+		dataRead = (EEPROM.read(1) << 8) + dataRead;
+		dataRead = (EEPROM.read(2) << 16) + dataRead;
+		dataRead = (EEPROM.read(3) << 24) + dataRead;
+		return dataRead;
+	}
+}
 
 // the setup function runs once when you press reset or power the board
 void setup() {
@@ -142,14 +180,17 @@ void setup() {
 	//attachInterrupt(fan1.PIN, isr, RISING);
 
 	// inicializacion de los pines controladores de las EV como salidas
-	pinMode(EV_01_P1, OUTPUT);  // PIN 3   velocidad
-	pinMode(EV_02_P1, OUTPUT);  // PIN 6   velocidad
-	pinMode(EV_03_P1, OUTPUT);  // PIN 12  velocidad
-
-	EEPROM.begin(4);
+	pinMode(EV_INSPIRA, OUTPUT);	// PIN 3   velocidad
+	pinMode(EV_ESC_CAM, OUTPUT);	// PIN 6   velocidad
+	pinMode(EV_ESPIRA, OUTPUT);		// PIN 12  velocidad
+	pinMode(EV_IN_CAM, OUTPUT);		// PIN 5  velocidad
+	pinMode(EV_IN_FLU, OUTPUT);		// PIN 5  velocidad
 
 	Serial.begin(115200);
-	Serial2.begin(115200, SERIAL_8N1, RXD2, TXD2);
+	Serial2.begin(115200); // , SERIAL_8N1, RXD2, TXD2);
+
+	EEPROM.begin(4);
+	contCiclos = eeprom_wr_int();
 
 	// inicializacion de los strings
 	SERIALEQU = String("1234567890ABCD");
@@ -166,6 +207,7 @@ void setup() {
 
 // the loop function runs over and over again until power down or reset
 void loop() {
+	receiveData();
 
 	cycling();
 	// *************************************************
@@ -183,29 +225,34 @@ void loop() {
 
 		//Filtrado media movil
 		//-Almacenamiento de valores
-		Pin[9] = Pressure1;
+		Pin[9] = Pressure3;
 		Pout[9] = Pressure2;
+		Ppac[9] = Pressure1;
 		//-Corrimiento inicial
 		for (char i = 9; i >= 1; i--) {
 			Pin[9 - i] = Pin[9 - i + 1];
 			Pout[9 - i] = Pout[9 - i + 1];
+			Ppac[9 - i] = Ppac[9 - i + 1];
 		}
 		//-Calculo promedio
 		SPin = 0;
 		SPout = 0;
+		SPpac = 0;
 		for (char i = 0; i <= 9; i++) {
 			SPin = SPin + Pin[i];
 			SPout = SPout + Pout[i];
+			SPpac = SPpac + Ppac[i];
 		}
 		SPin = SPin / 10;
 		SPout = SPout / 10;
+		SPpac = SPpac / 10;
 		//-Calculo Peep
-		if (UmbralPeep > SPin) {
-			UmbralPeep = SPin;
+		if (UmbralPeep > SPpac) {
+			UmbralPeep = SPpac;
 		}
 		//-Calculo Ppico
-		if (UmbralPpico < SPin) {
-			UmbralPpico = SPin;
+		if (UmbralPpico < SPpac) {
+			UmbralPpico = SPpac;
 		}
 
 		// conteo de los pulsos
@@ -233,20 +280,50 @@ void loop() {
 		// Envio de la cadena de datos
 		//Serial.println(RaspberryChain);
 		//Serial2.println(RaspberryChain);
-
+		//Calibración sensores
 		/*Serial.print("Pres1 = ");
-		  Serial.print(ADC1_Value);
-		  Serial.print(", Pres2 = ");
-		  Serial.print(ADC2_Value + 180);
-		  Serial.print(", Puls = ");
-		  Serial.println(numeroPulsos);*/
-	}// Final muestreo ADC
-
+		Serial.print(SPin);
+		Serial.print(", Pres2 = ");
+		Serial.print(SPout);
+		Serial.print(", Pres3 = ");
+		Serial.println(SPpac);*/
+		//Calibración compliancia
+		//Serial.print("SPin = ");
+		//Serial.print(SPin);
+		//Serial.print(", SPout = ");
+		//Serial.print(SPout);    
+		//Serial.print(", Sdpin = ");
+		//Serial.print(Sdpin);
+		//Serial.print(", Sdpout = ");
+		//Serial.println(Sdpout);
+		//Serial.print(", Comp = ");
+		//Serial.print(SComp);
+		// Funcionamiento normal
+		// Serial.print(", Ppico = ");
+		// Serial.print(Ppico);
+		// Serial.print(", Peep = ");
+		// Serial.println(Peep);
+		// Serial.print(", VT = ");
+		// Serial.println(VT);
+		// Serial.print("SPin = ");
+		// Serial.print(SPin);
+		// Serial.print(", SPout = ");
+		// Serial.print(SPout);    
+		// Serial.print(", Sdpin = ");
+		// Serial.print(SPpac);
+		// Serial.println(", SPpac = ");
+		// Chequeo señales
+		// Serial.print("Pin = ");
+		// Serial.print(Pressure1);
+		// Serial.print(", Pout = ");
+		// Serial.print(Pressure2);
+		// Serial.print(", Ppac = ");
+		// Serial.println(Pressure3);
+	} // Final muestreo ADC
 }
 
 void IRAM_ATTR onTimer() {
 	portENTER_CRITICAL(&timerMux);
-	//Serial.println("I am inside onTimer");
 	flagTimerInterrupt = true;
 	portEXIT_CRITICAL(&timerMux);
 }
@@ -257,74 +334,107 @@ void IRAM_ATTR onTimer() {
 // Cycling of the Mechanical Ventilator
 void cycling() {
 	if (flagTimerInterrupt) {
+		portENTER_CRITICAL(&timerMux);
 		flagTimerInterrupt = false;
+		portEXIT_CRITICAL(&timerMux);
+		
 		interruptCounter++;
 		contADC++;
+		contEscrituraEEPROM++;
+		contUpdateData++;
+		
+		//Update data on LCD each 200ms
+		if (contUpdateData >= 200) {
+			contUpdateData = 0;
+			sendSerialData();
+			
+		}
+
+		if (contEscrituraEEPROM > 3600000) {
+			contEscrituraEEPROM = 0;
+			eeprom_wr_int(contCiclos, 'w');
+		}
 
 		if (contADC == 50) {
 			fl_ADC = true;
 			contADC = 0;
 		}
 
-		if (interruptCounter == 1) {        // Inicia el ciclado abriendo electrovalvula de entrada y cerrando electrovalvula de salida
-			digitalWrite(EV_01_P1, HIGH);   // turn the LED on (HIGH is the voltage level)
-			digitalWrite(EV_02_P1, LOW);	// turn the LED on (HIGH is the voltage level)
-			digitalWrite(EV_03_P1, LOW);	// turn the LED on (HIGH is the voltage level)
 
+		if (interruptCounter == 1) {        // Inicia el ciclado abriendo electrovalvula de entrada y cerrando electrovalvula de salida
+
+			digitalWrite(EV_INSPIRA, HIGH);   // turn the LED on (HIGH is the voltage level)
+			digitalWrite(EV_ESC_CAM, LOW);   // turn the LED on (HIGH is the voltage level)
+			digitalWrite(EV_ESPIRA, LOW);   // turn the LED on (HIGH is the voltage level)
+			digitalWrite(EV_IN_CAM, HIGH);   // turn the LED on (HIGH is the voltage level)
+			digitalWrite(EV_IN_FLU, LOW);   // turn the LED on (HIGH is the voltage level)
+
+
+			//} else if ((interruptCounter > 1) && (interruptCounter < int(inspirationTime * 1000))) {
+			//      if (Pressure2 >= 20) {
+			//        digitalWrite(EV_INSPIRA, HIGH);   // turn the LED on (HIGH is the voltage level)
+			//        digitalWrite(EV_IN_CAM, HIGH);   // turn the LED on (HIGH is the voltage level)
+			//      }
+		}
+		//    else if (interruptCounter == int(inspirationTime * 1000 * 0.05)) {
+		//      digitalWrite(EV_INSPIRA, HIGH);   // turn the LED on (HIGH is the voltage level)
+		//      digitalWrite(EV_ESC_CAM, LOW);    // turn the LED off by making the voltage LOW
+		//      digitalWrite(EV_IN_CAM, HIGH);   // turn the LED on (HIGH is the voltage level)
+		//      digitalWrite(EV_ESPIRA, HIGH);
+		//
+		//    }
+		else if (interruptCounter == int(inspirationTime * 1000)) { // espera 1 segundo y cierra electrovalvula de entrada y abre electrovalvula de salida
+		  //Calculos
+			Pin_max = SPin - DiffIns;
+			Pout_max = SPout;
+			dpin = Pin_max - (Pin_min - DiffIns);
+			dpout = Pout_max - Pout_min;
+			//
+			digitalWrite(EV_INSPIRA, LOW);   // turn the LED on (HIGH is the voltage level)
+			digitalWrite(EV_ESC_CAM, HIGH);    // turn the LED off by making the voltage LOW
+			digitalWrite(EV_ESPIRA, HIGH);    // turn the LED off by making the voltage LOW
+			digitalWrite(EV_IN_CAM, LOW);   // turn the LED on (HIGH is the voltage level)
+			digitalWrite(EV_IN_FLU, HIGH);   // turn the LED on (HIGH is the voltage level)
+
+
+		}
+		else if (interruptCounter >= int(((inspirationTime + expirationTime) * 1000))) {
 			//Calculos
 			Pin_min = SPin;
 			Pout_min = SPout;
-		}
-		else if (interruptCounter == int(inspirationTime * 1000)) { // espera 1 segundo y cierra electrovalvula de entrada y abre electrovalvula de salida
-			digitalWrite(EV_01_P1, LOW);   // turn the LED on (HIGH is the voltage level)
-			digitalWrite(EV_02_P1, HIGH);  // turn the LED off by making the voltage LOW
-			digitalWrite(EV_03_P1, HIGH);  // turn the LED off by making the voltage LOW
-
-			//Calculos
-			Pin_max = SPin;
-			Pout_max = SPout;
-			dpmax = Pin_max - Pin_min;
-			if (dpmax < 0) {
-				dpmax = -dpmax;
-			}
-			dpmin = Pout_max - Pout_min;
-			if (dpmin < 0) {
-				dpmin = -dpmin;
-			}
-		}
-		else if (interruptCounter >= int(((inspirationTime + expirationTime) * 1000))) {
+			DiffIns = SPin - SPout;
+			//
 			interruptCounter = 0;
 			Peep = UmbralPeep;
 			UmbralPeep = 100;
-			Ppico = UmbralPpico - 2;
+			Ppico = UmbralPpico;
 			UmbralPpico = -100;
-			Comp = (C1 * Peep * Peep) - (C2 * Peep) + C3;
-			//Comp=(-14.52*Peep)+(198.75);
 
 			//Filtrado media movil VT y COMP
 			//-Almacenamiento de valores
-			V_Comp[9] = Comp;
-			V_dpmax[9] = dpmax;
-			V_dpmin[9] = dpmin;
+			V_dpin[4] = dpin;
+			V_dpout[4] = dpout;
 			//-Corrimiento inicial
-			for (char i = 9; i >= 1; i--) {
-				V_Comp[9 - i] = V_Comp[9 - i + 1];
-				V_dpmax[9 - i] = V_dpmax[9 - i + 1];
-				V_dpmin[9 - i] = V_dpmin[9 - i + 1];
+			for (char i = 4; i >= 1; i--) {
+				V_dpin[4 - i] = V_dpin[9 - i + 1];
+				V_dpout[4 - i] = V_dpout[9 - i + 1];
 			}
 			//-Calculo promedio
-			SComp = 0;
-			Sdpmax = 0;
-			Sdpmin = 0;
-			for (char i = 0; i <= 9; i++) {
-				SComp = SComp + V_Comp[i];
-				Sdpmax = Sdpmax + V_dpmax[i];
-				Sdpmin = Sdpmin + V_dpmin[i];
+			Sdpin = 0;
+			Sdpout = 0;
+			for (char i = 0; i <= 4; i++) {
+				Sdpin = Sdpin + V_dpin[i];
+				Sdpout = Sdpout + V_dpout[i];
 			}
-			SComp = SComp / 10;
-			Sdpmax = Sdpmax / 10;
-			Sdpmin = Sdpmin / 10;
-			VT = SComp * (Sdpmax - Sdpmin);
+			Sdpin = Sdpin / 5;
+			Sdpout = Sdpout / 5;
+			DifP = fabs(Sdpin - Sdpout);
+			SComp = pow(DifP, C2) * C1;
+			VT = DifP * SComp;
+
+			contCiclos++;
+			//lcd_show();
+
 		}
 
 		milisecond++;
@@ -335,28 +445,55 @@ void cycling() {
 				second = 0;
 			}
 		}
+
 	}// Final interrupcion timer
 } // end cycling()
 
-int eeprom_wr_int(int dataIn = 0, char process = 'r') {
-	if (process == 'w') {
-		byte r1 = (dataIn & 0xff);
-		EEPROM.write(0, r1);
-		r1 = (dataIn & 0xff00) >> 8;
-		EEPROM.write(1, r1);
-		r1 = (dataIn & 0xff0000) >> 16;
-		EEPROM.write(2, r1);
-		r1 = (dataIn & 0xff000000) >> 24;
-		EEPROM.write(3, r1);
-		EEPROM.commit();
-		return 0;
+
+// Function to receive data from serial communication
+void receiveData() {
+	if (Serial2.available() > 5) {
+		String dataIn = Serial2.readStringUntil(';');
+		int contComas = 0;
+		for (int i = 0; i < dataIn.length(); i++) {
+			if (dataIn[i] == ',') {
+				contComas++;
+			}
+		}
+		String dataIn2[contComas];
+		for (int i = 0; i < contComas + 1; i++) {
+			dataIn2[i] = dataIn.substring(0, dataIn.indexOf(','));
+			dataIn = dataIn.substring(dataIn.indexOf(',') + 1);
+		}
+		//cargue los datos aqui
+		//para entero
+		//contCiclos =dataIn2[0].toInt();
+		//para float
+		frecRespiratoria = dataIn2[0].toInt();
+		I = dataIn2[1].toInt();
+		E = dataIn2[2].toInt();
+		maxPresion = dataIn2[3].toInt();
+		Serial2.flush();
+
+		Serial.println(String(frecRespiratoria) + ',' + String(I) + ',' + String(E) + ',' + String(maxPresion));
+		/*for (int i = 0; i < contComas + 1; i++) {
+			Serial.println(dataIn2[i]);
+		}*/
+
+		// Calculo del tiempo I:E
+		if (I == 1) {
+			inspirationTime = (60 / frecRespiratoria) / (1 + (float)(E/10));
+			expirationTime = (float)(E / 10) * inspirationTime;
+		}
+		else {
+			expirationTime = (60 / frecRespiratoria) / (1 - (float)(I / 10));
+			inspirationTime = (float)(I / 10) * expirationTime;
+		}
+		Serial.println("I = " + String(inspirationTime) + " E = " + String(expirationTime));
 	}
-	else if (process == 'r') {
-		int dataRead = 0;
-		dataRead = EEPROM.read(0);
-		dataRead = (EEPROM.read(1) << 8) + dataRead;
-		dataRead = (EEPROM.read(2) << 16) + dataRead;
-		dataRead = (EEPROM.read(3) << 24) + dataRead;
-		return dataRead;
-	}
+}
+
+void sendSerialData() {
+	String dataToSend = String(Ppico) + ',' + String(Peep) + ',' + String(VT) + ';';
+	Serial2.print(dataToSend);
 }

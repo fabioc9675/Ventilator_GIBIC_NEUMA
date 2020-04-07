@@ -19,6 +19,12 @@
 #define RXD2 16     // RX UART 2
 #define TXD2 17     // TX UART 2
 
+// Casos Menu
+#define ALE_PRES_PIP        4  // presion pico
+#define ALE_PRES_DES        5  // desconexion del paciente
+#define ALE_GENERAL         6  // fallo general
+#define BATERIA             7  // Bateria
+
 // variables para la medicion de milisegundos del programa
 unsigned long tiempoInterrupcion = 0;
 static unsigned long ultimaInterrupcion = 0;
@@ -34,6 +40,10 @@ unsigned int debounceVal = 1;  // valor para el antirrebote
 #define SW    5      //sw a pin digital 3 (SW en modulo)  
 
 volatile unsigned int menu = 0;
+volatile unsigned int menuImprimir = 0;
+volatile unsigned int menuAlerta = 0;
+bool flagAlerta = false;
+unsigned int contAlertas = 0;
 
 // Global al ser usada en loop e ISR (encoder)
 unsigned long tiempo1 = 0;
@@ -62,10 +72,17 @@ volatile bool flagDettachInterrupt_A = false;
 volatile bool flagDettachInterrupt_B = false;
 volatile bool flagDetach = false;
 volatile unsigned int contDetach = 0;
+unsigned int contAlarm = 0;
+
 
 float Peep = 0;
 float Ppico = 0;
 float VT = 0;
+
+int alerPresionPIP = 0;
+int alerDesconexion = 0;
+int alerGeneral = 0;
+int alerBateria = 0;
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);   // Objeto LCD
 
@@ -97,8 +114,8 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(B), encoderInterrupt_B, FALLING);
     attachInterrupt(digitalPinToInterrupt(SW), swInterrupt, RISING);
 
-    Serial.begin(115200);
-    Serial2.begin(115200, SERIAL_8N1, RXD2, TXD2);
+    Serial.begin(9600);
+    Serial2.begin(9600);
     lcd.init();
     lcd.backlight();
     lcd_show();
@@ -114,6 +131,72 @@ void loop() {
         portENTER_CRITICAL(&timerMux);
         flagTimerInterrupt = false;
         portEXIT_CRITICAL(&timerMux);
+        
+        // ***********************************************
+    // **** Atencion a las alertas
+    // ***********************************************
+
+        if (alerPresionPIP == 1) {
+            menuAlerta = ALE_PRES_PIP;
+            flagAlerta = true;
+            //Serial.println('1');
+        }
+        if (alerDesconexion == 1) {
+            menuAlerta = ALE_PRES_DES;
+            flagAlerta = true;
+            //Serial.println('2');
+        }
+        if (alerGeneral == 1) {
+            menuAlerta = ALE_GENERAL;
+            flagAlerta = true;
+            //Serial.println('3');
+        }
+        if (alerBateria == 1) {
+            menuAlerta = BATERIA;
+            flagAlerta = true;
+            //Serial.println('4');
+        }
+        if ((alerPresionPIP == 0) && (alerDesconexion == 0) && (alerGeneral == 0) && (alerBateria == 0)) {
+            menuAlerta = 0;
+            flagAlerta = false;
+            //Serial.print('0');
+        }
+
+        if (flagAlerta == true) {
+            contAlertas++;
+            if (contAlertas == 300) {
+                lcd.backlight();
+            }
+            else if (contAlertas == 1000) {
+                menuImprimir = menuAlerta;
+                lcd.noBacklight();
+                lcd_show();
+
+            }
+            else if (contAlertas == 1300) {
+                lcd.backlight();
+            }
+            else if (contAlertas == 2000) {
+                menuImprimir = menu;
+                lcd.noBacklight();
+                lcd_show();
+                contAlertas = 0;
+            }
+        }
+        else {
+            contAlertas++;
+            if (contAlertas == 1000) {
+                menuImprimir = menu;
+                lcd.backlight();
+                lcd_show();
+
+            }
+            else if (contAlertas == 2000) {
+                menuImprimir = menu;
+                lcd_show();
+                contAlertas = 0;
+            }
+        }
     }
 
     // *************************************************
@@ -148,28 +231,27 @@ void loop() {
 }
 
 void IRAM_ATTR onTimer() {
-    portENTER_CRITICAL(&timerMux);
+    portENTER_CRITICAL_ISR(&timerMux);
     flagTimerInterrupt = true;
-    portEXIT_CRITICAL(&timerMux);
+    portEXIT_CRITICAL_ISR(&timerMux);
 }
-
 
 void lcd_show() {
 
     if (relacionIE > 0) {
-        relacion_IE = "1:" + String((float)relacionIE/10, 1);
+        relacion_IE = "1:" + String((float)relacionIE / 10, 1);
         I = 1;
         E = (char)relacionIE;
     }
     else {
-        relacion_IE = String(-(float)relacionIE/10, 1) + ":1";
+        relacion_IE = String(-(float)relacionIE / 10, 1) + ":1";
         I = (char)(-relacionIE);
         E = 1;
     }
     //Serial.println("IE = " + String(I) + ':' + String(E));
     //Serial.println(relacionIE);
 
-    switch (menu) {
+    switch (menuImprimir) {
     case 0:
         // lcd.home();
         lcd.setCursor(0, 0);
@@ -201,10 +283,10 @@ void lcd_show() {
 
             lcd.print(" ");
             lcd.write(126);
-            lcd.print("Frec:            ");
+            lcd.print("Frec:             ");
         }
         else {
-            lcd.print("  Frec:             ");
+            lcd.print("  Frec:              ");
         }
         lcd.setCursor(10, 2);
         lcd.print(frecRespiratoria);
@@ -250,6 +332,51 @@ void lcd_show() {
         //lcd.setCursor(12, 3);
         //lcd.print(maxFlujo);
         break;
+
+    case ALE_PRES_PIP:
+        lcd.setCursor(0, 0);
+        lcd.print("       ALERTA       ");
+        lcd.setCursor(0, 1);
+        lcd.print("                    ");
+        lcd.setCursor(0, 2);
+        lcd.print("Presion PIP superada");
+        lcd.setCursor(0, 3);
+        lcd.print("                    ");
+        break;
+
+    case ALE_PRES_DES:
+        lcd.setCursor(0, 0);
+        lcd.print("       ALERTA       ");
+        lcd.setCursor(0, 1);
+        lcd.print("                    ");
+        lcd.setCursor(0, 2);
+        lcd.print("Desconexion paciente");
+        lcd.setCursor(0, 3);
+        lcd.print("                    ");
+        break;
+
+    case ALE_GENERAL:
+        lcd.setCursor(0, 0);
+        lcd.print("       ALERTA       ");
+        lcd.setCursor(0, 1);
+        lcd.print("                    ");
+        lcd.setCursor(0, 2);
+        lcd.print("   Fallo general    ");
+        lcd.setCursor(0, 3);
+        lcd.print("                    ");
+        break;
+
+    case BATERIA:
+        lcd.setCursor(0, 0);
+        lcd.print("       ALERTA       ");
+        lcd.setCursor(0, 1);
+        lcd.print("                    ");
+        lcd.setCursor(0, 2);
+        lcd.print("      Bateria       ");
+        lcd.setCursor(0, 3);
+        lcd.print("                    ");
+        break;
+
     default:
         lcd.setCursor(0, 0);
         lcd.print("                    ");
@@ -422,6 +549,7 @@ void encoderRoutine() {
     }
     // portENTER_CRITICAL_ISR(&mux);
     flagEncoder = 3;
+    menuImprimir = menu;
     lcd_show();
     // portEXIT_CRITICAL_ISR(&mux);
 }
@@ -459,12 +587,14 @@ void switchRoutine() {
         insideMenuFlag = !insideMenuFlag;
         flagFlujo = false;
     }*/
+    menuImprimir = menu;
     lcd_show();
 }
 
 // Function to receive data from serial communication
 void receiveData() {
     if (Serial2.available() > 5) {
+        Serial.println("Inside receiveData");
         String dataIn = Serial2.readStringUntil(';');
         int contComas = 0;
         for (int i = 0; i < dataIn.length(); i++) {
@@ -472,7 +602,7 @@ void receiveData() {
                 contComas++;
             }
         }
-        String dataIn2[contComas];
+        String dataIn2[40];
         for (int i = 0; i < contComas + 1; i++) {
             dataIn2[i] = dataIn.substring(0, dataIn.indexOf(','));
             dataIn = dataIn.substring(dataIn.indexOf(',') + 1);
@@ -484,13 +614,15 @@ void receiveData() {
         Ppico = dataIn2[0].toFloat();
         Peep = dataIn2[1].toFloat();
         VT = dataIn2[2].toFloat();
-
+        alerPresionPIP = dataIn2[3].toInt();
+        alerDesconexion = dataIn2[4].toInt();
+        alerGeneral = dataIn2[5].toInt();
+        alerBateria = dataIn2[6].toInt();
         Serial2.flush();
-
         //Serial.println(String(frecRespiratoria) + ',' + String(I) + ',' + String(E));
-        for (int i = 0; i < contComas + 1; i++) {
+        /*for (int i = 0; i < contComas + 1; i++) {
             Serial.println(dataIn2[i]);
-        }
+        }*/
     }
 }
 

@@ -23,20 +23,14 @@
 // Definiciones para controlar el sensor de flujo
 #define FLANCO          18  // pin digital numero 2 para deteccion de flujo IRQ
 
-#define AMP1       0.0281
-#define OFFS1      -28.071
-#define AMP2       0.0303
-#define OFFS2      -22.776
 
 // Calibracion de los sensores de presion
-#define AMP1       0.0298
-#define OFFS1      -28.013-1.4167
-#define AMP2       0.0303
-#define OFFS2      -22.776
-//#define AMP3       0.034
-//#define OFFS3      -22.938
-#define AMP3       0.0339
-#define OFFS3      -21.673-1.16
+#define AMP1       0.0232
+#define OFFS1      -22.6363
+#define AMP2       0.0289
+#define OFFS2      -26.995
+#define AMP3       0.0296
+#define OFFS3      -27.006
 
 // Variables de control del protocolo
 #define RXD2 16
@@ -52,6 +46,12 @@ String inspTime;
 String expiTime;
 String frequency;
 String volume;
+
+// variables para el envio de las alarmas
+int alerPresionPIP = 0;
+int alerDesconexion = 0;
+int alerGeneral = 0;
+int alerBateria = 0;
 
 String RaspberryChain = "";
 
@@ -84,6 +84,9 @@ volatile bool flagEncoderInterrupt_B = false;
 volatile bool flagDettachInterrupt_A = false;
 volatile bool flagDettachInterrupt_B = false;
 volatile bool flagDetach = false;
+bool flagAlarmPpico = false;
+bool flagAlarmPatientDesconnection = false;
+bool flagAlarmGeneral = false;
 volatile unsigned int contDetach = 0;
 unsigned int contCiclos = 0;
 unsigned int contEscrituraEEPROM = 0;
@@ -186,8 +189,8 @@ void setup() {
 	pinMode(EV_IN_CAM, OUTPUT);		// PIN 5  velocidad
 	pinMode(EV_IN_FLU, OUTPUT);		// PIN 5  velocidad
 
-	Serial.begin(115200);
-	Serial2.begin(115200); // , SERIAL_8N1, RXD2, TXD2);
+	Serial.begin(9600);
+	Serial2.begin(9600); // , SERIAL_8N1, RXD2, TXD2);
 
 	EEPROM.begin(4);
 	contCiclos = eeprom_wr_int();
@@ -334,9 +337,9 @@ void IRAM_ATTR onTimer() {
 // Cycling of the Mechanical Ventilator
 void cycling() {
 	if (flagTimerInterrupt) {
-		portENTER_CRITICAL(&timerMux);
+		portENTER_CRITICAL_ISR(&timerMux);
 		flagTimerInterrupt = false;
-		portEXIT_CRITICAL(&timerMux);
+		portEXIT_CRITICAL_ISR(&timerMux);
 		
 		interruptCounter++;
 		contADC++;
@@ -347,7 +350,6 @@ void cycling() {
 		if (contUpdateData >= 200) {
 			contUpdateData = 0;
 			sendSerialData();
-			
 		}
 
 		if (contEscrituraEEPROM > 3600000) {
@@ -441,7 +443,13 @@ void cycling() {
 		if (milisecond == 1000) {
 			milisecond = 0;
 			second++;
-			if (second == 60) {
+			if (second == 10) {
+				alerDesconexion = 1;
+			}
+			if (second == 15) {
+				alerDesconexion = 0;
+			}
+			if (second == 20) {
 				second = 0;
 			}
 		}
@@ -460,7 +468,7 @@ void receiveData() {
 				contComas++;
 			}
 		}
-		String dataIn2[contComas];
+		String dataIn2[40];
 		for (int i = 0; i < contComas + 1; i++) {
 			dataIn2[i] = dataIn.substring(0, dataIn.indexOf(','));
 			dataIn = dataIn.substring(dataIn.indexOf(',') + 1);
@@ -486,14 +494,32 @@ void receiveData() {
 			expirationTime = (float)(E / 10) * inspirationTime;
 		}
 		else {
-			expirationTime = (60 / frecRespiratoria) / (1 - (float)(I / 10));
+			expirationTime = (60 / frecRespiratoria) / (1 + (float)(I / 10));
 			inspirationTime = (float)(I / 10) * expirationTime;
 		}
-		Serial.println("I = " + String(inspirationTime) + " E = " + String(expirationTime));
+		//Serial.println("I = " + String(inspirationTime) + " E = " + String(expirationTime));
 	}
 }
 
 void sendSerialData() {
-	String dataToSend = String(Ppico) + ',' + String(Peep) + ',' + String(VT) + ';';
+	String dataToSend = String(Ppico) + ',' + String(Peep) + ',' + String(VT) + ',' + String(alerPresionPIP) + ',' + String(alerDesconexion) + ',' + String(alerGeneral) + ',' + String(alerBateria) + ';';
 	Serial2.print(dataToSend);
+}
+
+void alarmsDetection() {
+	// Ppico Alarm
+	if (Ppico < maxPresion) {
+		flagAlarmPpico = true;
+		//flag
+	}
+
+	// Patient desconnection Alarm
+	if (Peep < 5) {
+		
+	}
+
+	// General Alarm
+	if (true) {
+	
+	}
 }

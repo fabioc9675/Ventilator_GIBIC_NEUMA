@@ -5,9 +5,11 @@ VisualStudioVersion = 16.0.29911.84
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ventilator", "ventilator\ventilator.vcxproj", "{C5F80730-F44F-4478-BDAE-6634EFC2CA88}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lcd_control", "lcd_control\lcd_control.vcxproj", "{DA65D88A-92C6-40BA-95B6-B5AF2BFAC533}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "configurationUnit", "lcd_control\lcd_control.vcxproj", "{DA65D88A-92C6-40BA-95B6-B5AF2BFAC533}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "controlUnit", "controlUnit\controlUnit.vcxproj", "{2F910881-582F-43F0-9321-5DD5E99195B9}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "checkUnit", "checkUnit\checkUnit.vcxproj", "{8A6B7081-4397-4195-A751-B4FAB78752F2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{2F910881-582F-43F0-9321-5DD5E99195B9}.Debug|x86.Build.0 = Debug|Win32
 		{2F910881-582F-43F0-9321-5DD5E99195B9}.Release|x86.ActiveCfg = Release|Win32
 		{2F910881-582F-43F0-9321-5DD5E99195B9}.Release|x86.Build.0 = Release|Win32
+		{8A6B7081-4397-4195-A751-B4FAB78752F2}.Debug|x86.ActiveCfg = Debug|Win32
+		{8A6B7081-4397-4195-A751-B4FAB78752F2}.Debug|x86.Build.0 = Debug|Win32
+		{8A6B7081-4397-4195-A751-B4FAB78752F2}.Release|x86.ActiveCfg = Release|Win32
+		{8A6B7081-4397-4195-A751-B4FAB78752F2}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

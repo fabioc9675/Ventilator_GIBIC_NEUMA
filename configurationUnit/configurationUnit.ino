@@ -73,7 +73,6 @@ bool flagTimerInterrupt = false;
 int flagEncoder = 0;
 bool flagStandbyInterrupt = false;
 bool flagSilenceButtonInterrupt = false;
-bool flagTimerInterrupt = false;
 volatile bool flagSwInterrupt = false;
 
 // variables para la atencion de interrupciones

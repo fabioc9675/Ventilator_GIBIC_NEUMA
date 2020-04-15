@@ -95,6 +95,12 @@ unsigned int contUpdateData = 0;
 bool flagStandbyInterrupt = false;
 unsigned int contStandby = 0;
 
+// State machine
+#define checkState		0
+#define standbyState	1
+#define cyclingState	2
+#define failureState	3
+unsigned int stateMachine = standbyState;
 //***********************************
 // datos para prueba de transmision
 int pruebaDato = 0;
@@ -176,7 +182,6 @@ int eeprom_wr_int(int dataIn = 0, char process = 'r') {
 	}
 }
 
-
 // the setup function runs once when you press reset or power the board
 void setup() {
 	// Configuracion del timer a 1 kHz
@@ -227,113 +232,43 @@ void loop() {
 		portENTER_CRITICAL(&timerMux);
 		flagTimerInterrupt = false;
 		portEXIT_CRITICAL(&timerMux);
-
-		cycling();
 		receiveData();
-
-		//Update data on LCD each 200ms
-		contUpdateData++;
-		if (contUpdateData >= 200) {
-			contUpdateData = 0;
-			sendSerialData();
-		}
-
-		//Write the EEPROM each 2 minuts
-		contEscrituraEEPROM++;
-		if (contEscrituraEEPROM > 3600000) {
-			contEscrituraEEPROM = 0;
-			eeprom_wr_int(contCiclos, 'w');
-		}
-
-		// *************************************************
-		// **** Atencion a rutina de adquisicion ADC
-		// *************************************************
-		// Read the ADC BATTALARM and  50ms
-		contADC++;
-		if (contADC == 50) {
-			contADC = 0;
-
-			alerBateria = digitalRead(BATTALARM);
-
-			ADC1_Value = analogRead(ADC_PRESS_1);
-			ADC2_Value = analogRead(ADC_PRESS_2);
-			ADC3_Value = analogRead(ADC_PRESS_3);
-			// falta realizatr la conversion de adc a presion
-			Pressure1 = AMP1 * float(ADC1_Value) + OFFS1;
-			Pressure2 = AMP2 * float(ADC2_Value) + OFFS2;
-			Pressure3 = AMP3 * float(ADC3_Value) + OFFS3;
-
-			//Filtrado media movil
-			//-Almacenamiento de valores
-			Ppac[9] = Pressure1;
-			Pin[9] = Pressure3;
-			Pout[9] = Pressure2;
-			//-Corrimiento inicial
-			for (char i = 9; i >= 1; i--) {
-				Pin[9 - i] = Pin[9 - i + 1];
-				Pout[9 - i] = Pout[9 - i + 1];
-				Ppac[9 - i] = Ppac[9 - i + 1];
+		
+		switch (stateMachine) {
+		case checkState:
+			break;
+		case standbyState:
+			adcReading();
+			standbyRoutine();
+			//Update data on LCD each 200ms
+			contUpdateData++;
+			if (contUpdateData >= 200) {
+				contUpdateData = 0;
+				sendSerialData();
 			}
-			//-Calculo promedio
-			SPin = 0;
-			SPout = 0;
-			SPpac = 0;
-			for (char i = 0; i <= 9; i++) {
-				SPin = SPin + Pin[i];
-				SPout = SPout + Pout[i];
-				SPpac = SPpac + Ppac[i];
+			//Serial.println("Standby state on control Unit");
+			break;
+		case cyclingState:
+			cycling();
+			adcReading();
+			//Update data on LCD each 200ms
+			contUpdateData++;
+			if (contUpdateData >= 200) {
+				contUpdateData = 0;
+				sendSerialData();
 			}
-			SPin = SPin / 10;
-			SPout = SPout / 10;
-			SPpac = SPpac / 10;
-			//-Calculo Peep
-			if (UmbralPeep > SPpac) {
-				UmbralPeep = SPpac;
+
+			//Write the EEPROM each 10 minuts
+			contEscrituraEEPROM++;
+			if (contEscrituraEEPROM > 3600000) {
+				contEscrituraEEPROM = 0;
+				eeprom_wr_int(contCiclos, 'w');
 			}
-			//-Calculo Ppico
-			if (UmbralPpico < SPpac) {
-				UmbralPpico = SPpac;
-			}
-			// conteo de los pulsos
-			numeroPulsos = fan1.numberOfPulses;  //Numero de pulsos en 50ms
-			fan1.numberOfPulses = 0;
-			numeroPulsos = (numeroPulsos * 2000 / 75); //(#pulsos/1 s)=7.5*Q [L/min] (considera un decimal)
-
-			patientPress = String(Pressure1);
-			circuitPress = String(Pressure2);
-
-			if (pruebaDato == 20) {
-				pruebaDato = 0;
-			}
-			frequency = String(pruebaDato);
-			volume = String(second);
-			expiTime = String(inspirationTime * 1000);
-			inspTime = String(expirationTime * 1000);
-
-			pruebaDato++;
-
-			// composicion de cadena
-			RaspberryChain = SERIALEQU + ',' + patientPress + ',' + circuitPress + ',' + patientFlow + ',' + circuitFlow + ',' + inspTime + ',' + expiTime + ',' + frequency + ',' + volume;
-
-			// Envio de la cadena de datos
-	//		      Serial.print("SPin = ");
-	//          Serial.print(SPin);
-	//          Serial.print(", SPin_max = ");
-	//          Serial.print(SPin_max);
-	//          Serial.print(", SPin_min = ");
-	//          Serial.print(SPin_min);          
-	//          Serial.print(", SPout = ");
-	//          Serial.print(SPout);  
-	//          Serial.print(", SPout_max = ");
-	//          Serial.print(SPout_max);
-	//          Serial.print(", SPout_min = ");
-	//          Serial.print(SPout_min);
-			Serial.print(", SPpac = ");
-			Serial.println(SPpac);
-			//          Serial.print(", Peep = ");
-			//          Serial.print(Peep);
-			//          Serial.print(", Ppico = ");
-			//          Serial.println(Ppico);
+			break;
+		case failureState:
+			break;
+		default:
+			break;
 		}
 	}
 }
@@ -348,11 +283,11 @@ void IRAM_ATTR onTimer() {
 void cycling() {
 	contCycling++;
 	if (contCycling == 1) {        // Inicia el ciclado abriendo electrovalvula de entrada y cerrando electrovalvula de salida
-		digitalWrite(EV_INSPIRA, HIGH);   // turn the LED on (HIGH is the voltage level)
-		digitalWrite(EV_ESC_CAM, LOW);   // turn the LED on (HIGH is the voltage level)
-		digitalWrite(EV_ESPIRA, HIGH);   // turn the LED on (HIGH is the voltage level)
-		digitalWrite(EV_IN_CAM, HIGH);   // turn the LED on (HIGH is the voltage level)
-		//digitalWrite(EV_IN_FLU, LOW);   // turn the LED on (HIGH is the voltage level)
+		digitalWrite(EV_INSPIRA, HIGH);		// turn the LED on (HIGH is the voltage level)
+		digitalWrite(EV_ESC_CAM, LOW);		// turn the LED on (HIGH is the voltage level)
+		digitalWrite(EV_ESPIRA, HIGH);		// turn the LED on (HIGH is the voltage level)
+		digitalWrite(EV_IN_CAM, HIGH);		// turn the LED on (HIGH is the voltage level)
+		//digitalWrite(EV_IN_FLU, LOW);		// turn the LED on (HIGH is the voltage level)
 	}
 	else if (contCycling == int(inspirationTime * 1000)) { // espera 1 segundo y cierra electrovalvula de entrada y abre electrovalvula de salida
 	  //Calculos
@@ -390,19 +325,19 @@ void cycling() {
 			Ppico = UmbralPpico;
 		}
 		UmbralPpico = -100;
-		//Calculo VT
+		// Calculo VT
 		DifP = (Ppico - Peep);
 		VT = DifP * 26.325 - 98.897;
 
-		//-Almacenamiento de valores
+		// Almacenamiento de valores
 		V_Ppico[4] = Ppico;
 		V_Ppeep[4] = Peep;
-		//-Corrimiento inicial
+		// Corrimiento inicial
 		for (char i = 4; i >= 1; i--) {
 			V_Ppico[4 - i] = V_Ppico[4 - i + 1];
 			V_Ppeep[4 - i] = V_Ppeep[4 - i + 1];
 		}
-		//-Calculo promedio
+		// Calculo promedio
 		SPpico = 0;
 		SPpeep = 0;
 		for (char i = 0; i <= 4; i++) {
@@ -413,7 +348,7 @@ void cycling() {
 		SPpeep = SPpeep / 5;
 
 		contCiclos++;
-		//lcd_show();
+		// lcd_show();
 
 		if (Ppico > 2 && Peep > 2) {
 			flagInicio = false;
@@ -451,23 +386,101 @@ void receiveData() {
 		I = dataIn2[1].toInt();
 		E = dataIn2[2].toInt();
 		maxPresion = dataIn2[3].toInt();
+		stateMachine = dataIn2[4].toInt();
 		Serial2.flush();
 
-		Serial.println(String(frecRespiratoria) + ',' + String(I) + ',' + String(E) + ',' + String(maxPresion));
+		
 		/*for (int i = 0; i < contComas + 1; i++) {
 			Serial.println(dataIn2[i]);
 		}*/
 
 		// Calculo del tiempo I:E
 		if (I == 1) {
-			inspirationTime = (60 / frecRespiratoria) / (1 + (float)(E / 10));
+			inspirationTime = (float)(60.0 / frecRespiratoria) / (1 + (float)(E / 10));
 			expirationTime = (float)(E / 10) * inspirationTime;
 		}
 		else {
-			expirationTime = (60 / frecRespiratoria) / (1 + (float)(I / 10));
+			expirationTime = (float)(60.0 / frecRespiratoria) / (1 + (float)(I / 10));
 			inspirationTime = (float)(I / 10) * expirationTime;
 		}
-		//Serial.println("I = " + String(inspirationTime) + " E = " + String(expirationTime));
+		Serial.println(String(frecRespiratoria) + ',' + String(I) + ',' + 
+					   String(E) + ',' + String(maxPresion));
+		Serial.println("I = " + String(inspirationTime) + 
+					  " E = " + String(expirationTime) + 
+					  " maxPresion = " + String(maxPresion) + 
+					  " stateMachine = " + String(stateMachine));
+	}
+}
+
+// Read ADC BATTALARM (each 50ms)
+void adcReading() {
+	contADC++;
+	if (contADC == 50) {
+		contADC = 0;
+
+		alerBateria = digitalRead(BATTALARM);
+
+		ADC1_Value = analogRead(ADC_PRESS_1);
+		ADC2_Value = analogRead(ADC_PRESS_2);
+		ADC3_Value = analogRead(ADC_PRESS_3);
+		// falta realizatr la conversion de adc a presion
+		Pressure1 = AMP1 * float(ADC1_Value) + OFFS1;
+		Pressure2 = AMP2 * float(ADC2_Value) + OFFS2;
+		Pressure3 = AMP3 * float(ADC3_Value) + OFFS3;
+
+		//Filtrado media movil
+		//-Almacenamiento de valores
+		Ppac[9] = Pressure1;
+		Pin[9] = Pressure3;
+		Pout[9] = Pressure2;
+		//-Corrimiento inicial
+		for (char i = 9; i >= 1; i--) {
+			Pin[9 - i] = Pin[9 - i + 1];
+			Pout[9 - i] = Pout[9 - i + 1];
+			Ppac[9 - i] = Ppac[9 - i + 1];
+		}
+		//-Calculo promedio
+		SPin = 0;
+		SPout = 0;
+		SPpac = 0;
+		for (char i = 0; i <= 9; i++) {
+			SPin = SPin + Pin[i];
+			SPout = SPout + Pout[i];
+			SPpac = SPpac + Ppac[i];
+		}
+		SPin = SPin / 10;
+		SPout = SPout / 10;
+		SPpac = SPpac / 10;
+		//-Calculo Peep
+		if (UmbralPeep > SPpac) {
+			UmbralPeep = SPpac;
+		}
+		//-Calculo Ppico
+		if (UmbralPpico < SPpac) {
+			UmbralPpico = SPpac;
+		}
+		// conteo de los pulsos
+		numeroPulsos = fan1.numberOfPulses;  //Numero de pulsos en 50ms
+		fan1.numberOfPulses = 0;
+		numeroPulsos = (numeroPulsos * 2000 / 75); //(#pulsos/1 s)=7.5*Q [L/min] (considera un decimal)
+
+		patientPress = String(Pressure1);
+		circuitPress = String(Pressure2);
+
+		if (pruebaDato == 20) {
+			pruebaDato = 0;
+		}
+		frequency = String(pruebaDato);
+		volume = String(second);
+		expiTime = String(inspirationTime * 1000);
+		inspTime = String(expirationTime * 1000);
+
+		pruebaDato++;
+
+		// composicion de cadena
+		RaspberryChain = SERIALEQU + ',' + patientPress + ',' + circuitPress + ',' +
+			patientFlow + ',' + circuitFlow + ',' + inspTime + ',' +
+			expiTime + ',' + frequency + ',' + volume;
 	}
 }
 
@@ -488,7 +501,6 @@ void alarmsDetection() {
 		else {
 			flagAlarmPpico = false;
 			alerPresionPIP = 0;
-
 		}
 		// Patient desconnection Alarm
 		if (Ppico < 3 && Peep < 2) {
@@ -516,4 +528,11 @@ void alarmsDetection() {
 			BandGeneral = 0;
 		}
 	}
+}
+
+void standbyRoutine() {
+	digitalWrite(EV_INSPIRA, LOW);   // turn the LED on (HIGH is the voltage level)
+	digitalWrite(EV_ESC_CAM, HIGH);    // turn the LED off by making the voltage LOW
+	digitalWrite(EV_ESPIRA, LOW);    // turn the LED off by making the voltage LOW
+	digitalWrite(EV_IN_CAM, LOW);   // turn the LED on (HIGH is the voltage level)
 }

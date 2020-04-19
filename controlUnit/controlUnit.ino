@@ -144,10 +144,15 @@ volatile int contCycling = 0;
 
 bool flagInicio = true;
 
-int frecRespiratoria = 12;
-int I = 1;
-int E = 41;
+int currentFrecRespiratoria = 12;
+int newFrecRespiratoria = currentFrecRespiratoria;
+int currentI = 1;
+int currentE = 20;
+int newI = currentI;
+int newE = currentE;
+
 int maxPresion = 30;
+
 // inicializacion del contador del timer
 hw_timer_t* timer = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
@@ -282,6 +287,23 @@ void IRAM_ATTR onTimer() {
 // Cycling of the Mechanical Ventilator
 void cycling() {
 	contCycling++;
+
+	if ((newFrecRespiratoria = !currentFrecRespiratoria) && 
+		(newI = !currentI) && (newE = !currentE)) {
+		currentFrecRespiratoria = newFrecRespiratoria;
+		currentI = newI;
+		currentE = newE;
+		// Calculo del tiempo I:E
+		if (currentI == 1) {
+			inspirationTime = (float)(60.0 / currentFrecRespiratoria) / (1 + (float)(currentE / 10));
+			expirationTime = (float)(currentE / 10) * inspirationTime;
+		}
+		else {
+			expirationTime = (float)(60.0 / currentFrecRespiratoria) / (1 + (float)(currentI / 10));
+			inspirationTime = (float)(currentI / 10) * expirationTime;
+		}
+	}
+
 	if (contCycling == 1) {        // Inicia el ciclado abriendo electrovalvula de entrada y cerrando electrovalvula de salida
 		digitalWrite(EV_INSPIRA, HIGH);		// turn the LED on (HIGH is the voltage level)
 		digitalWrite(EV_ESC_CAM, LOW);		// turn the LED on (HIGH is the voltage level)
@@ -382,9 +404,9 @@ void receiveData() {
 			dataIn = dataIn.substring(dataIn.indexOf(',') + 1);
 		}
 
-		frecRespiratoria = dataIn2[0].toInt();
-		I = dataIn2[1].toInt();
-		E = dataIn2[2].toInt();
+		newFrecRespiratoria = dataIn2[0].toInt();
+		newI = dataIn2[1].toInt();
+		newE = dataIn2[2].toInt();
 		maxPresion = dataIn2[3].toInt();
 		stateMachine = dataIn2[4].toInt();
 		Serial2.flush();
@@ -394,17 +416,8 @@ void receiveData() {
 			Serial.println(dataIn2[i]);
 		}*/
 
-		// Calculo del tiempo I:E
-		if (I == 1) {
-			inspirationTime = (float)(60.0 / frecRespiratoria) / (1 + (float)(E / 10));
-			expirationTime = (float)(E / 10) * inspirationTime;
-		}
-		else {
-			expirationTime = (float)(60.0 / frecRespiratoria) / (1 + (float)(I / 10));
-			inspirationTime = (float)(I / 10) * expirationTime;
-		}
-		Serial.println(String(frecRespiratoria) + ',' + String(I) + ',' + 
-					   String(E) + ',' + String(maxPresion));
+		Serial.println(String(currentFrecRespiratoria) + ',' + String(newI) + ',' + 
+					   String(newE) + ',' + String(maxPresion));
 		Serial.println("I = " + String(inspirationTime) + 
 					  " E = " + String(expirationTime) + 
 					  " maxPresion = " + String(maxPresion) + 

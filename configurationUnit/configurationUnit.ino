@@ -33,6 +33,7 @@
 #define ALE_GENERAL     6  // fallo general
 #define BATTERY         7  // Bateria
 #define CHECK_MENU      8  // Show in check state
+#define CONFIRM_MENU	9
 
 // variables para la medicion de milisegundos del programa
 unsigned long tiempoInterrupcion = 0;
@@ -56,13 +57,15 @@ unsigned int contAlertas = 0;
 
 // Global al ser usada en loop e ISR (encoder)
 unsigned long tiempo1 = 0;
-int relacionIE = 20;
-String relacion_IE = "1:4.1";
+int currentRelacionIE = 20;
+int newRelacionIE = 20;
+String relacion_IE = "1:2.0";
 byte maxPresion = 30;
 float maxFlujo = 4;
-byte frecRespiratoria = 12;
+byte currentFrecRespiratoria = 12;
+byte newFrecRespiratoria = 12;
 byte I = 1;
-byte E = 41;
+byte E = 20;
 
 // Banderas utilizadas en las interrupciones
 bool insideMenuFlag = false;
@@ -75,6 +78,9 @@ int flagEncoder = 0;
 bool flagStandbyInterrupt = false;
 bool flagSilenceButtonInterrupt = false;
 volatile bool flagSwInterrupt = false;
+bool flagConfirm = false;
+bool flagMode = false;
+bool ventilationMode = false;
 
 // variables para la atencion de interrupciones
 volatile bool flagEncoderInterrupt_A = false;
@@ -144,6 +150,7 @@ void setup() {
 
 	Serial.begin(115200);
 	Serial2.begin(115200);
+	Serial2.setTimeout(10);
 	lcd.init();
 	lcd.backlight();
 	lcd_show();
@@ -331,10 +338,10 @@ void alertMonitoring() {
 		menuAlerta = ALE_PRES_DES;
 		flagAlerta = true;
 	}
-	if (stateMachine == standbyState) {
+	/*if (stateMachine == standbyState) {
 		menuAlerta = ALERT_STANDBY;
 		flagAlerta = true;
-	}
+	}*/
 	if ((alerPresionPIP == 0) && (alerDesconexion == 0) && (alerGeneral == 0) &&
 		(alerBateria == 0) && (stateMachine != standbyState) && (stateMachine != checkState)) {
 		menuAlerta = 0;
@@ -391,28 +398,41 @@ void alertMonitoring() {
 
 void lcd_show() {
 	// I and E are calculated
-	if (relacionIE > 0) {
-		relacion_IE = "1:" + String((float)relacionIE / 10, 1);
+	if (currentRelacionIE > 0) {
+		relacion_IE = "1:" + String((float)currentRelacionIE / 10, 1);
 		I = 1;
-		E = (char)relacionIE;
+		E = (char)currentRelacionIE;
 	}
 	else {
-		relacion_IE = String(-(float)relacionIE / 10, 1) + ":1";
-		I = (char)(-relacionIE);
+		relacion_IE = String(-(float)currentRelacionIE / 10, 1) + ":1";
+		I = (char)(-currentRelacionIE);
 		E = 1;
 	}
+	String newRelacion_IE;
+	if (newRelacionIE > 0) {
+		newRelacion_IE = "1:" + String((float)newRelacionIE / 10, 1);
+	}
+	else {
+		newRelacion_IE = String(-(float)newRelacionIE / 10, 1) + ":1";
+	}
+
 	//Serial.println("IE = " + String(I) + ':' + String(E));
-	//Serial.println(relacionIE);
+	//Serial.println(currentRelacionIE);
 
 	switch (menuImprimir) {
 	case MAIN_MENU:
 		//lcd.home();
 		lcd.setCursor(0, 0);
-		lcd.print("  InnspiraMED UdeA  ");
+		if (stateMachine == standbyState) {
+			lcd.print("    Modo Standby    ");
+		}
+		else {
+			lcd.print("  InnspiraMED UdeA  ");
+		}
 		lcd.setCursor(0, 1);
 		lcd.print("FR        PIP     ");
 		lcd.setCursor(4, 1);
-		lcd.print(frecRespiratoria);
+		lcd.print(currentFrecRespiratoria);
 		lcd.setCursor(14, 1);
 		lcd.print(String(Ppico, 1));
 		lcd.setCursor(0, 2);
@@ -433,27 +453,43 @@ void lcd_show() {
 		lcd.print("                    ");
 		lcd.setCursor(0, 2);
 		if (flagFrecuencia) {
-
-			lcd.print(" ");
+			//lcd.print(" ");
 			lcd.write(126);
 			lcd.print("Frec:             ");
 		}
 		else {
-			lcd.print("  Frec:              ");
+			lcd.print(" Frec:              ");
 		}
-		lcd.setCursor(10, 2);
-		lcd.print(frecRespiratoria);
+		lcd.setCursor(7, 2);
+		lcd.print(newFrecRespiratoria);
+		lcd.setCursor(12, 2);
+		lcd.write(124);
+		if (flagMode == true) {
+			lcd.write(126);
+			lcd.print("Modo: ");
+		}
+		else {
+			lcd.print(" Modo: ");
+		}
 		lcd.setCursor(0, 3);
 		if (flagIE) {
-			lcd.print(" ");
+			//lcd.print(" ");
 			lcd.write(126);
 			lcd.print("I:E:              ");
 		}
 		else {
-			lcd.print("  I:E:              ");
+			lcd.print(" I:E:              ");
 		}
-		lcd.setCursor(10, 3);
-		lcd.print(relacion_IE);
+		lcd.setCursor(6, 3);
+		lcd.print(newRelacion_IE);
+		lcd.setCursor(12, 3);
+		lcd.write(124);
+		if (ventilationMode == true) {
+			lcd.print("  A/C  ");
+		}
+		else {
+			lcd.print(" P-CMV ");
+		}
 		break;
 	case ALARMS_MENU:
 		lcd.setCursor(0, 0);
@@ -534,6 +570,25 @@ void lcd_show() {
 		lcd.setCursor(0, 3);
 		lcd.print("Sensores            ");
 		break;
+	case CONFIRM_MENU:
+		lcd.setCursor(0, 0);
+		lcd.print(" Confirmar cambios  ");
+		lcd.setCursor(0, 1);
+		lcd.print("                    ");
+		lcd.setCursor(0, 2);
+		if (flagConfirm == true) {
+			lcd.print("   ");
+			lcd.write(126);
+			lcd.print("Si        No    ");
+		}
+		else {
+			lcd.print("    Si       ");
+			lcd.write(126);
+			lcd.print("No    ");
+		}
+		lcd.setCursor(0, 3);
+		lcd.print("                    ");
+		break;
 	default:
 		lcd.setCursor(0, 0);
 		lcd.print("                    ");
@@ -552,7 +607,54 @@ void lcd_show() {
 
 void swInterruptAttention() {
 	if (tiempoInterrupcion - ultimaInterrupcion > 100) {
-		switchRoutine();
+		// Serial.println("SW MENU");
+		if (menu == CONFIG_MENU && !insideMenuFlag) {
+			insideMenuFlag = !insideMenuFlag;
+			flagFrecuencia = true;
+			// Serial.println("SW MENU 1_1");
+		}
+		else if (menu == CONFIG_MENU && flagFrecuencia) {
+			flagFrecuencia = false;
+			flagIE = true;
+			// Serial.println("SW MENU 1_2");
+		}
+		else if (menu == CONFIG_MENU && flagIE) {
+			flagIE = false;
+			flagMode = true;
+		}
+		else if (menu == CONFIG_MENU && flagMode) {
+			flagMode = false;
+			menu = CONFIRM_MENU;
+		}
+		else if (menu == CONFIRM_MENU) {
+			insideMenuFlag = !insideMenuFlag;
+			menu = CONFIG_MENU;
+			if (flagConfirm == true) {
+				flagConfirm = false;
+				currentFrecRespiratoria = newFrecRespiratoria;
+				currentRelacionIE = newRelacionIE;
+				sendSerialData();
+			}
+			else {
+				newFrecRespiratoria = currentFrecRespiratoria;
+				newRelacionIE = currentRelacionIE;
+			}
+		}
+		else if (menu == ALARMS_MENU && !insideMenuFlag) {
+			insideMenuFlag = !insideMenuFlag;
+			flagPresion = true;
+			//Serial.println("Config maxPres");
+		}
+		else if (menu == ALARMS_MENU && flagPresion) {
+			flagPresion = false;
+			//flagFlujo = true;
+			insideMenuFlag = !insideMenuFlag;
+			//Serial.println("Config maxFlujo");
+			sendSerialData();
+		}
+		menuImprimir = menu;
+		lcd_show();
+
 		ultimaInterrupcion = tiempoInterrupcion;
 	}
 }
@@ -593,24 +695,27 @@ void encoderRoutine() {
 		}
 		else {
 			switch (menu) {
-			case 1:
+			case CONFIG_MENU:
 				if (flagFrecuencia) {
-					frecRespiratoria++;
-					if (frecRespiratoria > MAX_FREC) {
-						frecRespiratoria = MAX_FREC;
+					newFrecRespiratoria++;
+					if (newFrecRespiratoria > MAX_FREC) {
+						newFrecRespiratoria = MAX_FREC;
 					}
 				}
 				else if (flagIE) {
-					relacionIE = relacionIE + 1;
-					if (relacionIE >= MAX_RIE) {
-						relacionIE = MAX_RIE;;
+					newRelacionIE = newRelacionIE + 1;
+					if (newRelacionIE >= MAX_RIE) {
+						newRelacionIE = MAX_RIE;;
 					}
-					if (relacionIE > -10 && relacionIE < 0) {
-						relacionIE = 10;
+					if (newRelacionIE > -10 && newRelacionIE < 0) {
+						newRelacionIE = 10;
 					}
 				}
+				else if (flagMode == true) {
+					ventilationMode = !ventilationMode;
+				}
 				break;
-			case 2:
+			case ALARMS_MENU:
 				if (flagPresion) {
 					maxPresion++;
 					if (maxPresion > MAX_PRESION) {
@@ -624,6 +729,9 @@ void encoderRoutine() {
 					}
 				}
 				break;
+			case CONFIRM_MENU:
+				flagConfirm = !flagConfirm;
+				break;
 			}
 		}
 	}
@@ -636,24 +744,27 @@ void encoderRoutine() {
 		}
 		else {
 			switch (menu) {
-			case 1:
+			case CONFIG_MENU:
 				if (flagFrecuencia) {
-					frecRespiratoria--;
-					if (frecRespiratoria > MAX_FREC) {
-						frecRespiratoria = 0;
+					newFrecRespiratoria--;
+					if (newFrecRespiratoria > MAX_FREC) {
+						newFrecRespiratoria = 0;
 					}
 				}
 				else if (flagIE) {
-					relacionIE = relacionIE - 1;
-					if (relacionIE <= -MAX_RIE) {
-						relacionIE = -MAX_RIE;
+					newRelacionIE = newRelacionIE - 1;
+					if (newRelacionIE <= -MAX_RIE) {
+						newRelacionIE = -MAX_RIE;
 					}
-					if (relacionIE > 0 && relacionIE < 10) {
-						relacionIE = -10;
+					if (newRelacionIE > 0 && newRelacionIE < 10) {
+						newRelacionIE = -10;
 					}
 				}
+				else if (flagMode == true) {
+					ventilationMode = !ventilationMode;
+				}
 				break;
-			case 2:
+			case ALARMS_MENU:
 				if (flagPresion) {
 					maxPresion--;
 					if (maxPresion > MAX_PRESION) {
@@ -667,47 +778,13 @@ void encoderRoutine() {
 					}
 				}
 				break;
+			case CONFIRM_MENU:
+				flagConfirm = !flagConfirm;
+				break;
 			}
 		}
 	}
 	flagEncoder = 3;
-	menuImprimir = menu;
-	lcd_show();
-}
-
-void switchRoutine() {
-	// Serial.println("SW MENU");
-	if (menu == 1 && !insideMenuFlag) {
-		insideMenuFlag = !insideMenuFlag;
-		flagFrecuencia = true;
-		// Serial.println("SW MENU 1_1");
-	}
-	else if (menu == 1 && flagFrecuencia) {
-		flagFrecuencia = false;
-		flagIE = true;
-		// Serial.println("SW MENU 1_2");
-	}
-	else if (menu == 1 && flagIE) {
-		insideMenuFlag = !insideMenuFlag;
-		flagIE = false;
-		sendSerialData();
-	}
-	else if (menu == 2 && !insideMenuFlag) {
-		insideMenuFlag = !insideMenuFlag;
-		flagPresion = true;
-		//Serial.println("Config maxPres");
-	}
-	else if (menu == 2 && flagPresion) {
-		flagPresion = false;
-		//flagFlujo = true;
-		insideMenuFlag = !insideMenuFlag;
-		//Serial.println("Config maxFlujo");
-		sendSerialData();
-	}
-	/*else if (menu == 2 && flagFlujo) {
-		insideMenuFlag = !insideMenuFlag;
-		flagFlujo = false;
-	  }*/
 	menuImprimir = menu;
 	lcd_show();
 }
@@ -740,15 +817,15 @@ void receiveData() {
 		alerGeneral = dataIn2[5].toInt();
 		alerBateria = dataIn2[6].toInt();
 		Serial2.flush();
-		//Serial.println(String(frecRespiratoria) + ',' + String(I) + ',' + String(E));
+		//Serial.println(String(currentFrecRespiratoria) + ',' + String(I) + ',' + String(E));
 		/*for (int i = 0; i < contComas + 1; i++) {
 			Serial.println(dataIn2[i]);
-		  }*/
+		}*/
 	}
 }
 
 void sendSerialData() {
-	String dataToSend = String(frecRespiratoria) + ',' + String(I) + ',' +
+	String dataToSend = String(currentFrecRespiratoria) + ',' + String(I) + ',' +
 		String(E) + ',' + String(maxPresion) + ',' + String(stateMachine) + ';';
 
 	Serial2.print(dataToSend);

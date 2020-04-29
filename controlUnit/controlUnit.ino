@@ -69,7 +69,7 @@ Fan fan1 = { FLANCO, 0, false };
 // Definiciones del ADC
 volatile int contADC = 0;
 
-int ADC1_Value = 0;     //
+int ADC1_Value = 0;
 int ADC2_Value = 0;
 int ADC3_Value = 0;
 float Pressure1 = 0;
@@ -101,6 +101,12 @@ unsigned int contStandby = 0;
 #define cyclingState	2
 #define failureState	3
 unsigned int stateMachine = standbyState;
+
+#define stopCycling			0
+#define startCycling		1
+#define inspirationState	2
+#define expirationState		3
+unsigned int stateMachineCycling = stopCycling;
 //***********************************
 // datos para prueba de transmision
 int pruebaDato = 0;
@@ -162,7 +168,6 @@ void IRAM_ATTR onTimer();  // funcion de interrupcion
 void receiveData();
 void sendSerialData();
 void alarmsDetection();
-
 
 int eeprom_wr_int(int dataIn = 0, char process = 'r') {
 	if (process == 'w') {
@@ -304,78 +309,94 @@ void cycling() {
 		}
 	}
 
-	if (contCycling == 1) {        // Inicia el ciclado abriendo electrovalvula de entrada y cerrando electrovalvula de salida
-		digitalWrite(EV_INSPIRA, HIGH);		// turn the LED on (HIGH is the voltage level)
-		digitalWrite(EV_ESC_CAM, LOW);		// turn the LED on (HIGH is the voltage level)
-		digitalWrite(EV_ESPIRA, HIGH);		// turn the LED on (HIGH is the voltage level)
-		digitalWrite(EV_IN_CAM, HIGH);		// turn the LED on (HIGH is the voltage level)
-		//digitalWrite(EV_IN_FLU, LOW);		// turn the LED on (HIGH is the voltage level)
-	}
-	else if (contCycling == int(inspirationTime * 1000)) { // espera 1 segundo y cierra electrovalvula de entrada y abre electrovalvula de salida
-	  //Calculos
-		Pin_max = SPin;
-		Pout_max = SPout;
-		//
-		digitalWrite(EV_INSPIRA, LOW);   // turn the LED on (HIGH is the voltage level)
-		digitalWrite(EV_ESC_CAM, HIGH);    // turn the LED off by making the voltage LOW
-		digitalWrite(EV_ESPIRA, LOW);    // turn the LED off by making the voltage LOW
-		digitalWrite(EV_IN_CAM, LOW);   // turn the LED on (HIGH is the voltage level)
-		//digitalWrite(EV_IN_FLU, HIGH);   // turn the LED on (HIGH is the voltage level)
-	}
-	else if (contCycling >= int(((inspirationTime + expirationTime) * 1000))) {
-		contCycling = 0;
-		//Calculos
-		Pin_min = SPin;
-		Pout_min = SPout;
-		//
-		if (BandGeneral == 1) {
-			ContGeneral++;
+	switch (stateMachineCycling){
+	case stopCycling:
+		
+		break;
+	case startCycling:
+		if (contCycling >= 1) {        // Inicia el ciclado abriendo electrovalvula de entrada y cerrando electrovalvula de salida
+			digitalWrite(EV_INSPIRA, HIGH);		// turn the LED on (HIGH is the voltage level)
+			digitalWrite(EV_ESC_CAM, LOW);		// turn the LED on (HIGH is the voltage level)
+			digitalWrite(EV_ESPIRA, HIGH);		// turn the LED on (HIGH is the voltage level)
+			digitalWrite(EV_IN_CAM, HIGH);		// turn the LED on (HIGH is the voltage level)
+			stateMachineCycling = inspirationState;
 		}
-		//
-		if (UmbralPeep > 4) {
-			Peep = UmbralPeep + 5;
+		break;
+	case inspirationState:
+		if (contCycling >= int(inspirationTime * 1000)) {
+			//Calculos
+			Pin_max = SPin;
+			Pout_max = SPout;
+			//
+			digitalWrite(EV_INSPIRA, LOW);   // turn the LED on (HIGH is the voltage level)
+			digitalWrite(EV_ESC_CAM, HIGH);    // turn the LED off by making the voltage LOW
+			digitalWrite(EV_ESPIRA, LOW);    // turn the LED off by making the voltage LOW
+			digitalWrite(EV_IN_CAM, LOW);   // turn the LED on (HIGH is the voltage level)
+			//digitalWrite(EV_IN_FLU, HIGH);   // turn the LED on (HIGH is the voltage level)
+			stateMachine = expirationState;
 		}
-		else {
-			Peep = UmbralPeep + 2.5;
-		}
-		UmbralPeep = 100;
+		break;
+	case expirationState:
+		//Add para el modo A/C
+		if (contCycling >= int(((inspirationTime + expirationTime) * 1000))) {
+			contCycling = 0;
+			//Calculos
+			Pin_min = SPin;
+			Pout_min = SPout;
+			//
+			if (BandGeneral == 1) {
+				ContGeneral++;
+			}
+			//
+			if (UmbralPeep > 4) {
+				Peep = UmbralPeep + 5;
+			}
+			else {
+				Peep = UmbralPeep + 2.5;
+			}
+			UmbralPeep = 100;
 
-		if (UmbralPpico > 8) {
-			Ppico = UmbralPpico + 5;
-		}
-		else {
-			Ppico = UmbralPpico;
-		}
-		UmbralPpico = -100;
-		// Calculo VT
-		DifP = (Ppico - Peep);
-		VT = DifP * 26.325 - 98.897;
+			if (UmbralPpico > 8) {
+				Ppico = UmbralPpico + 5;
+			}
+			else {
+				Ppico = UmbralPpico;
+			}
+			UmbralPpico = -100;
+			// Calculo VT
+			DifP = (Ppico - Peep);
+			VT = DifP * 26.325 - 98.897;
 
-		// Almacenamiento de valores
-		V_Ppico[4] = Ppico;
-		V_Ppeep[4] = Peep;
-		// Corrimiento inicial
-		for (char i = 4; i >= 1; i--) {
-			V_Ppico[4 - i] = V_Ppico[4 - i + 1];
-			V_Ppeep[4 - i] = V_Ppeep[4 - i + 1];
-		}
-		// Calculo promedio
-		SPpico = 0;
-		SPpeep = 0;
-		for (char i = 0; i <= 4; i++) {
-			SPpico = SPpico + V_Ppico[i];
-			SPpeep = SPpeep + V_Ppeep[i];
-		}
-		SPpico = SPpico / 5;
-		SPpeep = SPpeep / 5;
+			// Almacenamiento de valores
+			V_Ppico[4] = Ppico;
+			V_Ppeep[4] = Peep;
+			// Corrimiento inicial
+			for (char i = 4; i >= 1; i--) {
+				V_Ppico[4 - i] = V_Ppico[4 - i + 1];
+				V_Ppeep[4 - i] = V_Ppeep[4 - i + 1];
+			}
+			// Calculo promedio
+			SPpico = 0;
+			SPpeep = 0;
+			for (char i = 0; i <= 4; i++) {
+				SPpico = SPpico + V_Ppico[i];
+				SPpeep = SPpeep + V_Ppeep[i];
+			}
+			SPpico = SPpico / 5;
+			SPpeep = SPpeep / 5;
 
-		contCiclos++;
-		// lcd_show();
+			contCiclos++;
+			// lcd_show();
 
-		if (Ppico > 2 && Peep > 2) {
-			flagInicio = false;
+			if (Ppico > 2 && Peep > 2) {
+				flagInicio = false;
+			}
+			stateMachine = startCycling;
+			alarmsDetection();
 		}
-		alarmsDetection();
+		break;
+	default:
+		break;
 	}
 
 	milisecond++;

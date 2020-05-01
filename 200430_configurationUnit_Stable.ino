@@ -1,4 +1,4 @@
-ï»¿/*
+/*
   Name:		configurationUnit.ino
   Created:	4/3/2020 11:40:24
   Author:	Helber Carvajal
@@ -24,10 +24,10 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);
 #define BUZZER          12
 #define SILENCE         26  // Silenciar alarma cambiar
 #define SILENCE_LED     27  // Led Boton silencio
-#define STABILITY       34
-#define STABILITY_LED   35
-#define STANDBY         32  // Stabdby button
-#define STANDBY_LED     33  // Stabdby button
+#define STABILITY       32
+#define STABILITY_LED   33
+#define STANDBY         34  // Stabdby button
+#define STANDBY_LED     35  // Stabdby button
 
 #define LUMINR      13  // Alarma luminosa
 #define LUMING      14
@@ -38,16 +38,15 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);
 
 #define ESP_INTR_FLAG_DEFAULT 0
 
-#define DEBOUNCE_ENC            50  // tiempo para realizar antirrebote
-#define DEBOUNCE_ENC_2          400  // tiempo para realizar antirrebote
-#define DEBOUNCE_ENC_OUT        300  // tiempo para realizar antirrebote
-#define DEBOUNCE_ENC_OUT_2      800  // tiempo para realizar antirrebote
+#define DEBOUNCE_ENC            200  // tiempo para realizar antirrebote
+#define DEBOUNCE_ENC_2          250  // tiempo para realizar antirrebote
+#define DEBOUNCE_ENC_OUT        450  // tiempo para realizar antirrebote
+#define DEBOUNCE_ENC_OUT_2      600  // tiempo para realizar antirrebote
 #define DEBOUNCE_ENC_SW         400  // tiempo para realizar antirrebote
 #define LOW_ATT_INT             50  // Interrupcion cada 10 ms
 
 #define ENCOD_INCREASE          1  // movimiento a la derecha, aumento
 #define ENCOD_DECREASE          2  // movimiento a la derecha, aumento
-#define ENCOD_COUNT             3  // cantidad de interrupciones antes de reconocer el conteo 
 
 //**********VALORES MAXIMOS**********
 #define MENU_QUANTITY       3
@@ -70,9 +69,8 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);
 #define ALE_PRES_PEEP       11 // Perdida de Peep
 #define BATTERY             7  // Bateria
 #define CHECK_MENU          8  // Show in check state
-#define CONFIRM_MENU	      9
+#define CONFIRM_MENU	    9
 #define CPAP_MENU           10
-#define MODE_CHANGE         19 // definicion para obligar al cambio entre StandBy y modo normal en el LCD
 
 volatile bool flagDetachInterrupt_A = false;
 volatile bool flagDetachInterrupt_B = false;
@@ -84,8 +82,6 @@ unsigned int contDetachA = 0;
 unsigned int contDetachB = 0;
 unsigned int contDetachS = 0;
 unsigned int contAlarm = 0;
-unsigned int contRecogIntA = 0;   // contador para reconocimiento del conteo del encoder
-unsigned int contRecogIntB = 0;   // contador para reconocimiento del conteo del encoder
 
 unsigned int contSilence = 0;
 unsigned int contSilenceBattery = 0;
@@ -100,12 +96,10 @@ unsigned int contStandby = 0;
 volatile signed int menu = MAIN_MENU;
 volatile unsigned int menuImprimir = MAIN_MENU;
 volatile unsigned int menuAlerta = MAIN_MENU;
-volatile unsigned int lineaAlerta = MAIN_MENU;
 volatile uint8_t flagAlreadyPrint = false;
 
 // Variables para menu anterior
 volatile unsigned int menuAnterior = CONFIRM_MENU;  // valor de menu anterior
-volatile unsigned int lineaAnterior = CONFIRM_MENU;  // valor de menu anterior
 byte IAnte = 1;
 byte EAnte = 1;
 float PpicoAnte = 1;
@@ -156,12 +150,13 @@ int alerPresionPeep = 0;
 int currentBatteryAlert = 1;        // When is working with energy supply
 int newBatteryAlert = 1;
 
+
 // State Machine
 #define CHECK_STATE		0
 #define STANDBY_STATE	1
 #define CYCLING_STATE	2
 #define FAILURE_STATE	3
-byte stateMachine = STANDBY_STATE;
+unsigned int stateMachine = STANDBY_STATE;
 
 #define batteryNoAlarm      0
 #define batteryAlarm        1
@@ -169,7 +164,7 @@ byte stateMachine = STANDBY_STATE;
 #define batteryAlarm5min    3
 byte batteryAlert = batteryNoAlarm;
 
-//creo el manejador para el semï¿½foro como variable global
+//creo el manejador para el semáforo como variable global
 SemaphoreHandle_t xSemaphoreEncoder = NULL;
 SemaphoreHandle_t xSemaphoreTimer = NULL;
 //xQueueHandle timer_queue = NULL;
@@ -218,9 +213,7 @@ void init_GPIO() {
     pinMode(LUMING, OUTPUT);
     pinMode(LUMINB, OUTPUT);
     pinMode(SILENCE_LED, OUTPUT);
-    pinMode(STANDBY_LED, OUTPUT);
-    pinMode(STABILITY_LED, OUTPUT);
-    
+
     pinMode(BATTALARM, INPUT);
 
     attachInterrupt(digitalPinToInterrupt(A), encoderInterrupt_A, FALLING);
@@ -230,8 +223,6 @@ void init_GPIO() {
     attachInterrupt(digitalPinToInterrupt(SILENCE), silenceButtonInterrupt, FALLING);
     attachInterrupt(digitalPinToInterrupt(STABILITY), stabilityButtonInterrupt, FALLING);
 
-    digitalWrite(STANDBY_LED, HIGH);
-    digitalWrite(STABILITY_LED, HIGH);
     pinMode(LED, OUTPUT);
 }
 
@@ -248,7 +239,7 @@ void init_TIMER() {
  * *********************************************************************/
  // Interrupcion por presion del switch
 void IRAM_ATTR swInterrupt(void) {
-    // da el semï¿½foro para que quede libre para la tarea pulsador
+    // da el semáforo para que quede libre para la tarea pulsador
     portENTER_CRITICAL_ISR(&mux);
     flagSEncoder = true;
     xSemaphoreGiveFromISR(xSemaphoreEncoder, NULL);
@@ -301,10 +292,10 @@ void IRAM_ATTR silenceButtonInterrupt(void) {
 }
 
 void IRAM_ATTR stabilityButtonInterrupt(void) {
-    portENTER_CRITICAL_ISR(&mux);
-    flagStabilityInterrupt = true;
-    detachInterrupt(digitalPinToInterrupt(STABILITY));
-    portEXIT_CRITICAL_ISR(&mux);
+        portENTER_CRITICAL_ISR(&mux);
+        flagStabilityInterrupt = true;
+        detachInterrupt(digitalPinToInterrupt(STABILITY));
+        portEXIT_CRITICAL_ISR(&mux);
 }
 
 /************************************************************
@@ -413,7 +404,7 @@ void task_timer(void* arg) {
                     flagStabilityInterrupt = false;
                     attachInterrupt(digitalPinToInterrupt(STABILITY), stabilityButtonInterrupt, FALLING);
                     portEXIT_CRITICAL(&timerMux);
-
+                    
                 }
 
                 /* ***************************************************************************
@@ -424,7 +415,7 @@ void task_timer(void* arg) {
                 // ejecuta tareas de baja prioridad en tiempo
                 if (contLowAtten == LOW_ATT_INT) {
                     contLowAtten = 0;
-
+                    
                     newBatteryAlert = digitalRead(BATTALARM);
                     //Serial.println(newBatteryAlert);
                     switch (batteryAlert) {
@@ -476,7 +467,7 @@ void task_timer(void* arg) {
                             currentBatteryAlert = newBatteryAlert;
                             contBattery = 0;
                             contBattery5min = 0;
-                            batteryAlert = batteryAlarm5min;
+                            batteryAlert = batteryAlarm5min; 
                             //Serial.println("Battery 5 Min");
                         }
                         break;
@@ -495,7 +486,7 @@ void task_timer(void* arg) {
                     default:
                         break;
                     }
-
+                    
                     // verifica la condicion de silenciar alarmas
                     silenceInterruptAttention();
                     // activacion alerta de bateria
@@ -527,7 +518,7 @@ void task_timer(void* arg) {
                         flagAlerta = true;
                     }
                     // desactivacion alertas
-                    if ((alerPresionPIP == 0) && (alerDesconexion == 0) &&
+                    if ((alerPresionPIP == 0) && (alerDesconexion == 0) && 
                         (alerGeneral == 0) && (alerPresionPeep == 0) && (currentBatteryAlert == 1)) {
                         menuAlerta = 0;
                         flagAlerta = false;
@@ -538,15 +529,15 @@ void task_timer(void* arg) {
     }
 }
 
-/* ***************************************************************************
- * **** Atencion a interrupcion por encoder **********************************
- * ***************************************************************************/
+ /* ***************************************************************************
+  * **** Atencion a interrupcion por encoder **********************************
+  * ***************************************************************************/
 void task_Encoder(void* arg) {
     while (1) {
-        // Espero por la notificaciï¿½n de la ISR por A
+        // Espero por la notificación de la ISR por A
         if (xSemaphoreTake(xSemaphoreEncoder, portMAX_DELAY) == pdTRUE) {
             if (flagAEncoder == true) {
-
+                
                 portENTER_CRITICAL(&mux);
                 flagAEncoder = false;
                 portEXIT_CRITICAL(&mux);
@@ -558,18 +549,13 @@ void task_Encoder(void* arg) {
                     flagDetachInterrupt_B_A = true;
                     contDetachA = 0;
                     fl_StateEncoder = ENCOD_INCREASE;
-                    // ejecucion de la tarea de incremento, esta funcion se coloca por sensibildad del encoder,
-                    // si se cambia por menor sensibilidad, solo necesitara ejecutar la funcion  encoderRoutine();
-                    contRecogIntA++;
-                    if (contRecogIntA == ENCOD_COUNT) {
-                        contRecogIntA = 0;
-                        encoderRoutine();
-                    }
+                    // ejecucion de la tarea de incremento
+                    encoderRoutine();
                 }
             }
 
             if (flagBEncoder == true) {
-
+                
                 portENTER_CRITICAL(&mux);
                 flagBEncoder = false;
                 portEXIT_CRITICAL(&mux);
@@ -581,13 +567,8 @@ void task_Encoder(void* arg) {
                     flagDetachInterrupt_A_B = true;
                     contDetachB = 0;
                     fl_StateEncoder = ENCOD_DECREASE;
-                    // ejecucion de la tarea de decremento, esta funcion se coloca por sensibildad del encoder,
-                    // si se cambia por menor sensibilidad, solo necesitara ejecutar la funcion  encoderRoutine();
-                    contRecogIntB++;
-                    if (contRecogIntB == ENCOD_COUNT) {
-                        contRecogIntB = 0;
-                        encoderRoutine();
-                    }
+                    // ejecucion de la tarea de decremento
+                    encoderRoutine();
                 }
             }
 
@@ -601,8 +582,6 @@ void task_Encoder(void* arg) {
                 flagDetachInterrupt_S = true;
                 contDetachS = 0;
                 // ejecucion de la tarea de Switch
-                contRecogIntA = 0;
-                contRecogIntB = 0;
                 switchRoutine();
             }
         }
@@ -615,13 +594,13 @@ void task_Encoder(void* arg) {
 void encoderRoutine() {
 
     switch (fl_StateEncoder) {
-        // Incremento
+    // Incremento
     case ENCOD_INCREASE:
         if (insideMenuFlag == false) {
             menu++;
             if (menu < 0 || menu > MENU_QUANTITY - 1)
                 menu = 0;
-            //Serial.println("menu = " + String(menu));
+                //Serial.println("menu = " + String(menu));
         }
         else {
             switch (menu) {
@@ -642,7 +621,7 @@ void encoderRoutine() {
                     }
                 }
                 else if (flagMode == true) {
-                    newVentilationMode++;
+                    newVentilationMode ++;
                     if (newVentilationMode > 2) {
                         newVentilationMode = 0;
                     }
@@ -669,7 +648,7 @@ void encoderRoutine() {
         }
         fl_StateEncoder = 0;
         break;
-        // Decremento
+    // Decremento
     case ENCOD_DECREASE:
         if (insideMenuFlag == false) {
             menu--;
@@ -695,7 +674,7 @@ void encoderRoutine() {
                     }
                 }
                 else if (flagMode == true) {
-                    newVentilationMode--;
+                    newVentilationMode --;
                     if (newVentilationMode > 2) {
                         newVentilationMode = 2;
                     }
@@ -728,7 +707,6 @@ void encoderRoutine() {
     }
 
     menuImprimir = menu;
-    lineaAlerta = menu;
     flagAlreadyPrint = false;
 
 }
@@ -793,7 +771,6 @@ void switchRoutine() {
         sendSerialData();
     }
     menuImprimir = menu;
-    lineaAlerta = menu;
     flagAlreadyPrint = false;
 }
 
@@ -808,7 +785,7 @@ void silenceInterruptAttention() {
             portENTER_CRITICAL(&mux);
             flagSilenceInterrupt = false;
             portEXIT_CRITICAL(&mux);
-
+            
             contSilence = 0;
         }
     }
@@ -827,10 +804,9 @@ void silenceInterruptAttention() {
 }
 
 void standbyInterruptAttention() {
-    //Serial.println("Standby Interrupt");
     if (flagStandbyInterrupt) {
         contStandby++;
-        if (contStandby > 400) {
+        if (contStandby > 400) {            
             portENTER_CRITICAL(&mux);
             attachInterrupt(digitalPinToInterrupt(STANDBY), standbyButtonInterrupt, FALLING);
             flagStandbyInterrupt = false;
@@ -840,15 +816,12 @@ void standbyInterruptAttention() {
             if (stateMachine == STANDBY_STATE) {
                 stateMachine = CYCLING_STATE;
                 //Serial.println("I am on Cycling state");
-                digitalWrite(STANDBY_LED, LOW);
             }
             else {
                 stateMachine = STANDBY_STATE;
-                digitalWrite(STANDBY_LED, HIGH);
                 //Serial.println("I am on Standby state");
             }
-            lineaAnterior = MODE_CHANGE;
-            sendSerialData();
+            //sendSerialData();
         }
     }
 }
@@ -859,7 +832,6 @@ void standbyInterruptAttention() {
 void lcd_show_comp() {
 
     menuAnterior = menuImprimir;
-    lineaAnterior = lineaAlerta;
     flagAlreadyPrint = true;
 
     if (currentRelacionIE > 0) {
@@ -873,63 +845,16 @@ void lcd_show_comp() {
         E = 1;
     }
 
-    // maquina de estados para cambiar la impresion de alarmas 
-    // solo en la linea principal
-    lcd.setCursor(0, 0);
-    switch (lineaAlerta) {
+    switch (menuImprimir) {
     case MAIN_MENU:
+        // lcd.home();
+        lcd.setCursor(0, 0);
         if (stateMachine == STANDBY_STATE) {
             lcd.print("    Modo Standby    ");
         }
         else {
             lcd.print("  InnspiraMED UdeA  ");
         }
-        break;
-    case CONFIG_MENU:
-        lcd.print("   Configuracion    ");
-        break;
-    case CONFIG_ALARM:
-        lcd.print("      Alarmas       ");
-        break;
-    case ALE_PRES_PIP:
-        lcd.print("Presion PIP elevada ");
-        break;
-    case ALE_PRES_DES:
-        lcd.print("Desconexion Paciente");
-        break;
-    case ALE_GENERAL:
-        lcd.print("    Obstruccion     ");
-        break;
-    case ALE_PRES_PEEP:
-        lcd.print("  Perdida de PEEP   ");
-        break;
-    case BATTERY:
-        if (batteryAlert == 2) {
-            lcd.print(" Bateria baja 10 Min ");
-        }
-        else if (batteryAlarm == 3) {
-            lcd.print(" Bateria baja 5 Min  ");
-        }
-        else {
-            lcd.print("Fallo red electrica ");
-        }
-        break;
-    case CHECK_MENU:
-        lcd.print("Comprobacion Inicial");
-        break;
-    case CONFIRM_MENU:
-        lcd.print(" Confirmar cambios  ");
-        break;
-    case CPAP_MENU:
-        lcd.print(" Configuracion CPAP ");
-        break;
-    default:
-        break;
-    }
-
-    switch (menuImprimir) {
-    case MAIN_MENU:
-        // lcd.home();
         lcd.setCursor(0, 1);
         lcd.print("FR        PIP     ");
         lcd.setCursor(4, 1);
@@ -958,6 +883,8 @@ void lcd_show_comp() {
         PconAnte = Pcon;
         break;
     case CONFIG_MENU:
+        lcd.setCursor(0, 0);
+        lcd.print("   Configuracion    ");
         lcd.setCursor(0, 1);
         lcd.print("                    ");
         lcd.setCursor(0, 2);
@@ -993,6 +920,8 @@ void lcd_show_comp() {
         EAnte = E;
         break;
     case CONFIG_ALARM:
+        lcd.setCursor(0, 0);
+        lcd.print("      Alarmas       ");
         lcd.setCursor(0, 1);
         lcd.print("                    ");
         lcd.setCursor(0, 2);
@@ -1003,7 +932,44 @@ void lcd_show_comp() {
         lcd.print("                    ");
         maxPresionAnte = maxPresion;
         break;
+    case ALE_PRES_PIP:
+        // Serial.println("Alerta");
+        lcd.setCursor(7, 0);
+        lcd.print("ALERTA");
+        lcd.setCursor(0, 2);
+        lcd.print("Presion PIP elevada");
+        break;
+    case ALE_PRES_DES:
+        // Serial.println("Alerta");
+        lcd.setCursor(7, 0);
+        lcd.print("ALERTA");
+        lcd.setCursor(0, 2);
+        lcd.print("Desconexion Paciente");
+        break;
+    case ALE_GENERAL:
+        // Serial.println("Alerta");
+        lcd.setCursor(7, 0);
+        lcd.print("ALERTA");
+        lcd.setCursor(4, 2);
+        lcd.print("Obstruccion");
+        break;
+    case ALE_PRES_PEEP:
+        // Serial.println("Alerta");
+        lcd.setCursor(7, 0);
+        lcd.print("ALERTA");
+        lcd.setCursor(0, 2);
+        lcd.print("  Perdida de PEEP   ");
+        break;
+    case BATTERY:
+        // Serial.println("Alerta");
+        lcd.setCursor(5, 0);
+        lcd.print("ADVERTENCIA");
+        lcd.setCursor(0, 2);
+        lcd.print("Fallo red electrica");
+        break;
     case CHECK_MENU:
+        lcd.setCursor(0, 0);
+        lcd.print("Comprobacion Inicial");
         lcd.setCursor(0, 1);
         lcd.print("                    ");
         lcd.setCursor(0, 2);
@@ -1012,6 +978,8 @@ void lcd_show_comp() {
         lcd.print("Sensores            ");
         break;
     case CONFIRM_MENU:
+        lcd.setCursor(0, 0);
+        lcd.print(" Confirmar cambios  ");
         lcd.setCursor(0, 1);
         lcd.print("                    ");
         lcd.setCursor(0, 2);
@@ -1029,6 +997,8 @@ void lcd_show_comp() {
         lcd.print("                    ");
         break;
     case CPAP_MENU:
+        lcd.setCursor(0, 0);
+        lcd.print(" Configuracion CPAP ");
         lcd.setCursor(0, 1);
         lcd.print("                    ");
         lcd.setCursor(0, 2);
@@ -1067,57 +1037,15 @@ void lcd_show_part() {
     //Serial.println("IE = " + String(I) + ':' + String(E));
     //Serial.println(currentRelacionIE);
 
-    // maquina de estados para cambiar la impresion de alarmas solo en la linea principal
-    if (lineaAnterior != lineaAlerta) {
-        lineaAnterior = lineaAlerta;
-        lcd.setCursor(0, 0);
-        switch (lineaAlerta) {
-        case MAIN_MENU:
-            if (stateMachine == STANDBY_STATE) {
-                lcd.print("    Modo Standby    ");
-            }
-            else {
-                lcd.print("  InnspiraMED UdeA  ");
-            }
-            break;
-        case CONFIG_MENU:
-            lcd.print("   Configuracion    ");
-            break;
-        case CONFIG_ALARM:
-            lcd.print("      Alarmas       ");
-            break;
-        case ALE_PRES_PIP:
-            lcd.print("Presion PIP elevada ");
-            break;
-        case ALE_PRES_DES:
-            lcd.print("Desconexion Paciente");
-            break;
-        case ALE_GENERAL:
-            lcd.print("    Obstruccion     ");
-            break;
-        case ALE_PRES_PEEP:
-            lcd.print("  Perdida de PEEP   ");
-            break;
-        case BATTERY:
-            lcd.print("Fallo red electrica ");
-            break;
-        case CHECK_MENU:
-            lcd.print("Comprobacion Inicial");
-            break;
-        case CONFIRM_MENU:
-            lcd.print(" Confirmar cambios  ");
-            break;
-        case CPAP_MENU:
-            lcd.print(" Configuracion CPAP ");
-            break;
-        default:
-            break;
-        }
-    }
-
-
     switch (menuImprimir) {
     case MAIN_MENU:
+        lcd.setCursor(0, 0);
+        if (stateMachine == STANDBY_STATE) {
+            lcd.print("    Modo Standby    ");
+        }
+        else {
+            lcd.print("  InnspiraMED UdeA  ");
+        }
         if (currentFrecRespiratoria != frecRespiratoriaAnte) {
             lcd.setCursor(4, 1);
             lcd.print(currentFrecRespiratoria);
@@ -1144,7 +1072,7 @@ void lcd_show_part() {
             // Serial.println("Changed IE");
         }
         if (Pcon != PconAnte) {
-
+        
             lcd.setCursor(15, 2);
             lcd.print(String(Pcon, 0));
             if (Pcon < 10)
@@ -1264,7 +1192,7 @@ void task_Receive(void* pvParameters) {
     while (1) {
         if (Serial2.available() > 5) {
             // if (Serial.available() > 5) {  // solo para pruebas
-            // Serial.println("Inside receiveData");
+              // Serial.println("Inside receiveData");
             String dataIn = Serial2.readStringUntil(';');
             // String dataIn = Serial.readStringUntil(';');  // solo para pruebas
             int contComas = 0;
@@ -1312,12 +1240,14 @@ void sendSerialData() {
         I = (char)(-currentRelacionIE);
         E = 1;
     }
+    /*String dataToSend = String(currentFrecRespiratoria) + ',' + String(I) + ',' +
+        String(E) + ',' + String(maxPresion) + ',' + String(stateMachine) + 
+        String(currentVentilationMode) + ';';*/
     String dataToSend = String(currentFrecRespiratoria) + ',' + String(I) + ',' +
         String(E) + ',' + String(maxPresion) + ',' + String(batteryAlert) + ',' +
-        String(flagStabilityInterrupt) + ',' + String(stateMachine) + ',' +
-        String(currentVentilationMode) + ';';
+        String(flagStabilityInterrupt) + ';';
     Serial2.print(dataToSend);
-    //Serial.println(stateMachine);
+    //Serial.println(dataToSend);
 }
 
 /* ***************************************************************************
@@ -1347,7 +1277,7 @@ void task_Display(void* pvParameters) {
                 digitalWrite(SILENCE_LED, HIGH);
             }
             else if (contAlertas == 10) {
-                lineaAlerta = menuAlerta;
+                menuImprimir = menuAlerta;
                 flagAlreadyPrint = false;
                 if (flagSilenceInterrupt == false) {
                     //digitalWrite(BUZZER, HIGH);
@@ -1367,10 +1297,10 @@ void task_Display(void* pvParameters) {
                 digitalWrite(SILENCE_LED, HIGH);
             }
             else if (contAlertas == 20) {
-                lineaAlerta = menu;
+                menuImprimir = menu;
                 flagAlreadyPrint = false;
                 if (flagSilenceInterrupt == false) {
-                    // digitalWrite(BUZZER, HIGH);
+                   // digitalWrite(BUZZER, HIGH);
                 }
                 digitalWrite(LUMINR, LOW);
                 digitalWrite(LUMING, LOW);
@@ -1379,8 +1309,8 @@ void task_Display(void* pvParameters) {
                 contAlertas = 0;
             }
         }
-        else if (flagBatteryAlert == true) {
-            contSilenceBattery++;
+        else if (flagBatteryAlert == true ) {
+            contSilenceBattery++;  
             if (contSilenceBattery == 3) {
                 if (flagBatterySilence == false) {
                     digitalWrite(BUZZER, LOW);
@@ -1391,7 +1321,7 @@ void task_Display(void* pvParameters) {
                 digitalWrite(SILENCE_LED, HIGH);
             }
             else if (contSilenceBattery == 10) {
-                lineaAlerta = menuAlerta;
+                menuImprimir = menuAlerta;
                 flagAlreadyPrint = false;
                 if (flagBatterySilence == false) {
                     //digitalWrite(BUZZER, HIGH);
@@ -1411,7 +1341,7 @@ void task_Display(void* pvParameters) {
                 digitalWrite(SILENCE_LED, HIGH);
             }
             else if (contSilenceBattery == 20) {
-                lineaAlerta = menu;
+                menuImprimir = menu;
                 flagAlreadyPrint = false;
                 if (flagBatterySilence == false) {
                     // digitalWrite(BUZZER, HIGH);
@@ -1426,7 +1356,7 @@ void task_Display(void* pvParameters) {
         else {
             contAlertas++;
             if (contAlertas == 10) {
-                lineaAlerta = menu;
+                menuImprimir = menu;
                 flagAlreadyPrint = false;
                 digitalWrite(LUMINR, LOW);
                 digitalWrite(LUMING, LOW);
@@ -1437,7 +1367,7 @@ void task_Display(void* pvParameters) {
                 flagSilenceInterrupt = false;
             }
             else if (contAlertas == 20) {
-                lineaAlerta = menu;
+                menuImprimir = menu;
                 flagAlreadyPrint = false;
                 contAlertas = 0;
             }
@@ -1448,7 +1378,6 @@ void task_Display(void* pvParameters) {
          * ***************************************************************/
         if ((menuAnterior != menuImprimir) && (flagAlreadyPrint == false)) {
             lcd.clear();
-            lineaAnterior = MODE_CHANGE;
             lcd_show_comp();
         }
         else {
@@ -1478,7 +1407,7 @@ void setup()
 
     // nvs_flash_init();
 
-    // se crea el semï¿½foro binario
+    // se crea el semáforo binario
     xSemaphoreEncoder = xSemaphoreCreateBinary();
     xSemaphoreTimer = xSemaphoreCreateBinary();
 

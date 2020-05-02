@@ -13,7 +13,7 @@
 #define EV_ESPIRA    12  // Valvula 3/2 de control de presiones PCON y PEEP (pin 11 del shield, velocidad motor 2)
 
 // Definiciones para el manejo del ADC
-#define ADC_PRESS_1     33  // Sensor de presión xx (pin ADC para presion 1)
+#define ADC_PRESS_1     26  // Sensor de presión xx (pin ADC para presion 1)
 #define ADC_PRESS_2     32  // Sensor de presión xx (pin ADC para presion 2)
 #define ADC_PRESS_3     35  // Sensor de presión via aerea del paciente (pin ADC para presion 3)
 #define ADC_FLOW_1      36  // Sensor de flujo linea xx (pin ADC para presion 2)
@@ -82,6 +82,7 @@ String RaspberryChain = "";
 
 // Variables de manejo de ADC
 volatile int contADC = 0;
+volatile int contADCfast = 0;
 bool fl_ADC = false;
 int ADC1_Value = 0;
 int ADC2_Value = 0;
@@ -114,21 +115,21 @@ bool flagStandbyInterrupt = false;
 unsigned int contStandby = 0;
 
 // State machine
-#define checkState		0
-#define standbyState	1
-#define cyclingState	2
-#define failureState	3
-int currentStateMachine = standbyState;
-int newStateMachine = standbyState;
+#define CHECK_STATE		0
+#define STANDBY_STATE	1
+#define CYCLING_STATE	2
+#define FAILURE_STATE	3
+int currentStateMachine = STANDBY_STATE;
+int newStateMachine = STANDBY_STATE;
 int currentVentilationMode = 0;
 int newVentilationMode = 0;
 
 
-#define stopCycling			0
-#define startCycling		1
-#define inspirationState	2
-#define expirationState		3
-unsigned int currentStateMachineCycling = startCycling;
+#define STOP_CYCLING			0
+#define START_CYCLING			1
+#define INSPIRATION_CYCLING		2
+#define EXPIRATION_CYCLING		3
+unsigned int currentStateMachineCycling = START_CYCLING;
 //***********************************
 // datos para prueba de transmision
 int pruebaDato = 0;
@@ -161,11 +162,11 @@ float SPin = 0; //Señal filtrada de presion en la camara
 float SPout = 0; //Señal filtrada de presion en la bolsa
 
 //- Filtrado
-float Pin[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-float Pout[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-float Ppac[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-float Fin[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-float Fout[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+float Pin[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+float Pout[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+float Ppac[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+float Fin[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+float Fout[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 //- Mediciones derivadas
 float UmbralPpmin = 100;
@@ -260,6 +261,12 @@ void setup() {
 	Serial2.begin(115200); // , SERIAL_8N1, RXD2, TXD2);
 	Serial2.setTimeout(10);
 
+	adcAttachPin(ADC_PRESS_1);
+	adcAttachPin(ADC_PRESS_2);
+	adcAttachPin(ADC_PRESS_3);
+	adcAttachPin(ADC_FLOW_1);
+	adcAttachPin(ADC_FLOW_2);
+
 	EEPROM.begin(4);
 	contCiclos = eeprom_wr_int();
 
@@ -302,7 +309,7 @@ void setup() {
 	inspExp = String("");
 
 	RaspberryChain = String("");
-	
+
 	digitalWrite(2, LOW);	// PIN 3   velocidad
 	digitalWrite(4, LOW);	// PIN 6   velocidad
 	digitalWrite(5, LOW);   // PIN 12  velocidad
@@ -327,13 +334,13 @@ void loop() {
 		portENTER_CRITICAL(&timerMux);
 		flagTimerInterrupt = false;
 		portEXIT_CRITICAL(&timerMux);
-		
+
 		receiveData();
-		
+
 		switch (currentStateMachine) {
-		case checkState:
+		case CHECK_STATE:
 			break;
-		case standbyState:
+		case STANDBY_STATE:
 			adcReading();
 			standbyRoutine();
 			//Update data on LCD each 200ms
@@ -344,8 +351,8 @@ void loop() {
 			}
 			//Serial.println("Standby state on control Unit");
 			break;
-		case cyclingState:
-			//Serial.println("I am on cyclingState");
+		case CYCLING_STATE:
+			//Serial.println("I am on CYCLING_STATE");
 			cycling();
 			adcReading();
 			//Update data on LCD each 200ms
@@ -361,7 +368,7 @@ void loop() {
 				eeprom_wr_int(contCiclos, 'w');
 			}
 			break;
-		case failureState:
+		case FAILURE_STATE:
 			break;
 		default:
 			break;
@@ -379,8 +386,8 @@ void IRAM_ATTR onTimer() {
 void cycling() {
 	contCycling++;
 
-	if ((newFrecRespiratoria = !currentFrecRespiratoria) && 
-		(newI = !currentI) && (newE = !currentE)) {
+	if ((newFrecRespiratoria != currentFrecRespiratoria) ||
+		(newI != currentI) || (newE != !currentE)) {
 		currentFrecRespiratoria = newFrecRespiratoria;
 		currentI = newI;
 		currentE = newE;
@@ -395,27 +402,27 @@ void cycling() {
 		}
 	}
 
-	switch (currentStateMachineCycling){
-	case stopCycling:
+	switch (currentStateMachineCycling) {
+	case STOP_CYCLING:
 		break;
-	case startCycling:
+	case START_CYCLING:
 		if (contCycling >= 1) {        // Inicia el ciclado abriendo electrovalvula de entrada y cerrando electrovalvula de salida
 			BandInsp = 1;// Activa bandera que indica que empezo la inspiración
 			digitalWrite(EV_INSPIRA, LOW);//Piloto conectado a ambiente -> Desbloquea valvula piloteada y permite el paso de aire
 			digitalWrite(EV_ESPIRA, HIGH);//Piloto conectado a PIP -> Limita la presión de la via aerea a la PIP configurada
 			digitalWrite(EV_ESC_CAM, HIGH);//Piloto conectado a Presión de activación -> Presiona la camara  
-			currentStateMachineCycling = inspirationState;
+			currentStateMachineCycling = INSPIRATION_CYCLING;
 		}//- Mitad de la inspiración
 		else if (contCycling == int(((inspirationTime) * 1000) / 2)) {
 			SFinMax = SFin;//
 			SFoutMax = SFout;//
 		}
 		break;
-	case inspirationState:
+	case INSPIRATION_CYCLING:
 		if (contCycling >= int(inspirationTime * 1000)) {
 			//Calculo PIP
-			Ppico = SPpac;//Detección de Ppico como la presión al final de la inspiración
-			Ppico = -0.0079 * (Ppico * Ppico) + 1.6493 * Ppico - 33.664;//Ajuste de Ppico
+			//Ppico = SPpac;//Detección de Ppico como la presión al final de la inspiración
+			//Ppico = -0.0079 * (Ppico * Ppico) + 1.6493 * Ppico - 33.664;//Ajuste de Ppico
 			if (Ppico < 0) {// Si el valor de Ppico es negativo
 				Ppico = 0;// Lo limita a 0
 			}
@@ -437,10 +444,10 @@ void cycling() {
 			digitalWrite(EV_INSPIRA, HIGH);//Piloto conectado a presión de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
 			digitalWrite(EV_ESC_CAM, LOW);//Piloto conectado a PEEP -> Limita la presión de la via aerea a la PEEP configurada
 			digitalWrite(EV_ESPIRA, LOW);//Piloto conectado a ambiente -> Despresuriza la camara y permite el llenado de la bolsa
-			currentStateMachineCycling = expirationState;
+			currentStateMachineCycling = EXPIRATION_CYCLING;
 		}
 		break;
-	case expirationState:
+	case EXPIRATION_CYCLING:
 		//Add para el modo A/C
 		if (contCycling >= int(((inspirationTime + expirationTime) * 1000))) {
 			contCycling = 0;
@@ -485,6 +492,7 @@ void cycling() {
 			//Asignación de valores maximos y minimos de presión      
 			pmin = UmbralPpmin;//asigna la presion minima encontrada en todo el periodo      
 			pmax = UmbralPpico;//asigna la presion maxima encontrada en todo el periodo
+			Ppico = pmax;
 			UmbralPpmin = 100;//Reinicia el umbral minimo de presion del paciente
 			UmbralPpico = -100;//Reinicia el umbral maximo de presion del paciente
 
@@ -494,7 +502,7 @@ void cycling() {
 			}
 
 			alarmsDetection();
-			currentStateMachineCycling = startCycling;
+			currentStateMachineCycling = START_CYCLING;
 
 			if (newStateMachine != currentStateMachine) {
 				currentStateMachine = newStateMachine;
@@ -556,11 +564,11 @@ void receiveData() {
 
 		Serial2.flush();
 
-		Serial.println("State = " + String(currentStateMachine));
-		Serial.println(String(newFrecRespiratoria) + ',' + String(newI) + ',' + 
-					   String(newE) + ',' + String(maxPresion) + ',' + 
-					   String(alerBateria) + ',' + String(estabilidad) + ',' +
-					   String(newStateMachine) + ',' + String(newVentilationMode));
+		/*Serial.println("State = " + String(currentStateMachine));
+		Serial.println(String(newFrecRespiratoria) + ',' + String(newI) + ',' +
+			String(newE) + ',' + String(maxPresion) + ',' +
+			String(alerBateria) + ',' + String(estabilidad) + ',' +
+			String(newStateMachine) + ',' + String(newVentilationMode));*/
 		//Serial.println(String(alerPeep));
 		/*for (int i = 0; i < contComas + 1; i++) {
 			Serial.println(dataIn2[i]);
@@ -583,63 +591,75 @@ void receiveData() {
 // Read ADC BATTALARM (each 50ms)
 void adcReading() {
 	contADC++;
-	if (contADC == 50) {
-		contADC = 0;
+	contADCfast++;
+	if (contADCfast == 3) {
+		contADCfast = 0;
 
 		// Lectura de valores ADC
+		ADC4_Value = analogRead(ADC_FLOW_1);
+		ADC5_Value = analogRead(ADC_FLOW_2);
 		ADC1_Value = analogRead(ADC_PRESS_1);
 		ADC2_Value = analogRead(ADC_PRESS_2);
 		ADC3_Value = analogRead(ADC_PRESS_3);// ADC presión de la via aerea
-		ADC4_Value = analogRead(ADC_FLOW_1);
-		ADC5_Value = analogRead(ADC_FLOW_2);
-		
+
 		// Procesamiento señales
-		//- Almacenamiento
-		Ppac[9] = ADC3_Value;
-		Pin[9] = ADC1_Value;
-		Pout[9] = ADC1_Value;
-		Fin[9] = ADC4_Value;
-		Fout[9] = ADC5_Value;
+	//- Almacenamiento
+		Fin[39] = ADC4_Value;
+		Fout[39] = ADC5_Value;
+		Ppac[39] = ADC3_Value;
+		Pin[39] = ADC1_Value;
+		Pout[39] = ADC2_Value;
+
 		//- Corrimiento inicial
-		for (int i = 9; i >= 1; i--) {
-			Pin[9 - i] = Pin[9 - i + 1];
-			Pout[9 - i] = Pout[9 - i + 1];
-			Ppac[9 - i] = Ppac[9 - i + 1];
-			Fin[9 - i] = Fin[9 - i + 1];
-			Fout[9 - i] = Fout[9 - i + 1];
+		for (int i = 39; i >= 1; i--) {
+			Fin[39 - i] = Fin[39 - i + 1];
+			Fout[39 - i] = Fout[39 - i + 1];
+			Pin[39 - i] = Pin[39 - i + 1];
+			Pout[39 - i] = Pout[39 - i + 1];
+			Ppac[39 - i] = Ppac[39 - i + 1];
 		}
+
 		//- Inicialización
+		SFin = 0;
+		SFout = 0;
 		SPin = 0;
 		SPout = 0;
 		SPpac = 0;
-		SFin = 0;
-		SFout = 0;
+
 		//- Actualización
-		for (int i = 0; i <= 9; i++) {
+		for (int i = 0; i <= 39; i++) {
+			SFin = SFin + Fin[i];
+			SFout = SFout + Fout[i];
 			SPin = SPin + Pin[i];
 			SPout = SPout + Pout[i];
 			SPpac = SPpac + Ppac[i];
-			SFin = SFin + Fin[i];
-			SFout = SFout + Fout[i];
 		}
-		//- Calculo promedio
-		SPin = SPin / 10;
-		SPout = SPout / 10;
-		SPpac = SPpac / 10;
-		SFin = SFin / 10;
-		SFout = SFout / 10;
 
-		// Conversiones de ADC a presiones
+		//- Calculo promedio
+		SFin = SFin / 40;
+		SFout = SFout / 40;
+		SPin = SPin / 40;
+		SPout = SPout / 40;
+		SPpac = SPpac / 40;
+
+		//- Conversión ADC-Presión
 		SPin = AMP1 * float(SPin) + OFFS1;
 		SPout = AMP2 * float(SPout) + OFFS2;
 		SPpac = AMP3 * float(SPpac) + OFFS3;// Presión de la via aerea
-		flow1 = float(ADC4_Value - 1695) / 10;
-		flow2 = float(ADC5_Value - 1768) / 10;
-		
+
+		// machetazo flujo
+		SFin = float(SFin - 1695) / 10;
+		SFout = float(SFout - 1768) / 10;
 		//- machetazo flujo
 		SFin = (SFin - 10);
 		SFout = (SFout + 12);
 		SFout = SFout * 2 + 3.5;
+
+	}
+
+
+	if (contADC == 50) {
+		contADC = 0;
 
 		// Calculo Presiones maximas y minimas en la via aerea
 		if (UmbralPpmin > SPpac) {
@@ -668,17 +688,17 @@ void adcReading() {
 
 		// Transmicón serial
 		//- Asignación de variables
-		if (alerDesconexion == 1) {
-			patientPress = String(0);
-		}
-		else {
+		//if (alerDesconexion == 1) {
+		//	patientPress = String(0);
+		//}
+		//else {
 			patientPress = String(SPpac);
-		}
+		//}
 		patientFlow = String(SFin - SFout - 10);
 		patientVolume = String(Vtidal);
 		pressPIP = String(Ppico, 0);
 		pressPEEP = String(Peep, 0);
-		frequency = String(currentFrecRespiratoria, 0);
+		frequency = String(currentFrecRespiratoria);
 		if (currentI == 1) {
 			rInspir = String(relI, 0);
 		}
@@ -692,17 +712,16 @@ void adcReading() {
 			rEspir = String(relE, 1);
 		}
 
-
 		volumeT = String(VT, 0);
-		alertPip = String(alerPresionPIP, 0);
+		alertPip = String(alerPresionPIP);
 
-		alertPeep = String(alerGeneral, 0);
+		alertPeep = String(alerGeneral);
 
 		alertDiffPress = String(0);
-		alertConnPat = String(alerDesconexion, 0);
+		alertConnPat = String(alerDesconexion);
 		alertLeak = String(0);
-		//alertConnEquipment = String(alerBateria);
-		alertConnEquipment = String(0);
+		alertConnEquipment = String(alerBateria);
+		//alertConnEquipment = String(0);
 		alertValve1Fail = String(0);
 		alertValve2Fail = String(0);
 		alertValve3Fail = String(0);
@@ -735,7 +754,7 @@ void adcReading() {
 			inspFlow + ',' + inspExp;
 
 		// Envio de la cadena de datos (visualizacion Raspberry)
-		//Serial.println(RaspberryChain);
+		Serial.println(RaspberryChain);
 
 		// Envio de la cadena de datos
 	//    Serial.print(", Ppac = ");
@@ -764,15 +783,16 @@ void adcReading() {
 }
 
 void sendSerialData() {
-	String dataToSend = String(Ppico) + ',' + String(Peep) + ',' + "0" + ',' +
+	String dataToSend = String(Ppico) + ',' + String(Peep) + ',' + String(VT) + ',' +
 		String(alerPresionPIP) + ',' + String(alerDesconexion) + ',' +
-		String(alerGeneral) + ',' + ';';
+		String(alerGeneral) + ',' + String(estabilidad)+ ';';
 	Serial2.print(dataToSend);
 }
 
 void alarmsDetection() {
 	// Ppico Alarm
-	if (flagInicio == false) {
+	if (flagInicio == false) {//Si hay habilitación de alarmas
+	// Alarma por Ppico elevada
 		if (Ppico > maxPresion) {
 			flagAlarmPpico = true;
 			alerPresionPIP = 1;
@@ -781,8 +801,9 @@ void alarmsDetection() {
 			flagAlarmPpico = false;
 			alerPresionPIP = 0;
 		}
-		// Patient desconnection Alarm
-		if (Ppico < 3 && Peep < 2) {
+
+		// Alarma por desconexión del paciente
+		if ((SFinMax - SFtotalMax) <= 10) {
 			flagAlarmPatientDesconnection = true;
 			alerDesconexion = 1;
 		}
@@ -790,22 +811,19 @@ void alarmsDetection() {
 			flagAlarmPatientDesconnection = false;
 			alerDesconexion = 0;
 		}
-		// General Alarm (Obstrucci`n)
-		if (Peep < 3) {
-			BandGeneral = 1;
-			if (ContGeneral >= 2) {
-				flagAlarmGeneral = true;
-				alerGeneral = 1;
-				BandGeneral = 0;
-				ContGeneral = 0;
-			}
+
+		// Alarma por obstrucción
+		if ((SFinMax - SFoutMax) <= 5) {
+			flagAlarmGeneral = true;
+			alerGeneral = 1;
 		}
 		else {
 			flagAlarmGeneral = false;
 			alerGeneral = 0;
-			ContGeneral = 0;
-			BandGeneral = 0;
 		}
+
+		SFinMax = SFin;
+		SFoutMax = SFout;
 	}
 }
 

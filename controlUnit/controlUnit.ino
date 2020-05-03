@@ -1,4 +1,4 @@
-/*
+ï»¿/*
  Name:		controlUnit.ino
  Created:	4/3/2020 17:28:49
  Author:	Helber Carvajal
@@ -9,13 +9,13 @@
 // Definiciones para controlar el shiel DFRobot quad motor driver
 // Definiciones para controlar el shiel DFRobot quad motor driver
 #define EV_INSPIRA   13  // Valvula 3/2 de control de la via inspiratoria (pin 3 del shield, velocidad motor 1)
-#define EV_ESC_CAM   14  // Valvula 3/2 de activación de la camara (pin 6 del shield, velocidad motor 4)
+#define EV_ESC_CAM   14  // Valvula 3/2 de activaciï¿½n de la camara (pin 6 del shield, velocidad motor 4)
 #define EV_ESPIRA    12  // Valvula 3/2 de control de presiones PCON y PEEP (pin 11 del shield, velocidad motor 2)
 
 // Definiciones para el manejo del ADC
-#define ADC_PRESS_1     26  // Sensor de presión xx (pin ADC para presion 1)
-#define ADC_PRESS_2     32  // Sensor de presión xx (pin ADC para presion 2)
-#define ADC_PRESS_3     35  // Sensor de presión via aerea del paciente (pin ADC para presion 3)
+#define ADC_PRESS_1     26  // Sensor de presion xx (pin ADC para presion 1)
+#define ADC_PRESS_2     32  // Sensor de presion xx (pin ADC para presion 2)
+#define ADC_PRESS_3     35  // Sensor de presion via aerea del paciente (pin ADC para presion 3)
 #define ADC_FLOW_1      36  // Sensor de flujo linea xx (pin ADC para presion 2)
 #define ADC_FLOW_2      39  // Sensor de flujo linea xx (pin ADC para presion 3)
 
@@ -72,9 +72,10 @@ String inspExp;
 //Variables para el envio de las alarmas
 int alerPresionPIP = 0;
 int alerDesconexion = 0;
-int alerGeneral = 0;
+int alerObstruccion = 0;
 int alerPeep = 0;
 int alerBateria = 0;
+int alerGeneral = 0;
 int estabilidad = 0;
 int PeepEstable = 0;
 
@@ -105,8 +106,9 @@ volatile bool flagDettachInterrupt_A = false;
 volatile bool flagDettachInterrupt_B = false;
 volatile bool flagDetach = false;
 bool flagAlarmPpico = false;
-bool flagAlarmPatientDesconnection = false;
 bool flagAlarmGeneral = false;
+bool flagAlarmPatientDesconnection = false;
+bool flagAlarmObstruccion = false;
 volatile unsigned int contDetach = 0;
 unsigned int contCiclos = 0;
 unsigned int contEscrituraEEPROM = 0;
@@ -154,12 +156,12 @@ float Vout_Ins = 0;
 float Vin_Esp = 0;
 float Vout_Esp = 0;
 
-//- Señales
-float SFin = 0; //Señal de flujo inspiratorio
-float SFout = 0; //Señal de flujo espiratorio
-float SPpac = 0; //Señal de presión en la via aerea del paciente
-float SPin = 0; //Señal filtrada de presion en la camara
-float SPout = 0; //Señal filtrada de presion en la bolsa
+//- Seï¿½ales
+float SFin = 0; //Seï¿½al de flujo inspiratorio
+float SFout = 0; //Seï¿½al de flujo espiratorio
+float SPpac = 0; //Seï¿½al de presiï¿½n en la via aerea del paciente
+float SPin = 0; //Seï¿½al filtrada de presion en la camara
+float SPout = 0; //Seï¿½al filtrada de presion en la bolsa
 
 //- Filtrado
 float Pin[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -242,7 +244,7 @@ void setup() {
 	timerAlarmWrite(timer, 1000, true);             // Interrupcion cada 1000 conteos del timer, es decir 100 Hz
 	timerAlarmEnable(timer);                        // Habilita interrupcion por timer
 
-	// Configuración de los pines de conexion con del driver para manejo de electrovalvulas
+	// Configuraciï¿½n de los pines de conexion con del driver para manejo de electrovalvulas
 	pinMode(2, OUTPUT);		// PIN 3   velocidad
 	pinMode(4, OUTPUT);		// PIN 6   velocidad
 	pinMode(5, OUTPUT);		// PIN 12  velocidad
@@ -407,12 +409,12 @@ void cycling() {
 		break;
 	case START_CYCLING:
 		if (contCycling >= 1) {        // Inicia el ciclado abriendo electrovalvula de entrada y cerrando electrovalvula de salida
-			BandInsp = 1;// Activa bandera que indica que empezo la inspiración
+			BandInsp = 1;// Activa bandera que indica que empezo la inspiraciï¿½n
 			digitalWrite(EV_INSPIRA, LOW);//Piloto conectado a ambiente -> Desbloquea valvula piloteada y permite el paso de aire
-			digitalWrite(EV_ESPIRA, HIGH);//Piloto conectado a PIP -> Limita la presión de la via aerea a la PIP configurada
-			digitalWrite(EV_ESC_CAM, HIGH);//Piloto conectado a Presión de activación -> Presiona la camara  
+			digitalWrite(EV_ESPIRA, HIGH);//Piloto conectado a PIP -> Limita la presiï¿½n de la via aerea a la PIP configurada
+			digitalWrite(EV_ESC_CAM, HIGH);//Piloto conectado a Presiï¿½n de activaciï¿½n -> Presiona la camara  
 			currentStateMachineCycling = INSPIRATION_CYCLING;
-		}//- Mitad de la inspiración
+		}//- Mitad de la inspiraciï¿½n
 		else if (contCycling == int(((inspirationTime) * 1000) / 2)) {
 			SFinMax = SFin;//
 			SFoutMax = SFout;//
@@ -421,7 +423,7 @@ void cycling() {
 	case INSPIRATION_CYCLING:
 		if (contCycling >= int(inspirationTime * 1000)) {
 			//Calculo PIP
-			//Ppico = SPpac;//Detección de Ppico como la presión al final de la inspiración
+			//Ppico = SPpac;//Detecciï¿½n de Ppico como la presiï¿½n al final de la inspiraciï¿½n
 			//Ppico = -0.0079 * (Ppico * Ppico) + 1.6493 * Ppico - 33.664;//Ajuste de Ppico
 			if (Ppico < 0) {// Si el valor de Ppico es negativo
 				Ppico = 0;// Lo limita a 0
@@ -429,8 +431,8 @@ void cycling() {
 			Ppico = int(Ppico);
 
 			//Mediciones de presion del sistema
-			Pin_max = SPin;//Presión maxima de la camara
-			Pout_max = SPout;//Presión maxima de la bolsa
+			Pin_max = SPin;//Presiï¿½n maxima de la camara
+			Pout_max = SPout;//Presiï¿½n maxima de la bolsa
 
 			//Medicion de Volumen circulante
 			VT = Vtidal;
@@ -440,9 +442,9 @@ void cycling() {
 			SFtotalMax = SFin - SFout;
 
 			//Rutina de ciclado
-			BandInsp = 0;	// Desactiva la bandera, indicando que empezo la espiración
-			digitalWrite(EV_INSPIRA, HIGH);//Piloto conectado a presión de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
-			digitalWrite(EV_ESC_CAM, LOW);//Piloto conectado a PEEP -> Limita la presión de la via aerea a la PEEP configurada
+			BandInsp = 0;	// Desactiva la bandera, indicando que empezo la espiraciï¿½n
+			digitalWrite(EV_INSPIRA, HIGH);//Piloto conectado a presiï¿½n de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
+			digitalWrite(EV_ESC_CAM, LOW);//Piloto conectado a PEEP -> Limita la presiï¿½n de la via aerea a la PEEP configurada
 			digitalWrite(EV_ESPIRA, LOW);//Piloto conectado a ambiente -> Despresuriza la camara y permite el llenado de la bolsa
 			currentStateMachineCycling = EXPIRATION_CYCLING;
 		}
@@ -452,7 +454,7 @@ void cycling() {
 		if (contCycling >= int(((inspirationTime + expirationTime) * 1000))) {
 			contCycling = 0;
 			//Calculo de Peep
-			Peep = SPpac;// Peep como la presion en la via aerea al final de la espiración
+			Peep = SPpac;// Peep como la presion en la via aerea al final de la espiraciï¿½n
 
 			if (Peep < 0) {// Si el valor de Peep es negativo
 				Peep = 0;// Lo limita a 0
@@ -474,7 +476,7 @@ void cycling() {
 			Vtidal = 0;
 
 			//Calculos de volumenes
-			//- Asignación
+			//- Asignaciï¿½n
 			Vin_Ins = SUMVin_Ins / 1000;
 			Vout_Ins = SUMVout_Ins / 1000;
 			Vin_Esp = SUMVin_Esp / 1000;
@@ -486,17 +488,17 @@ void cycling() {
 			SUMVout_Esp = 0;
 
 			//Mediciones de presion del sistema
-			Pin_min = SPin;//Presión minima de la camara
-			Pout_min = SPout;//Presión minima de la bolsa
+			Pin_min = SPin;//Presiï¿½n minima de la camara
+			Pout_min = SPout;//Presiï¿½n minima de la bolsa
 
-			//Asignación de valores maximos y minimos de presión      
+			//Asignaciï¿½n de valores maximos y minimos de presiï¿½n      
 			pmin = UmbralPpmin;//asigna la presion minima encontrada en todo el periodo      
 			pmax = UmbralPpico;//asigna la presion maxima encontrada en todo el periodo
 			Ppico = pmax;
 			UmbralPpmin = 100;//Reinicia el umbral minimo de presion del paciente
 			UmbralPpico = -100;//Reinicia el umbral maximo de presion del paciente
 
-			//Metodo de exclusión de alarmas
+			//Metodo de exclusiï¿½n de alarmas
 			if (Ppico > 2 && Peep > 2) {
 				flagInicio = false;
 			}
@@ -569,12 +571,12 @@ void receiveData() {
 			String(newE) + ',' + String(maxPresion) + ',' +
 			String(alerBateria) + ',' + String(estabilidad) + ',' +
 			String(newStateMachine) + ',' + String(newVentilationMode));*/
-		//Serial.println(String(alerPeep));
-		/*for (int i = 0; i < contComas + 1; i++) {
-			Serial.println(dataIn2[i]);
-		  }*/
+			//Serial.println(String(alerPeep));
+			/*for (int i = 0; i < contComas + 1; i++) {
+				Serial.println(dataIn2[i]);
+			  }*/
 
-		  // Calculo del tiempo I:E
+			  // Calculo del tiempo I:E
 		if (newI == 1) {
 			inspirationTime = (float)(60.0 / (float)newFrecRespiratoria) / (1 + (float)((float)newE / 10.0));
 			expirationTime = (float)((float)newE / 10.0) * (float)inspirationTime;
@@ -600,9 +602,9 @@ void adcReading() {
 		ADC5_Value = analogRead(ADC_FLOW_2);
 		ADC1_Value = analogRead(ADC_PRESS_1);
 		ADC2_Value = analogRead(ADC_PRESS_2);
-		ADC3_Value = analogRead(ADC_PRESS_3);// ADC presión de la via aerea
+		ADC3_Value = analogRead(ADC_PRESS_3);// ADC presiï¿½n de la via aerea
 
-		// Procesamiento señales
+		// Procesamiento seï¿½ales
 	//- Almacenamiento
 		Fin[39] = ADC4_Value;
 		Fout[39] = ADC5_Value;
@@ -619,14 +621,14 @@ void adcReading() {
 			Ppac[39 - i] = Ppac[39 - i + 1];
 		}
 
-		//- Inicialización
+		//- Inicializaciï¿½n
 		SFin = 0;
 		SFout = 0;
 		SPin = 0;
 		SPout = 0;
 		SPpac = 0;
 
-		//- Actualización
+		//- Actualizaciï¿½n
 		for (int i = 0; i <= 39; i++) {
 			SFin = SFin + Fin[i];
 			SFout = SFout + Fout[i];
@@ -642,10 +644,10 @@ void adcReading() {
 		SPout = SPout / 40;
 		SPpac = SPpac / 40;
 
-		//- Conversión ADC-Presión
+		//- Conversiï¿½n ADC-Presiï¿½n
 		SPin = AMP1 * float(SPin) + OFFS1;
 		SPout = AMP2 * float(SPout) + OFFS2;
-		SPpac = AMP3 * float(SPpac) + OFFS3;// Presión de la via aerea
+		SPpac = AMP3 * float(SPpac) + OFFS3;// Presiï¿½n de la via aerea
 
 		// machetazo flujo
 		SFin = float(SFin - 1695) / 10;
@@ -686,13 +688,13 @@ void adcReading() {
 		// Calculo de volumen circulante	
 		Vtidal = Vtidal + (SFin - SFout - 10) * .5;
 
-		// Transmicón serial
-		//- Asignación de variables
+		// Transmicï¿½n serial
+		//- Asignaciï¿½n de variables
 		//if (alerDesconexion == 1) {
 		//	patientPress = String(0);
 		//}
 		//else {
-			patientPress = String(SPpac);
+		patientPress = String(SPpac);
 		//}
 		patientFlow = String(SFin - SFout - 10);
 		patientVolume = String(Vtidal);
@@ -714,12 +716,10 @@ void adcReading() {
 
 		volumeT = String(VT, 0);
 		alertPip = String(alerPresionPIP);
-
-		alertPeep = String(alerGeneral);
-
-		alertDiffPress = String(0);
+		alertPeep = String(alerPeep);
+		alertDiffPress = String(alerObstruccion);
 		alertConnPat = String(alerDesconexion);
-		alertLeak = String(0);
+		alertLeak = String(alerGeneral);
 		alertConnEquipment = String(alerBateria);
 		//alertConnEquipment = String(0);
 		alertValve1Fail = String(0);
@@ -779,19 +779,31 @@ void adcReading() {
 		//    Serial.print(SFin-SFout-10);
 		//    Serial.print(", V = ");
 		//    Serial.println(Vtidal);
+	//Serial.print(", Ppac = ");
+	//Serial.print(SPpac);
+	//Serial.print(", Pin = ");
+	//Serial.println(SPin);
+//    Serial.print(", Vin_Ins = ");
+//    Serial.print(Vin_Ins);
+//    Serial.print(", Vout_Ins = ");
+//    Serial.println(Vout_Ins);
+//    Serial.print(", Pin = ");
+//    Serial.print(SPin);
+//    Serial.print(", Pin_max = ");
+//    Serial.println(Pin_max);
 	}
 }
 
 void sendSerialData() {
 	String dataToSend = String(Ppico) + ',' + String(Peep) + ',' + String(VT) + ',' +
 		String(alerPresionPIP) + ',' + String(alerDesconexion) + ',' +
-		String(alerGeneral) + ',' + String(estabilidad)+ ';';
+		String(alerObstruccion) + ',' + String(alerPeep) + ',' + String(alerGeneral) + ';';
 	Serial2.print(dataToSend);
 }
 
 void alarmsDetection() {
 	// Ppico Alarm
-	if (flagInicio == false) {//Si hay habilitación de alarmas
+	if (flagInicio == false) {//Si hay habilitaciï¿½n de alarmas
 	// Alarma por Ppico elevada
 		if (Ppico > maxPresion) {
 			flagAlarmPpico = true;
@@ -801,9 +813,19 @@ void alarmsDetection() {
 			flagAlarmPpico = false;
 			alerPresionPIP = 0;
 		}
+		// Fallo general
+		if ((Pin_max) < 10) {
+			flagAlarmGeneral = true;
+			alerGeneral = 1;
+			newStateMachine = 1;
+		}
+		else {
+			flagAlarmGeneral = false;
+			alerGeneral = 0;
+		}
 
-		// Alarma por desconexión del paciente
-		if ((SFinMax - SFtotalMax) <= 10) {
+		// Alarma por desconexiï¿½n del paciente
+		if ((Ppico) < 2) {
 			flagAlarmPatientDesconnection = true;
 			alerDesconexion = 1;
 		}
@@ -812,14 +834,14 @@ void alarmsDetection() {
 			alerDesconexion = 0;
 		}
 
-		// Alarma por obstrucción
-		if ((SFinMax - SFoutMax) <= 5) {
-			flagAlarmGeneral = true;
-			alerGeneral = 1;
+		// Alarma por obstrucciï¿½n
+		if ((Vout_Ins >= 0.5 * Vin_Ins) && (Peep < 1)) {
+			flagAlarmObstruccion = true;
+			alerObstruccion = 1;
 		}
 		else {
-			flagAlarmGeneral = false;
-			alerGeneral = 0;
+			flagAlarmObstruccion = false;
+			alerObstruccion = 0;
 		}
 
 		SFinMax = SFin;
@@ -832,7 +854,7 @@ void standbyRoutine() {
 		currentStateMachine = newStateMachine;
 	}
 	contCycling = 0;
-	digitalWrite(EV_INSPIRA, LOW);//Piloto conectado a presión de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
-	digitalWrite(EV_ESC_CAM, LOW);//Piloto conectado a PEEP -> Limita la presión de la via aerea a la PEEP configurada
+	digitalWrite(EV_INSPIRA, LOW);//Piloto conectado a presion de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
+	digitalWrite(EV_ESC_CAM, LOW);//Piloto conectado a PEEP -> Limita la presion de la via aerea a la PEEP configurada
 	digitalWrite(EV_ESPIRA, LOW);//Piloto conectado a ambiente -> Despresuriza la camara y permite el llenado de la bolsa
 }

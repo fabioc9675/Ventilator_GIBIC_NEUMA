@@ -51,7 +51,7 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);
 
 //**********VALORES MAXIMOS**********
 #define MENU_QUANTITY       3
-#define MAX_FREC            35
+#define MAX_FREC            30
 #define MIN_FREC            6
 #define MAX_RIE             40
 #define MAX_PRESION         50
@@ -165,8 +165,10 @@ int newBatteryAlert = 1;
 // State Machine
 #define CHECK_STATE		0
 #define STANDBY_STATE	1
-#define CYCLING_STATE	2
-#define FAILURE_STATE	3
+#define PCMV_STATE		2
+#define AC_STATE		3
+#define CPAP_STATE		4
+#define FAILURE_STATE	5
 byte stateMachine = STANDBY_STATE;
 
 #define BATTERY_NO_ALARM      0
@@ -347,7 +349,7 @@ void task_timer(void* arg) {
 					//alertMonitoring();
 					standbyInterruptAttention();
 					break;
-				case CYCLING_STATE:
+				case PCMV_STATE:
 					//alertMonitoring();
 					standbyInterruptAttention();
 					break;
@@ -520,6 +522,7 @@ void task_timer(void* arg) {
 						}
 						else if (batteryAlert == 3) {
 							menuAlerta[7] = ALE_BATTERY_5MIN;
+							flagAlerta = true;
 						}
 						flagBatteryAlert = true;
 					}
@@ -562,16 +565,17 @@ void task_timer(void* arg) {
 						menuAlerta[2] = 0;
 					}
 					if (alerGeneral == 1) {
-						menuAlerta[1] = ALE_GENERAL;
 						flagAlerta = true;
-						stateMachine = STANDBY_STATE;
+						menuAlerta[1] = ALE_GENERAL;
+						stateMachine = FAILURE_STATE;
+						digitalWrite(STANDBY_LED, LOW);
 					}
 					else {
 						menuAlerta[1] = 0;
 					}
 					// desactivacion alertas
 					if ((alerPresionPIP == 0) && (alerDesconexion == 0) && (alerObstruccion == 0) && 
-						(alerPresionPeep == 0) && (alerGeneral == 0)) {
+						(alerPresionPeep == 0) && (alerGeneral == 0) && (menuAlerta[7] != ALE_BATTERY_5MIN)) {
 						flagAlerta = false;
 						for (int i = 1; i < ALARM_QUANTITY - 1; i++) {
 							menuAlerta[i] = 0;
@@ -686,8 +690,8 @@ void encoderRoutine() {
 					if (newRelacionIE >= MAX_RIE) {
 						newRelacionIE = MAX_RIE;;
 					}
-					if (newRelacionIE > -10 && newRelacionIE < 0) {
-						newRelacionIE = 10;
+					if (newRelacionIE > -15 && newRelacionIE < 0) {
+						newRelacionIE = 15;
 					}
 				}
 				else if (flagMode == true) {
@@ -739,8 +743,8 @@ void encoderRoutine() {
 					if (newRelacionIE <= -MAX_RIE) {
 						newRelacionIE = -MAX_RIE;
 					}
-					if (newRelacionIE > 0 && newRelacionIE < 10) {
-						newRelacionIE = -10;
+					if (newRelacionIE > 0 && newRelacionIE < 15) {
+						newRelacionIE = 15;
 					}
 				}
 				else if (flagMode == true) {
@@ -885,7 +889,7 @@ void standbyInterruptAttention() {
 
 			contStandby = 0;
 			if (stateMachine == STANDBY_STATE) {
-				stateMachine = CYCLING_STATE;
+				stateMachine = PCMV_STATE;
 				//Serial.println("I am on Cycling state");
 				digitalWrite(STANDBY_LED, LOW);
 			}
@@ -927,6 +931,9 @@ void lcd_show_comp() {
 	case MAIN_MENU:
 		if (stateMachine == STANDBY_STATE) {
 			lcd.print("    Modo Standby    ");
+		}
+		else if (stateMachine == CPAP_STATE) {
+			lcd.print("     Modo CPAP      ");
 		}
 		else {
 			lcd.print("  InnspiraMED UdeA  ");
@@ -1080,9 +1087,9 @@ void lcd_show_comp() {
 		lcd.setCursor(0, 1);
 		lcd.print("                    ");
 		lcd.setCursor(0, 2);
-		lcd.print("1. Ajustar PEEP     ");
-		lcd.setCursor(0, 3);
-		lcd.print("2. Ajustar PCON = 0");
+		lcd.print("   PEEP CPAP =      ");
+		lcd.setCursor(14, 2);
+		lcd.print(String(Peep, 0));
 		break;
 	default:
 		lcd.setCursor(0, 0);
@@ -1121,6 +1128,9 @@ void lcd_show_part() {
 		case MAIN_MENU:
 			if (stateMachine == STANDBY_STATE) {
 				lcd.print("    Modo Standby    ");
+			}
+			else if (stateMachine == CPAP_STATE) {
+				lcd.print("     Modo CPAP      ");
 			}
 			else {
 				lcd.print("  InnspiraMED UdeA  ");
@@ -1219,13 +1229,13 @@ void lcd_show_part() {
 			lcd.setCursor(4, 3);
 			lcd.print(String(VT, 0));
 			if (VT < 10) {
-				lcd.print("   ");
+				lcd.print("    ");
 			}
 			else if (VT < 100) {
-				lcd.print("  ");
+				lcd.print("   ");
 			}
 			else if (VT < 9999) {
-				lcd.print(" ");
+				lcd.print("  ");
 			}
 			VTAnte = VT;
 			// Serial.println("Changed VT");
@@ -1268,12 +1278,15 @@ void lcd_show_part() {
 			lcd.setCursor(13, 3);
 			if (newVentilationMode == 1) {
 				lcd.print("  A/C  ");
+				stateMachine = AC_STATE;
 			}
 			else if (newVentilationMode == 2) {
 				lcd.print(" CPAP  ");
+				stateMachine = CPAP_STATE;
 			}
 			else {
 				lcd.print(" P-CMV ");
+				stateMachine = PCMV_STATE;
 			}
 		}
 		break;
@@ -1309,8 +1322,15 @@ void lcd_show_part() {
 			lcd.write(126);
 		}
 		break;
+	case CPAP_MENU:
+		lcd.setCursor(0, 1);
+		lcd.print("                    ");
+		lcd.setCursor(0, 2);
+		lcd.print("   PEEP CPAP =      ");
+		lcd.setCursor(14, 2);
+		lcd.print(String(Peep, 0));
+		break;
 	}
-
 	//Serial.println("I am in lcd_show()");
 }
 

@@ -119,8 +119,10 @@ unsigned int contStandby = 0;
 // State machine
 #define CHECK_STATE		0
 #define STANDBY_STATE	1
-#define CYCLING_STATE	2
-#define FAILURE_STATE	3
+#define PCMP_STATE		2
+#define AC_STATE		3
+#define CPAP_STATE		4
+#define FAILURE_STATE	5
 int currentStateMachine = STANDBY_STATE;
 int newStateMachine = STANDBY_STATE;
 int currentVentilationMode = 0;
@@ -343,8 +345,8 @@ void loop() {
 		case CHECK_STATE:
 			break;
 		case STANDBY_STATE:
-			adcReading();
 			standbyRoutine();
+			adcReading();
 			//Update data on LCD each 200ms
 			contUpdateData++;
 			if (contUpdateData >= 200) {
@@ -353,8 +355,8 @@ void loop() {
 			}
 			//Serial.println("Standby state on control Unit");
 			break;
-		case CYCLING_STATE:
-			//Serial.println("I am on CYCLING_STATE");
+		case PCMP_STATE:
+			//Serial.println("I am on PCMP_STATE");
 			cycling();
 			adcReading();
 			//Update data on LCD each 200ms
@@ -370,9 +372,23 @@ void loop() {
 				eeprom_wr_int(contCiclos, 'w');
 			}
 			break;
+		case CPAP_STATE:
+			standbyRoutine();
+			adcReading();
+			//Update data on LCD each 200ms
+			contUpdateData++;
+			if (contUpdateData >= 200) {
+				contUpdateData = 0;
+				sendSerialData();
+			}
+			break;
 		case FAILURE_STATE:
+			currentStateMachine = STANDBY_STATE;
+			sendSerialData();
 			break;
 		default:
+			currentStateMachine = STANDBY_STATE;
+			sendSerialData();
 			break;
 		}
 	}
@@ -395,12 +411,12 @@ void cycling() {
 		currentE = newE;
 		// Calculo del tiempo I:E
 		if (currentI == 1) {
-			inspirationTime = (float)(60.0 / currentFrecRespiratoria) / (1 + (float)(currentE / 10));
-			expirationTime = (float)(currentE / 10) * inspirationTime;
+			inspirationTime = (float)(60.0 / currentFrecRespiratoria) / (1 + (float)(currentE / 10.0));
+			expirationTime = (float)(currentE / 10.0) * inspirationTime;
 		}
 		else {
-			expirationTime = (float)(60.0 / currentFrecRespiratoria) / (1 + (float)(currentI / 10));
-			inspirationTime = (float)(currentI / 10) * expirationTime;
+			expirationTime = (float)(60.0 / currentFrecRespiratoria) / (1 + (float)(currentI / 10.0));
+			inspirationTime = (float)(currentI / 10.0) * expirationTime;
 		}
 	}
 
@@ -535,6 +551,11 @@ void cycling() {
 	}
 } // end cycling()
 
+void cpapRoutine() {
+
+
+}
+
 // Function to receive data from serial communication
 void receiveData() {
 	if (Serial2.available() > 5) {
@@ -628,7 +649,7 @@ void adcReading() {
 		SPout = 0;
 		SPpac = 0;
 
-		//- Actualizaci�n
+		//- Actualizacion
 		for (int i = 0; i <= 39; i++) {
 			SFin = SFin + Fin[i];
 			SFout = SFout + Fout[i];

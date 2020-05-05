@@ -14,8 +14,8 @@
 
 // Definiciones para el manejo del ADC
 #define ADC_PRESS_1     26  // Sensor de presion xx (pin ADC para presion 1)
-#define ADC_PRESS_2     32  // Sensor de presion xx (pin ADC para presion 2)
-#define ADC_PRESS_3     35  // Sensor de presion via aerea del paciente (pin ADC para presion 3)
+#define ADC_PRESS_2     35  // Sensor de presion xx (pin ADC para presion 2)
+#define ADC_PRESS_3     33  // Sensor de presion via aerea del paciente (pin ADC para presion 3)
 #define ADC_FLOW_1      36  // Sensor de flujo linea xx (pin ADC para presion 2)
 #define ADC_FLOW_2      39  // Sensor de flujo linea xx (pin ADC para presion 3)
 

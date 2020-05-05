@@ -749,7 +749,7 @@ void encoderRoutine() {
 				}
 				else if (flagMode == true) {
 					newVentilationMode--;
-					if (newVentilationMode > 2) {
+					if (newVentilationMode > 2) { en
 						newVentilationMode = 2;
 					}
 				}

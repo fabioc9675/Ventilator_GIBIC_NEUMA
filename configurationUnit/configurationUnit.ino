@@ -1,4 +1,4 @@
-﻿/*
+/*
   Name:		configurationUnit.ino
   Created:	4/3/2020 11:40:24
   Author:	Helber Carvajal
@@ -749,7 +749,7 @@ void encoderRoutine() {
 				}
 				else if (flagMode == true) {
 					newVentilationMode--;
-					if (newVentilationMode > 2) { en
+					if (newVentilationMode > 2) { 
 						newVentilationMode = 2;
 					}
 				}

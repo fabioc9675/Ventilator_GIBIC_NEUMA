@@ -531,6 +531,7 @@ void cycling() {
         Vout_Ins = SUMVout_Ins / 1000;
         Vin_Esp = SUMVin_Esp / 1000;
         Vout_Esp = SUMVout_Esp / 1000;
+        
         //- Reinio de acumuladores
         SUMVin_Ins = 0;
         SUMVout_Ins = 0;
@@ -716,7 +717,7 @@ void adcReading() {
     // Conversion ADC Flujo Espiratorio, ajuste por tramos para linealizacion
     if (SFout <= LIM_FE_1) {
       SFout = AMP_FE_1 * float(SFout) + OFFS_FE_1;
-    } else if (SFin <= LIM_FE_2) {
+    } else if (SFout <= LIM_FE_2) {
       SFout = AMP_FE_2 * float(SFout) + OFFS_FE_2;
     } else {
       SFout = AMP_FE_3 * float(SFout) + OFFS_FE_3;
@@ -754,7 +755,7 @@ void adcReading() {
     flowTotal = SFin - SFout - flowZero;
     if (alerGeneral == 0) {
       if ((flowTotal <= FLOWLO_LIM) || (flowTotal >= FLOWUP_LIM)) {
-        Vtidal = Vtidal + (flowTotal * 0.05);
+        Vtidal = Vtidal + (flowTotal * 0.5);
       }
     } else {
       Vtidal = 0;
@@ -856,10 +857,23 @@ void adcReading() {
     //Serial.print(SPpac);
     //Serial.print(", Pin = ");
     //Serial.println(SPin);
-    //    Serial.print(", Vin_Ins = ");
-    //    Serial.print(Vin_Ins);
-    //    Serial.print(", Vout_Ins = ");
-    //    Serial.println(Vout_Ins);
+    
+//    Serial.print(", Vin_Ins = ");
+//    Serial.print(Vin_Ins);
+//    Serial.print(", Vout_Esp = ");
+//    Serial.print(Vout_Esp);
+//    Serial.print(", Vin_Esp = ");
+//    Serial.print(Vin_Esp);
+//    Serial.print(", Vout_Ins = ");
+//    Serial.print(Vout_Ins);
+//    Serial.print(", Vt = ");
+//    Serial.print(Vtidal);
+//    Serial.print(", Vt2 = ");
+//    Serial.println(Vin_Ins+Vout_Esp);
+
+
+
+        
     //    Serial.print(", Pin = ");
     //    Serial.print(SPin);
     //    Serial.print(", Pin_max = ");

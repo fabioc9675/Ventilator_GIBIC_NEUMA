@@ -1,10 +1,17 @@
 /*
   Name:		controlUnit.ino
   Created:	4/3/2020 17:28:49
-  Author:	Helber Carvajal
+  Author:	GIBIC UdeA
 */
+
+#include <Arduino.h>
+#include <Esp.h>
 #include <math.h>
 #include <EEPROM.h>
+
+#define VERSION_1_0       true           
+
+#ifdef VERSION_1_0
 
 // Definiciones para controlar el shiel DFRobot quad motor driver
 // Definiciones para controlar el shiel DFRobot quad motor driver
@@ -16,8 +23,25 @@
 #define ADC_PRESS_1     26  // Sensor de presion xx (pin ADC para presion 1)
 #define ADC_PRESS_2     35  // Sensor de presion xx (pin ADC para presion 2)
 #define ADC_PRESS_3     33  // Sensor de presion via aerea del paciente (pin ADC para presion 3)
-#define ADC_FLOW_1      36  // Sensor de flujo linea xx (pin ADC para presion 2)
-#define ADC_FLOW_2      39  // Sensor de flujo linea xx (pin ADC para presion 3)
+#define ADC_FLOW_1      39  // Sensor de flujo linea xx (pin ADC para presion 2)
+#define ADC_FLOW_2      36  // Sensor de flujo linea xx (pin ADC para presion 3)
+
+#elif VERSION_1_1
+
+// Definiciones para controlar el shiel DFRobot quad motor driver
+// Definiciones para controlar el shiel DFRobot quad motor driver
+#define EV_INSPIRA   5   // out 3 // Valvula 3/2 de control de la via inspiratoria (pin 3 del shield, velocidad motor 1)
+#define EV_ESPIRA    18  // out 2 // Valvula 3/2 de control de presiones PCON y PEEP (pin 11 del shield, velocidad motor 2)
+#define EV_ESC_CAM   2   // out 1 // Valvula 3/2 de activaci�n de la camara (pin 6 del shield, velocidad motor 4)
+
+// Definiciones para el manejo del ADC
+#define ADC_PRESS_1     33  // ADC 6 // Sensor de presion xx (pin ADC para presion 1)
+#define ADC_PRESS_2     32  // ADC 5 // Sensor de presion xx (pin ADC para presion 2)
+#define ADC_PRESS_3     34  // ADC 4 // Sensor de presion via aerea del paciente (pin ADC para presion 3)
+#define ADC_FLOW_1      36  // ADC 1 // Sensor de flujo linea xx (pin ADC para presion 2)
+#define ADC_FLOW_2      39  // ADC 2 // Sensor de flujo linea xx (pin ADC para presion 3)
+
+#endif
 
 // Calibracion de los sensores de presion - coeficientes regresion lineal
 #define AMP1       0.0262
@@ -29,24 +53,25 @@
 
 // Calibracion de los sensores de flujo - coeficientes regresion lineal
 // Sensor de flujo Inspiratorio
-#define AMP_FI_1      0.091800
-#define OFFS_FI_1     -183.289800
-#define LIM_FI_1      1714
-#define AMP_FI_2      0.381000
-#define OFFS_FI_2     -678.984800
-#define LIM_FI_2      1850
-#define AMP_FI_3      0.091800
-#define OFFS_FI_3     -143.815400
+#define AMP_FI_1      0.116300
+#define OFFS_FI_1     -211.888900
+#define LIM_FI_1      1599
+#define AMP_FI_2      0.610700
+#define OFFS_FI_2     -1002.337700
+#define LIM_FI_2      1684
+#define AMP_FI_3      0.116300
+#define OFFS_FI_3     -169.789300
 
 // Sensor de flujo Espiratorio
-#define AMP_FE_1      0.116300
-#define OFFS_FE_1     -211.888900
-#define LIM_FE_1      1599
-#define AMP_FE_2      0.610700
-#define OFFS_FE_2     -1002.337700
-#define LIM_FE_2      1684
-#define AMP_FE_3      0.116300
-#define OFFS_FE_3     -169.789300
+#define AMP_FE_1      0.091800
+#define OFFS_FE_1     -183.289800
+#define LIM_FE_1      1714
+#define AMP_FE_2      0.381000
+#define OFFS_FE_2     -678.984800
+#define LIM_FE_2      1850
+#define AMP_FE_3      0.091800
+#define OFFS_FE_3     -143.815400
+
 
 // variable para ajustar el nivel cero de flujo y calcular el volumen
 #define FLOWUP_LIM        3

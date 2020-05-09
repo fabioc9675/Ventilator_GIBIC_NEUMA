@@ -31,8 +31,8 @@
 // Definiciones para controlar el shiel DFRobot quad motor driver
 // Definiciones para controlar el shiel DFRobot quad motor driver
 #define EV_INSPIRA   5   // out 3 // Valvula 3/2 de control de la via inspiratoria (pin 3 del shield, velocidad motor 1)
-#define EV_ESPIRA    18  // out 2 // Valvula 3/2 de control de presiones PCON y PEEP (pin 11 del shield, velocidad motor 2)
-#define EV_ESC_CAM   2   // out 1 // Valvula 3/2 de activaci�n de la camara (pin 6 del shield, velocidad motor 4)
+#define EV_ESPIRA    4  // out 2 // Valvula 3/2 de control de presiones PCON y PEEP (pin 11 del shield, velocidad motor 2)
+#define EV_ESC_CAM   18   // out 1 // Valvula 3/2 de activaci�n de la camara (pin 6 del shield, velocidad motor 4)
 
 // Definiciones para el manejo del ADC
 #define ADC_PRESS_1     33  // ADC 6 // Sensor de presion xx (pin ADC para presion 1)

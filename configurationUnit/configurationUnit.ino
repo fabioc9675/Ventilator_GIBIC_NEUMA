@@ -25,9 +25,9 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);
 #define SILENCE_BTN         26  // Silenciar alarma cambiar
 #define SILENCE_LED			27  // Led Boton silencio
 #define STABILITY_BTN       34
-#define STABILITY_LED   35
-#define STANDBY         32  // Stabdby button
-#define STANDBY_LED     33  // Stabdby button
+#define STABILITY_LED		10
+#define STANDBY				32  // Stabdby button
+#define STANDBY_LED			33  // Stabdby button
 
 #define LUMING      13  // Alarma luminosa
 #define LUMINR      14

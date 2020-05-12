@@ -1,7 +1,7 @@
 ﻿/*
-  Name:		    controlUnit.ino
-  Created:	    4/3/2020 17:28:49
-  Author:	   Helber Carvajal
+ Name:		controlUnit.ino
+ Created:	4/3/2020 17:28:49
+ Author:    Helber Carvajal
 */
 
 #include <Arduino.h>
@@ -15,7 +15,7 @@
 // Definiciones para controlar el shiel DFRobot quad motor driver
 // Definiciones para controlar el shiel DFRobot quad motor driver
 #define EV_INSPIRA   13  // Valvula 3/2 de control de la via inspiratoria (pin 3 del shield, velocidad motor 1)
-#define EV_ESC_CAM   14  // Valvula 3/2 de activaci�n de la camara (pin 6 del shield, velocidad motor 4)
+#define EV_ESC_CAM   14  // Valvula 3/2 de activacion de la camara (pin 6 del shield, velocidad motor 4)
 #define EV_ESPIRA    12  // Valvula 3/2 de control de presiones PCON y PEEP (pin 11 del shield, velocidad motor 2)
 
 // Definiciones para el manejo del ADC
@@ -74,6 +74,9 @@
 // variable para ajustar el nivel cero de flujo y calcular el volumen
 #define FLOWUP_LIM        3
 #define FLOWLO_LIM        -3
+#define FLOW_CONV         16.666666    // conversion de L/min a mL/second
+#define DELTA_T           0.05         // delta de tiempo para realizar la integra
+#define VOL_SCALE         0.85         // Factor de escala para ajustar el volumen
 
 // Variables de control del protocolo
 #define RXD2 16
@@ -208,6 +211,12 @@ float Vout_Ins = 0;
 float Vin_Esp = 0;
 float Vout_Esp = 0;
 
+// variables para calibracion de sensores
+float CalFin = 0; // almacena valor ADC para calibracion
+float CalFout = 0; // almacena valor ADC para calibracion
+float CalPpac = 0; // almacena valor ADC para calibracion
+float CalPin = 0; // almacena valor ADC para calibracion
+float CalPout = 0; // almacena valor ADC para calibracion
 //- Se�ales
 float SFin = 0; //Se�al de flujo inspiratorio
 float SFout = 0; //Se�al de flujo espiratorio
@@ -254,6 +263,7 @@ int newE = currentE;
 float relI = 0;
 float relE = 0;
 int maxPresion = 30;
+
 
 // inicializacion del contador del timer
 hw_timer_t* timer = NULL;
@@ -529,6 +539,7 @@ void cycling() {
             SFinMaxInsp = SFin;
             SFtotalMax = SFin - SFout;
 
+            flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
             //Rutina de ciclado
             BandInsp = 0;	// Desactiva la bandera, indicando que empezo la espiraci�n
             digitalWrite(EV_INSPIRA, HIGH);//Piloto conectado a presi�n de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
@@ -539,11 +550,63 @@ void cycling() {
         break;
     case EXPIRATION_CYCLING:
         //Add para el modo A/C
-        /*if (SPpac <= Peep - 2) {
+        if ((newVentilationMode == 1) && (SPpac <= Peep - newTrigger) && (contCycling >= int(inspirationTime)*1000 + (expirationTime * 100))) {
+            contCycling = 0;
+            
+            if (Peep < 0) {// Si el valor de Peep es negativo
+                Peep = 0;// Lo limita a 0
+            }
+            Peep = int(Peep);
+            if (estabilidad) {
+                PeepEstable = Peep;
+                estabilidad = 0;
+            }
+            else {
+                if (Peep <= PeepEstable - 1.5) {
+                    alerPeep = 1;
+                }
+                else {
+                    alerPeep = 0;
+                }
+            }
+            //Ajuste del valor de volumen
+            Vtidal = 0;
+            flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
+
+            //Calculos de volumenes
+            //- Asignacion
+            Vin_Ins = SUMVin_Ins / 1000;
+            Vout_Ins = SUMVout_Ins / 1000;
+            Vin_Esp = SUMVin_Esp / 1000;
+            Vout_Esp = SUMVout_Esp / 1000;
+
+            //- Reinio de acumuladores
+            SUMVin_Ins = 0;
+            SUMVout_Ins = 0;
+            SUMVin_Esp = 0;
+            SUMVout_Esp = 0;
+
+            //Mediciones de presion del sistema
+            Pin_min = SPin;//Presi�n minima de la camara
+            Pout_min = SPout;//Presi�n minima de la bolsa
+
+            //Asignaci�n de valores maximos y minimos de presi�n
+            pmin = UmbralPpmin;//asigna la presion minima encontrada en todo el periodo
+            pmax = UmbralPpico;//asigna la presion maxima encontrada en todo el periodo
+            Ppico = pmax;
+            UmbralPpmin = 100;//Reinicia el umbral minimo de presion del paciente
+            UmbralPpico = -100;//Reinicia el umbral maximo de presion del paciente
+
+            //Metodo de exclusi�n de alarmas
+            if (Ppico > 2 && Peep > 2) {
+                flagInicio = false;
+            }
+
             alarmsDetection();
             currentStateMachineCycling = START_CYCLING;
-        }*/
-        if (contCycling >= int(((inspirationTime + expirationTime) * 1000))) {
+            
+        }
+        if ((newVentilationMode == 0) && (contCycling >= int(((inspirationTime + expirationTime) * 1000)))) {
             contCycling = 0;
             //Calculo de Peep
             Peep = SPpac;// Peep como la presion en la via aerea al final de la espiracion
@@ -721,9 +784,9 @@ void adcReading() {
         ADC5_Value = analogRead(ADC_FLOW_2);
         ADC1_Value = analogRead(ADC_PRESS_1);
         ADC2_Value = analogRead(ADC_PRESS_2);
-        ADC3_Value = analogRead(ADC_PRESS_3);// ADC presi�n de la via aerea
+        ADC3_Value = analogRead(ADC_PRESS_3);// ADC presion de la via aerea
 
-        // Procesamiento se�ales
+        // Procesamiento senales
         //- Almacenamiento
         Fin[39] = ADC4_Value;
         Fout[39] = ADC5_Value;
@@ -763,6 +826,12 @@ void adcReading() {
         SPout = SPout / 40;
         SPpac = SPpac / 40;
 
+        // Actualizacion de valores para realizar calibracion
+        CalFin = SFin;
+        CalFout = SFout;
+        CalPpac = SPpac;
+        CalPin = SPin;
+        CalPout = SPout;
         //- Conversi�n ADC-Presi�n
         SPin = AMP1 * float(SPin) + OFFS1;
         SPout = AMP2 * float(SPout) + OFFS2;
@@ -822,7 +891,11 @@ void adcReading() {
         flowTotal = SFin - SFout - flowZero;
         if (alerGeneral == 0) {
             if ((flowTotal <= FLOWLO_LIM) || (flowTotal >= FLOWUP_LIM)) {
-                Vtidal = Vtidal + (flowTotal * 0.5);
+                Vtidal = Vtidal + (flowTotal * DELTA_T * FLOW_CONV * VOL_SCALE);
+
+                if (Vtidal < 0) {
+                    Vtidal = 0;
+                }
             }
         }
         else {
@@ -897,6 +970,24 @@ void adcReading() {
 
         // Envio de la cadena de datos (visualizacion Raspberry)
         Serial.println(RaspberryChain);
+
+        /* ********************************************************************
+         * **** ENVIO DE VARIABLES PARA CALIBRACION ***************************
+         * ********************************************************************/
+         //        Serial.print(CalFin);
+         //        Serial.print(",");
+         //        Serial.println(CalFout);  // informacion para calibracion de flujo
+             //    Serial.println(CalPpac);
+             //    Serial.println(CalPin);
+             //    Serial.println(CalPout); // informacion para calibracion de presion
+         //    Serial.print(SFin);
+         //    Serial.print(",");
+         //    Serial.print(SFout);
+         //    Serial.print(",");
+         //    Serial.print(Vtidal);
+         //    Serial.print(",");
+         //    Serial.println(SFin-SFout);
+
 
         // Envio de la cadena de datos
         //    Serial.print(", Ppac = ");

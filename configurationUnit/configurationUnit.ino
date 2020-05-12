@@ -9,8 +9,8 @@
 #include <Wire.h>
 #include "LiquidCrystal_I2C.h"
 
-LiquidCrystal_I2C lcd(0x27, 20, 4);
-//LiquidCrystal_I2C lcd(0x3F, 20, 4);
+//LiquidCrystal_I2C lcd(0x27, 20, 4);
+LiquidCrystal_I2C lcd(0x3F, 20, 4);
 
 //********DEFINICIONES CONDICIONES******
 #define TRUE          1
@@ -58,6 +58,8 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 #define MAX_RIE             40
 #define MAX_PRESION         50
 #define MIN_PRESION			10
+#define MAX_TRIGGER			10
+#define MIN_TRIGGER			2
 #define MAX_FLUJO           40
 #define SILENCE_BTN_TIME        2*60*1000/LOW_ATT_INT  // tiempo, 2 minutos a 20 Hz
 #define SILENCE_BTN_BATTERY     30*60*1000/LOW_ATT_INT
@@ -140,6 +142,7 @@ byte E = 20;
 byte maxPresion = 30;
 byte optionVentMenu = 0;
 byte optionConfigMenu = 0;
+byte trigger = 2;
 float maxFlujo = 4;
 
 // Banderas utilizadas en las interrupciones
@@ -147,8 +150,10 @@ bool insideMenuFlag = false;
 bool flagPresion = false;
 bool flagFlujo = false;
 bool flagFrecuencia = false;
+bool flagTrigger = false;
 bool flagIE = false;
 bool flagPeepMax = false;
+bool flagSensibilityCPAP = false;
 bool flagMode = false;
 bool flagConfirm = false;
 
@@ -162,6 +167,7 @@ byte PeepMax = 10;
 float Ppico = 0;
 float Pcon = 0;
 float VT = 0;
+byte sensibilityCPAP = 0;
 
 int alerPresionPIP = 0;
 int alerDesconexion = 0;
@@ -199,8 +205,6 @@ volatile uint8_t flagTimerInterrupt = false;
 volatile uint8_t flagSilenceInterrupt = false;
 volatile uint8_t flagStabilityInterrupt = false;
 volatile uint8_t flagBatterySilence = false;
-
-
 
 unsigned int temp = 0;
 bool flagFirst = false;
@@ -271,7 +275,7 @@ void init_TIMER() {
  * *********************************************************************/
  // Interrupcion por presion del switch
 void IRAM_ATTR swInterrupt(void) {
-	// da el sem�foro para que quede libre para la tarea pulsador
+	// da el semaforo para que quede libre para la tarea pulsador
 	portENTER_CRITICAL_ISR(&mux);
 	flagSEncoder = true;
 	xSemaphoreGiveFromISR(xSemaphoreEncoder, NULL);
@@ -688,43 +692,51 @@ void encoderRoutine() {
 		else {
 			switch (menu) {
 			case CONFIG_MENU:
-				if (currentVentilationMode == 2) {
-					if (flagPeepMax == true) {
-						PeepMax++;
-						if (PeepMax > MAX_PEEP) {
-							PeepMax = MAX_PEEP;
-						}
-					}
-					else if (insideMenuFlag == true) {
-						optionConfigMenu++;
-						if (optionConfigMenu > 1) {
-							optionConfigMenu = 0;
-						}
+				if (flagFrecuencia) {
+					newFrecRespiratoria++;
+					if (newFrecRespiratoria > MAX_FREC) {
+						newFrecRespiratoria = MAX_FREC;
 					}
 				}
-				else {
-					if (flagFrecuencia) {
-						newFrecRespiratoria++;
-						if (newFrecRespiratoria > MAX_FREC) {
-							newFrecRespiratoria = MAX_FREC;
-						}
+				else if (flagIE) {
+					newRelacionIE++;
+					if (newRelacionIE >= MAX_RIE) {
+						newRelacionIE = MAX_RIE;;
 					}
-					else if (flagIE) {
-						newRelacionIE = newRelacionIE + 1;
-						if (newRelacionIE >= MAX_RIE) {
-							newRelacionIE = MAX_RIE;;
-						}
-						if (newRelacionIE > -15 && newRelacionIE < 0) {
-							newRelacionIE = 15;
-						}
+					if (newRelacionIE > -10 && newRelacionIE < 0) {
+						newRelacionIE = 10;
 					}
-					else if (insideMenuFlag == true) {
-						optionConfigMenu++;
+				}
+				else if (flagTrigger == true) {
+					trigger++;
+					if (trigger > MAX_TRIGGER) {
+						trigger = MAX_TRIGGER;
+					}
+				}
+				else if (flagPeepMax == true) {
+					PeepMax++;
+					if (PeepMax > MAX_PEEP) {
+						PeepMax = MAX_PEEP;
+					}
+				} 
+				else if (insideMenuFlag == true) {
+					optionConfigMenu++;
+					if (currentVentilationMode == 0) {
 						if (optionConfigMenu > 2) {
 							optionConfigMenu = 0;
 						}
 					}
-				}
+					else if (currentVentilationMode == 1) {
+						if (optionConfigMenu > 3) {
+							optionConfigMenu = 0;
+						}
+					}
+					else {
+						if (optionConfigMenu > 1) {
+							optionConfigMenu = 0;
+						}	
+					}
+				}	
 				break;
 			case CONFIG_ALARM:
 				if (flagPresion == true) {
@@ -763,42 +775,52 @@ void encoderRoutine() {
 		else {
 			switch (menu) {
 			case CONFIG_MENU:
-				if (currentVentilationMode == 2) {
-					if (flagPeepMax == true) {
-						PeepMax--;
-						if (PeepMax < MIN_PEEP) {
-							PeepMax = MIN_PEEP;
-						}
-					}
-					else if (insideMenuFlag == true) {
-						optionConfigMenu--;
-						if (optionConfigMenu > 1) {
-							optionConfigMenu = 1;
-						}
+			
+				if (flagFrecuencia) {
+					newFrecRespiratoria--;
+					if (newFrecRespiratoria < MIN_FREC) {
+						newFrecRespiratoria = MIN_FREC;
 					}
 				}
-				else {
-					if (flagFrecuencia) {
-						newFrecRespiratoria--;
-						if (newFrecRespiratoria < MIN_FREC) {
-							newFrecRespiratoria = MIN_FREC;
-						}
+				else if (flagIE) {
+					newRelacionIE --;
+					if (newRelacionIE <= -MAX_RIE) {
+						newRelacionIE = -MAX_RIE;
 					}
-					else if (flagIE) {
-						newRelacionIE = newRelacionIE - 1;
-						if (newRelacionIE <= -MAX_RIE) {
-							newRelacionIE = -MAX_RIE;
-						}
-						if (newRelacionIE > 0 && newRelacionIE < 15) {
-							newRelacionIE = 15;
-						}
+					if (newRelacionIE < 10 && newRelacionIE > 0) {
+						newRelacionIE = -10;
 					}
-					else if (insideMenuFlag == true) {
-						optionConfigMenu--;
+				}
+				else if (flagTrigger == true) {
+					trigger--;
+					if (trigger > MAX_TRIGGER) {
+						trigger = MIN_TRIGGER;
+					}
+				}
+				else if (flagPeepMax == true) {
+					PeepMax--;
+					if (PeepMax < MIN_PEEP) {
+						PeepMax = MIN_PEEP;
+					}
+				}
+				else if (insideMenuFlag == true) {
+					optionConfigMenu--;
+					if (currentVentilationMode == 0) {
 						if (optionConfigMenu > 2) {
 							optionConfigMenu = 2;
 						}
 					}
+					else if (currentVentilationMode == 1) {
+						if (optionConfigMenu > 3) {
+							optionConfigMenu = 3;
+						}
+					}
+					else {
+						if (optionConfigMenu > 1) {
+							optionConfigMenu = 1;
+						}
+					}
+					
 				}
 				break;
 			case CONFIG_ALARM:
@@ -860,7 +882,19 @@ void switchRoutine() {
 			if (optionConfigMenu == 1) {
 				flagPeepMax = !flagPeepMax;
 			}
-
+		}
+		else if(currentVentilationMode == 1){
+			if (optionConfigMenu == 1) {
+				flagTrigger = !flagTrigger;
+			}
+			if (optionConfigMenu == 2) {
+				flagFrecuencia = !flagFrecuencia;
+				currentFrecRespiratoria = newFrecRespiratoria;
+			}
+			if (optionConfigMenu == 3) {
+				flagIE = !flagIE;
+				currentRelacionIE = newRelacionIE;
+			}
 		}
 		else {
 			if (optionConfigMenu == 1) {
@@ -1043,7 +1077,22 @@ void lcd_show_comp() {
 	case CONFIG_MENU:
 		lcd.setCursor(0, 1);
 		lcd.print("                    ");
-		if (currentVentilationMode == 2) { // CPAP Mode
+		if (currentVentilationMode == 1) { // A/C Mode
+			lcd.setCursor(0, 2);
+			lcd.print(" Trig | Frec | I:E  ");
+			lcd.setCursor(0, 3);
+			lcd.print("      |      |      ");
+			lcd.setCursor(2, 3);
+			lcd.print(trigger);
+			lcd.setCursor(9, 3);
+			lcd.print(currentFrecRespiratoria);
+			lcd.setCursor(14, 3);
+			lcd.print(relacion_IE);
+			frecRespiratoriaAnte = currentFrecRespiratoria;
+			IAnte = I;
+			EAnte = E;
+		}
+		else if (currentVentilationMode == 2) { // CPAP Mode
 			lcd.setCursor(0, 2);
 			lcd.print("  PEEP-CPAP:        ");
 			lcd.setCursor(13, 2);
@@ -1053,14 +1102,14 @@ void lcd_show_comp() {
 			lcd.setCursor(13, 3);
 			lcd.print(PeepMax);
 		}
-		else { // P-CMV or A/C Mode
+		else { // P-CMV
 			lcd.setCursor(0, 2);
-			lcd.print("   Frec:            ");
-			lcd.setCursor(9, 2);
-			lcd.print(currentFrecRespiratoria);
+			lcd.print("    Frec  |  I:E    ");
 			lcd.setCursor(0, 3);
-			lcd.print("   I:E:            ");
-			lcd.setCursor(8, 3);
+			lcd.print("          |         ");
+			lcd.setCursor(5, 3);
+			lcd.print(currentFrecRespiratoria);
+			lcd.setCursor(12, 3);
 			lcd.print(relacion_IE);
 			frecRespiratoriaAnte = currentFrecRespiratoria;
 			IAnte = I;
@@ -1235,7 +1284,70 @@ void lcd_show_part() {
 		else {
 			lcd.print(' ');
 		}
-		if (currentVentilationMode == 2) {
+		if (currentVentilationMode == 1) {  // A/C Mode
+			lcd.setCursor(0, 2);
+			if (optionConfigMenu == 1) {
+				lcd.write(126);
+				lcd.setCursor(5, 3);
+				if (flagTrigger == true) {
+					lcd.write(60);
+					lcd.setCursor(2, 3);
+					lcd.print(trigger);
+					if (trigger < 10) {
+						lcd.print(' ');
+					}
+				}
+				else {
+					lcd.print(' ');
+				}
+			}
+			else {
+				lcd.print(' ');
+			}
+			lcd.setCursor(7, 2);
+			if (optionConfigMenu == 2) { 
+				lcd.write(126);
+				lcd.setCursor(12, 3);
+				if (flagFrecuencia == true) {
+					lcd.write(60);
+					if (newFrecRespiratoria != currentFrecRespiratoria) {
+						lcd.setCursor(9, 3);
+						lcd.print(newFrecRespiratoria);
+						if (newFrecRespiratoria < 10) {
+							lcd.print(" ");
+						}
+						frecRespiratoriaAnte = newFrecRespiratoria;
+					}
+				}
+				else {
+					lcd.print(' ');
+				}
+			}
+			else {
+				lcd.print(' ');
+			}
+			lcd.setCursor(14, 2);
+			if (optionConfigMenu == 3) {
+				lcd.write(126);
+				lcd.setCursor(19, 3);
+				if (flagIE == true) {
+					lcd.write(60);
+					if (newRelacionIE != currentRelacionIE) {
+						lcd.setCursor(14, 3);
+						lcd.print(newRelacion_IE);
+						IAnte = I;
+						EAnte = E;
+					}
+				}
+				else {
+					lcd.print(' ');
+				}
+			}
+			else {
+				lcd.print(' ');
+			}
+		}
+		else if (currentVentilationMode == 2) { // CPAP Mode
 			lcd.setCursor(13, 2);
 			lcd.print(int(Peep));
 			lcd.setCursor(1, 3);
@@ -1258,45 +1370,44 @@ void lcd_show_part() {
 				lcd.print(' ');
 			}
 		}
-		else { // P-CMV or A/C Mode
-			lcd.setCursor(2, 2);
+		else { // P-CMV
+			lcd.setCursor(3, 2);
 			if (optionConfigMenu == 1) {
 				lcd.write(126);
-				lcd.setCursor(13, 2);
+				lcd.setCursor(8, 3);
 				if (flagFrecuencia == true) {
 					lcd.write(60);
+					if (newFrecRespiratoria != currentFrecRespiratoria) {
+						lcd.setCursor(5, 3);
+						lcd.print(newFrecRespiratoria);
+						if (newFrecRespiratoria < 10) {
+							lcd.print(" ");
+						}
+						frecRespiratoriaAnte = newFrecRespiratoria;
+					}
 				}
 				else {
 					lcd.print(' ');
 				}
-				if (newFrecRespiratoria != currentFrecRespiratoria) {
-					lcd.setCursor(9, 2);
-					lcd.print(newFrecRespiratoria);
-					if (newFrecRespiratoria < 10) {
-						lcd.print(" ");
-					}
-					frecRespiratoriaAnte = newFrecRespiratoria;
-				}
-			}			// Serial.println("Changed freq");
+			}
 			else {
 				lcd.print(' ');
 			}
-			lcd.setCursor(2, 3);
+			lcd.setCursor(12, 2);
 			if (optionConfigMenu == 2) {
 				lcd.write(126);
-				lcd.setCursor(13, 3);
+				lcd.setCursor(18, 3);
 				if (flagIE == true) {
 					lcd.write(60);
+					if (newRelacionIE != currentRelacionIE) {
+						lcd.setCursor(12, 3);
+						lcd.print(newRelacion_IE);
+						IAnte = I;
+						EAnte = E;
+					}
 				}
 				else {
 					lcd.print(' ');
-				}
-				if (newRelacionIE != currentRelacionIE) {
-					lcd.setCursor(8, 3);
-					lcd.print(newRelacion_IE);
-					IAnte = I;
-					EAnte = E;
-					// Serial.println("Changed IE");
 				}
 			}
 			else {
@@ -1400,11 +1511,17 @@ void lcdPrintFirstLine() {
 		if (stateMachine == STANDBY_STATE) {
 			lcd.print("    Modo Standby    ");
 		}
-		else if (stateMachine == CPAP_STATE) {
-			lcd.print("     Modo CPAP      ");
-		}
 		else {
-			lcd.print("  InnspiraMED UdeA  ");
+			lcd.print("  GIBIC NEUMA ");
+			if (currentVentilationMode == 0) {
+				lcd.print("P-CMV ");
+			}
+			else if (currentVentilationMode == 1) {
+				lcd.print("A/C   ");
+			}
+			else {
+				lcd.print("CPAP  ");
+			}
 		}
 		break;
 	case VENT_MENU:
@@ -1472,6 +1589,10 @@ void lcdPrintFirstLine() {
  * ***************************************************************************/
  // Function to receive data from serial communication
 void task_Receive(void* pvParameters) {
+	// Clean Serial buffers
+	vTaskDelay(1000 / portTICK_PERIOD_MS);
+	Serial.flush();
+	Serial2.flush();
 
 	while (1) {
 		if (Serial2.available() > 5) {
@@ -1530,7 +1651,8 @@ void sendSerialData() {
 	String dataToSend = String(currentFrecRespiratoria) + ',' + String(I) + ',' +
 		String(E) + ',' + String(maxPresion) + ',' + String(batteryAlert) + ',' +
 		String(flagStabilityInterrupt) + ',' + String(stateMachine) + ',' +
-		String(currentVentilationMode) + ',' + ';';
+		String(currentVentilationMode) + ',' + String(trigger) + ',' + 
+		String(PeepMax) + ';';
 	Serial2.print(dataToSend);
 	//Serial.println(stateMachine);
 }
@@ -1685,9 +1807,7 @@ void setup()
 	xTaskCreatePinnedToCore(task_Receive, "task_Receive", 2048, NULL, 1, NULL, taskCoreOne);
 
 	// Clean Serial buffers
-	delay(1000);
-	Serial.flush();
-	Serial2.flush();
+	vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
 /* ***************************************************************************

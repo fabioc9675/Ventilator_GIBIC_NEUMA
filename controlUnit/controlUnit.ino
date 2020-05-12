@@ -1,7 +1,7 @@
 /*
-  Name:		controlUnit.ino
+  Name:		  controlUnit.ino
   Created:	4/3/2020 17:28:49
-  Author:	GIBIC UdeA
+  Author:	  GIBIC UdeA
 */
 
 #include <Arduino.h>
@@ -9,7 +9,7 @@
 #include <math.h>
 #include <EEPROM.h>
 
-#define VERSION_1_0       true           
+#define VERSION_1_0       true
 
 #ifdef VERSION_1_0
 
@@ -44,38 +44,41 @@
 #endif
 
 // Calibracion de los sensores de presion - coeficientes regresion lineal
-#define AMP1       0.0262
-#define OFFS1      -15.092
+#define AMP1       0.02769
+#define OFFS1      -22.4863
 #define AMP2       0.0293
 #define OFFS2      -20.598
-#define AMP3       0.0292
-#define OFFS3      -21.429
+#define AMP3       0.02796
+#define OFFS3      -20.4197
 
 // Calibracion de los sensores de flujo - coeficientes regresion lineal
 // Sensor de flujo Inspiratorio
-#define AMP_FI_1      0.116300
-#define OFFS_FI_1     -211.888900
-#define LIM_FI_1      1599
-#define AMP_FI_2      0.610700
-#define OFFS_FI_2     -1002.337700
-#define LIM_FI_2      1684
-#define AMP_FI_3      0.116300
-#define OFFS_FI_3     -169.789300
+#define AMP_FI_1      0.105000         
+#define OFFS_FI_1     -196.646200         
+#define LIM_FI_1      1637         
+#define AMP_FI_2      0.342400         
+#define OFFS_FI_2     -585.124600         
+#define LIM_FI_2      1782         
+#define AMP_FI_3      0.105000         
+#define OFFS_FI_3     -162.258000         
 
 // Sensor de flujo Espiratorio
-#define AMP_FE_1      0.091800
-#define OFFS_FE_1     -183.289800
-#define LIM_FE_1      1714
-#define AMP_FE_2      0.381000
-#define OFFS_FE_2     -678.984800
-#define LIM_FE_2      1850
-#define AMP_FE_3      0.091800
-#define OFFS_FE_3     -143.815400
+#define AMP_FE_1      0.078600         
+#define OFFS_FE_1     -155.241900         
+#define LIM_FE_1      1659         
+#define AMP_FE_2      0.290200         
+#define OFFS_FE_2     -506.336700         
+#define LIM_FE_2      1830         
+#define AMP_FE_3      0.078600         
+#define OFFS_FE_3     -119.077900    
 
 
 // variable para ajustar el nivel cero de flujo y calcular el volumen
-#define FLOWUP_LIM        3
-#define FLOWLO_LIM        -3
+#define FLOWUP_LIM        2
+#define FLOWLO_LIM        0
+#define FLOW_CONV         16.666666    // conversion de L/min a mL/second
+#define DELTA_T           0.05         // delta de tiempo para realizar la integra
+#define VOL_SCALE         0.85         // Factor de escala para ajustar el volumen
 
 
 // Variables de control del protocolo
@@ -210,6 +213,13 @@ float Vin_Ins = 0;
 float Vout_Ins = 0;
 float Vin_Esp = 0;
 float Vout_Esp = 0;
+
+// variables para calibracion de sensores
+float CalFin = 0; // almacena valor ADC para calibracion
+float CalFout = 0; // almacena valor ADC para calibracion
+float CalPpac = 0; // almacena valor ADC para calibracion
+float CalPin = 0; // almacena valor ADC para calibracion
+float CalPout = 0; // almacena valor ADC para calibracion
 
 //- Se�ales
 float SFin = 0; //Se�al de flujo inspiratorio
@@ -515,6 +525,8 @@ void cycling() {
         SFinMaxInsp = SFin;
         SFtotalMax = SFin - SFout;
 
+        flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
+
         //Rutina de ciclado
         BandInsp = 0;	// Desactiva la bandera, indicando que empezo la espiraci�n
         digitalWrite(EV_INSPIRA, HIGH);//Piloto conectado a presi�n de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
@@ -549,14 +561,14 @@ void cycling() {
         //Ajuste del valor de volumen
         Vtidal = 0;
         flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
-
+        
         //Calculos de volumenes
         //- Asignaci�n
         Vin_Ins = SUMVin_Ins / 1000;
         Vout_Ins = SUMVout_Ins / 1000;
         Vin_Esp = SUMVin_Esp / 1000;
         Vout_Esp = SUMVout_Esp / 1000;
-        
+
         //- Reinio de acumuladores
         SUMVin_Ins = 0;
         SUMVout_Ins = 0;
@@ -725,6 +737,13 @@ void adcReading() {
     SPout = SPout / 40;
     SPpac = SPpac / 40;
 
+    // Actualizacion de valores para realizar calibracion
+    CalFin = SFin;
+    CalFout = SFout;
+    CalPpac = SPpac;
+    CalPin = SPin;
+    CalPout = SPout;
+
     //- Conversi�n ADC-Presi�n
     SPin = AMP1 * float(SPin) + OFFS1;
     SPout = AMP2 * float(SPout) + OFFS2;
@@ -780,7 +799,11 @@ void adcReading() {
     flowTotal = SFin - SFout - flowZero;
     if (alerGeneral == 0) {
       if ((flowTotal <= FLOWLO_LIM) || (flowTotal >= FLOWUP_LIM)) {
-        Vtidal = Vtidal + (flowTotal * 0.5);
+        Vtidal = Vtidal + (flowTotal * DELTA_T * FLOW_CONV *VOL_SCALE);
+
+        if (Vtidal < 0) {
+          Vtidal = 0;
+        }
       }
     } else {
       Vtidal = 0;
@@ -855,6 +878,24 @@ void adcReading() {
     // Envio de la cadena de datos (visualizacion Raspberry)
     Serial.println(RaspberryChain);
 
+
+    /* ********************************************************************
+     * **** ENVIO DE VARIABLES PARA CALIBRACION ***************************
+     * ********************************************************************/
+//        Serial.print(CalFin);
+//        Serial.print(",");
+//        Serial.println(CalFout);  // informacion para calibracion de flujo
+    //    Serial.println(CalPpac);
+    //    Serial.println(CalPin);
+    //    Serial.println(CalPout); // informacion para calibracion de presion
+//    Serial.print(SFin);
+//    Serial.print(",");
+//    Serial.print(SFout);
+//    Serial.print(",");
+//    Serial.print(Vtidal);
+//    Serial.print(",");
+//    Serial.println(SFin-SFout);
+
     // Envio de la cadena de datos
     //    Serial.print(", Ppac = ");
     //    Serial.print(SPpac);
@@ -882,23 +923,23 @@ void adcReading() {
     //Serial.print(SPpac);
     //Serial.print(", Pin = ");
     //Serial.println(SPin);
-    
-//    Serial.print(", Vin_Ins = ");
-//    Serial.print(Vin_Ins);
-//    Serial.print(", Vout_Esp = ");
-//    Serial.print(Vout_Esp);
-//    Serial.print(", Vin_Esp = ");
-//    Serial.print(Vin_Esp);
-//    Serial.print(", Vout_Ins = ");
-//    Serial.print(Vout_Ins);
-//    Serial.print(", Vt = ");
-//    Serial.print(Vtidal);
-//    Serial.print(", Vt2 = ");
-//    Serial.println(Vin_Ins+Vout_Esp);
+
+    //    Serial.print(", Vin_Ins = ");
+    //    Serial.print(Vin_Ins);
+    //    Serial.print(", Vout_Esp = ");
+    //    Serial.print(Vout_Esp);
+    //    Serial.print(", Vin_Esp = ");
+    //    Serial.print(Vin_Esp);
+    //    Serial.print(", Vout_Ins = ");
+    //    Serial.print(Vout_Ins);
+    //    Serial.print(", Vt = ");
+    //    Serial.print(Vtidal);
+    //    Serial.print(", Vt2 = ");
+    //    Serial.println(Vin_Ins+Vout_Esp);
 
 
 
-        
+
     //    Serial.print(", Pin = ");
     //    Serial.print(SPin);
     //    Serial.print(", Pin_max = ");

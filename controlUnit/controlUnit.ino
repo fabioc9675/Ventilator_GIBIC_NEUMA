@@ -606,7 +606,7 @@ void cycling() {
             currentStateMachineCycling = START_CYCLING;
             
         }
-        if ((newVentilationMode == 0) && (contCycling >= int(((inspirationTime + expirationTime) * 1000)))) {
+        if ((contCycling >= int(((inspirationTime + expirationTime) * 1000)))) {
             contCycling = 0;
             //Calculo de Peep
             Peep = SPpac;// Peep como la presion en la via aerea al final de la espiracion

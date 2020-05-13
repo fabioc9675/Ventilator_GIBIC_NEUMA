@@ -256,10 +256,12 @@ bool flagInicio = true;
 
 int currentFrecRespiratoria = 12;
 int newFrecRespiratoria = currentFrecRespiratoria;
+int frecRespiratoriaCalculada = 0;
 int currentI = 1;
 int currentE = 20;
 int newI = currentI;
 int newE = currentE;
+int calculatedE = currentE;
 float relI = 0;
 float relE = 0;
 int maxPresion = 30;
@@ -551,6 +553,8 @@ void cycling() {
     case EXPIRATION_CYCLING:
         //Add para el modo A/C
         if ((newVentilationMode == 1) && (SPpac <= Peep - newTrigger) && (contCycling >= int(inspirationTime)*1000 + (expirationTime * 100))) {
+            frecRespiratoriaCalculada = 60.0 / ((float)contCycling / 1000.0);
+            calculatedE = (int)((((60.0 / (float)frecRespiratoriaCalculada)/(float)inspirationTime) - 1)*currentI*10);
             contCycling = 0;
             
             if (Peep < 0) {// Si el valor de Peep es negativo
@@ -607,6 +611,8 @@ void cycling() {
             
         }
         if ((contCycling >= int(((inspirationTime + expirationTime) * 1000)))) {
+            frecRespiratoriaCalculada = 60.0 / ((float)contCycling / 1000.0);
+            calculatedE = (int)((((60.0 / (float)frecRespiratoriaCalculada) / (float)inspirationTime) - 1) * currentI * 10);
             contCycling = 0;
             //Calculo de Peep
             Peep = SPpac;// Peep como la presion en la via aerea al final de la espiracion
@@ -1043,7 +1049,8 @@ void adcReading() {
 void sendSerialData() {
     String dataToSend = String(Ppico) + ',' + String(Peep) + ',' + String(VT) + ',' +
         String(alerPresionPIP) + ',' + String(alerDesconexion) + ',' +
-        String(alerObstruccion) + ',' + String(alerPeep) + ',' + String(alerGeneral) + ';';
+        String(alerObstruccion) + ',' + String(alerPeep) + ',' + String(alerGeneral) + ',' + 
+        String(int(frecRespiratoriaCalculada)) + ',' + String(int(calculatedE)) + ';';
     Serial2.print(dataToSend);
 }
 

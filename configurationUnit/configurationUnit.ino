@@ -56,6 +56,7 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);
 #define MAX_PEEP			15
 #define MIN_PEEP			1
 #define MAX_RIE             40
+#define MIN_RIE				20
 #define MAX_PRESION         50
 #define MIN_PRESION			10
 #define MAX_TRIGGER			10
@@ -137,8 +138,10 @@ int newRelacionIE = 20;
 String relacion_IE = "1:2.0";
 byte currentFrecRespiratoria = 12;
 byte newFrecRespiratoria = 12;
+byte frecRespiratoriaCalculada = 0;
 byte I = 1;
 byte E = 20;
+int calculatedE = E;
 byte maxPresion = 30;
 byte optionVentMenu = 0;
 byte optionConfigMenu = 0;
@@ -701,7 +704,7 @@ void encoderRoutine() {
 				else if (flagIE) {
 					newRelacionIE++;
 					if (newRelacionIE >= MAX_RIE) {
-						newRelacionIE = MAX_RIE;;
+						newRelacionIE = MAX_RIE;
 					}
 					if (newRelacionIE > -10 && newRelacionIE < 0) {
 						newRelacionIE = 10;
@@ -784,8 +787,8 @@ void encoderRoutine() {
 				}
 				else if (flagIE) {
 					newRelacionIE --;
-					if (newRelacionIE <= -MAX_RIE) {
-						newRelacionIE = -MAX_RIE;
+					if (newRelacionIE <= -MIN_RIE) {
+						newRelacionIE = -MIN_RIE;
 					}
 					if (newRelacionIE < 10 && newRelacionIE > 0) {
 						newRelacionIE = -10;
@@ -1029,9 +1032,11 @@ void lcd_show_comp() {
 	menuAnterior = menuImprimir;
 	lineaAnterior = lineaAlerta;
 	flagAlreadyPrint = true;
-
+	String calculatedRelacion_IE;
 	if (currentRelacionIE > 0) {
+		//relacion_IE = "1:" + String((float)currentRelacionIE / 10, 1);
 		relacion_IE = "1:" + String((float)currentRelacionIE / 10, 1);
+		calculatedRelacion_IE = "1:" + String((float)calculatedE / 10, 1);
 		I = 1;
 		E = (char)currentRelacionIE;
 	}
@@ -1050,13 +1055,14 @@ void lcd_show_comp() {
 		lcd.setCursor(0, 1);
 		lcd.print("FR        PIP     ");
 		lcd.setCursor(4, 1);
-		lcd.print(currentFrecRespiratoria);
+		lcd.print(frecRespiratoriaCalculada);
+		//lcd.print(currentFrecRespiratoria);
 		lcd.setCursor(15, 1);
 		lcd.print(String(Ppico, 0));
 		lcd.setCursor(0, 2);
 		lcd.print("I:E       PCON      ");
 		lcd.setCursor(4, 2);
-		lcd.print(relacion_IE);
+		lcd.print(calculatedRelacion_IE);
 		lcd.setCursor(15, 2);
 		lcd.print(String(Pcon, 0));
 		lcd.setCursor(0, 3);
@@ -1066,7 +1072,7 @@ void lcd_show_comp() {
 		lcd.setCursor(15, 3);
 		lcd.print(String(Peep, 0));
 
-		frecRespiratoriaAnte = currentFrecRespiratoria;
+		frecRespiratoriaAnte = frecRespiratoriaCalculada;
 		PpicoAnte = Ppico;
 		IAnte = I;
 		EAnte = E;
@@ -1202,8 +1208,10 @@ void lcd_show_comp() {
 void lcd_show_part() {
 	menuAnterior = menuImprimir;
 	String newRelacion_IE;
+	String calculatedRelacion_IE;
 	if (newRelacionIE > 0) {
 		newRelacion_IE = "1:" + String((float)newRelacionIE / 10, 1);
+		calculatedRelacion_IE = "1:" + String((float)calculatedE / 10, 1);
 	}
 	else {
 		newRelacion_IE = String(-(float)newRelacionIE / 10, 1) + ":1";
@@ -1217,13 +1225,14 @@ void lcd_show_part() {
 
 	switch (menuImprimir) {
 	case MAIN_MENU:
-		if (currentFrecRespiratoria != frecRespiratoriaAnte) {
+		//if (currentFrecRespiratoria != frecRespiratoriaAnte) {
+		if (frecRespiratoriaCalculada != frecRespiratoriaAnte) {
 			lcd.setCursor(4, 1);
-			lcd.print(currentFrecRespiratoria);
-			if (currentFrecRespiratoria < 10) {
+			lcd.print(frecRespiratoriaCalculada);
+			if (frecRespiratoriaCalculada < 10) {
 				lcd.print(" ");
 			}
-			frecRespiratoriaAnte = currentFrecRespiratoria;
+			frecRespiratoriaAnte = frecRespiratoriaCalculada;
 			// Serial.println("Changed freq");
 		}
 		if (Ppico != PpicoAnte) {
@@ -1235,11 +1244,11 @@ void lcd_show_part() {
 			PpicoAnte = Ppico;
 			// Serial.println("Changed Ppico");
 		}
-		if ((I != IAnte) || (E != EAnte)) {
+		if ((I != IAnte) || (calculatedE != EAnte)) {
 			lcd.setCursor(4, 2);
-			lcd.print(relacion_IE);
+			lcd.print(calculatedRelacion_IE);
 			IAnte = I;
-			EAnte = E;
+			EAnte = calculatedE;
 			// Serial.println("Changed IE");
 		}
 		if (Pcon != PconAnte) {
@@ -1624,12 +1633,11 @@ void task_Receive(void* pvParameters) {
 			alerObstruccion = dataIn2[5].toInt();
 			alerPresionPeep = dataIn2[6].toInt();
 			alerGeneral = dataIn2[7].toInt();
+			frecRespiratoriaCalculada = dataIn2[8].toInt();
+			calculatedE = dataIn2[9].toInt();
 			Serial2.flush();
 			//Serial.flush();  // solo para pruebas
-			/*Serial.println(String(Ppico) + ',' + String(Peep) + ',' + String(VT) + ',' +
-							 String(alerPresionPIP) + ',' + String(alerDesconexion) + ','
-							+ String(alerObstruccion) + ',' + String(alerPresionPeep));*/
-							//Serial.println(alerGeneral);
+			//Serial.println(calculatedE);
 		}
 		vTaskDelay(10 / portTICK_PERIOD_MS);
 	}

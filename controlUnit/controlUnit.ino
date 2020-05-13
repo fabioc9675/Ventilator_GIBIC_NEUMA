@@ -1,14 +1,14 @@
-﻿/*
+/*
  Name:		controlUnit.ino
  Created:	4/3/2020 17:28:49
- Author:    Helber Carvajal
+ Author:  GIBIC UdeA
 */
 
 #include <Arduino.h>
 #include <math.h>
 #include <EEPROM.h>
 
-#define VERSION_1_1       true           
+#define VERSION_1_0       true           
 
 #ifdef VERSION_1_0
 
@@ -1094,4 +1094,3 @@ void alarmsDetection() {
         SFoutMax = SFout;
     }
 }
-

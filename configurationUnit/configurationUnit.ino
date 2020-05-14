@@ -57,14 +57,18 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);
 #define MIN_PEEP			1
 #define MAX_RIE             40
 #define MIN_RIE				20
-#define MAX_PRESION         50
+#define MAX_PRESION         40
+#define MAX_MAX_FR			60
+#define MIN_MAX_FR			5
+#define MAX_MAX_VE			50
+#define MIN_MAX_VE			1    // l/min
 #define MIN_PRESION			10
 #define MAX_TRIGGER			10
 #define MIN_TRIGGER			2
 #define MAX_FLUJO           40
 #define SILENCE_BTN_TIME        2*60*1000/LOW_ATT_INT  // tiempo, 2 minutos a 20 Hz
 #define SILENCE_BTN_BATTERY     30*60*1000/LOW_ATT_INT
-#define ALARM_QUANTITY		7
+#define ALARM_QUANTITY		9
 
 // Definitions for menu operation
 #define MAIN_MENU           0	// Menu principal
@@ -83,6 +87,8 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);
 #define ALE_BATTERY_10MIN	12
 #define ALE_BATTERY_5MIN	13
 #define ALE_GENERAL			14 
+#define ALE_FR_ALTA			15
+#define ALE_VE_ALTO			16
 
 #define MODE_CHANGE         19 // definicion para obligar al cambio entre StandBy y modo normal en el LCD
 
@@ -98,6 +104,7 @@ unsigned int contDetachS = 0;
 unsigned int contAlarm = 0;
 unsigned int contRecogIntA = 0;   // contador para reconocimiento del conteo del encoder
 unsigned int contRecogIntB = 0;   // contador para reconocimiento del conteo del encoder
+unsigned int contLowAtten = 0;
 
 unsigned int contSilence = 0;
 unsigned int contSilenceBattery = 0;
@@ -112,7 +119,7 @@ unsigned int contStandby = 0;
 // variables de menu
 volatile signed int menu = MAIN_MENU;
 volatile unsigned int menuImprimir = MAIN_MENU;
-int menuAlerta[ALARM_QUANTITY + 1] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+int menuAlerta[ALARM_QUANTITY + 1] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 volatile unsigned int lineaAlerta = MAIN_MENU;
 volatile uint8_t flagAlreadyPrint = false;
 
@@ -127,6 +134,10 @@ float PconAnte = 0;
 float VTAnte = 1;
 byte maxPresionAnte = 0;
 byte frecRespiratoriaAnte = 0;
+byte minFR_Ante = 0;
+byte minVE_Ante = 0;
+byte maxFR = 12;
+byte maxVE = 20;
 
 bool flagAlerta = false;
 bool flagBatteryAlert = false;
@@ -159,11 +170,15 @@ bool flagPeepMax = false;
 bool flagSensibilityCPAP = false;
 bool flagMode = false;
 bool flagConfirm = false;
-
+bool flagMinFR = false;
+bool flagVE = false;
 int flagEncoder = 0;
 
 byte currentVentilationMode = 0;
 byte newVentilationMode = 0;
+
+byte currentVE = 0;
+byte newVE = 0;
 
 float Peep = 0;
 byte PeepMax = 10;
@@ -177,6 +192,8 @@ int alerDesconexion = 0;
 int alerObstruccion = 0;
 int alerGeneral = 0;
 int alerPresionPeep = 0;
+int alerFR_Alta = 0;
+int alerVE_Alto = 0;
 int currentBatteryAlert = 1;        // When is working with energy supply
 int newBatteryAlert = 1;
 
@@ -342,7 +359,6 @@ void IRAM_ATTR stabilityButtonInterrupt(void) {
  ************************************************************/
 void task_timer(void* arg) {
 	int contms = 0;
-	int contLowAtten = 0;
 	uint8_t debounceENC = 0;
 	uint8_t debounceENC_2 = 0;
 
@@ -350,7 +366,6 @@ void task_timer(void* arg) {
 		// Se atiende la interrupcion del timer
 		if (xSemaphoreTake(xSemaphoreTimer, portMAX_DELAY) == pdTRUE) {
 			if (flagTimerInterrupt == true) {
-
 				portENTER_CRITICAL(&timerMux);
 				flagTimerInterrupt = false;
 				portEXIT_CRITICAL(&timerMux);
@@ -367,6 +382,9 @@ void task_timer(void* arg) {
 					break;
 				case PCMV_STATE:
 					//alertMonitoring();
+					standbyInterruptAttention();
+					break;
+				case AC_STATE:
 					standbyInterruptAttention();
 					break;
 				case FAILURE_STATE:
@@ -435,7 +453,6 @@ void task_timer(void* arg) {
 					}
 				} // Finaliza agregar interrupciones
 
-
 				if (flagStabilityInterrupt == true) {
 					contStability++;
 					if (contStability > 200) {
@@ -449,159 +466,8 @@ void task_timer(void* arg) {
 					}
 				}
 
-				/* ***************************************************************************
-				 * **** Atencion a las alertas ***********************************************
-				 * ***************************************************************************/
-				contLowAtten++; // contador para generar atencion a bajas frecuencias
+				alarmMonitoring();
 
-				// ejecuta tareas de baja prioridad en tiempo
-				if (contLowAtten == LOW_ATT_INT) {
-					contLowAtten = 0;
-
-					newBatteryAlert = digitalRead(BATTALARM);
-					//Serial.println(newBatteryAlert);
-					switch (batteryAlert) {
-					case BATTERY_NO_ALARM:
-						if (newBatteryAlert == 0) { // Battery Alarm
-							portENTER_CRITICAL_ISR(&mux);
-							flagBatterySilence = false;
-							portEXIT_CRITICAL_ISR(&mux);
-							contSilenceBattery = 0;
-							currentBatteryAlert = newBatteryAlert;
-							batteryAlert = batteryAlarm;
-							digitalWrite(LUMINB, HIGH);
-							sendSerialData();
-						}
-						break;
-					case batteryAlarm:
-						if (newBatteryAlert == 1) {
-							contBattery++;
-						}
-						else if (contBattery > 2 && contBattery < 50) {
-							contBattery = 0;
-							batteryAlert = batteryAlarm10min;
-							sendSerialData();
-						}
-						if (contBattery > 100) {
-							contBattery = 0;
-							currentBatteryAlert = newBatteryAlert;
-							batteryAlert = BATTERY_NO_ALARM;
-							digitalWrite(LUMINB, LOW);
-							sendSerialData();
-						}
-						break;
-					case batteryAlarm10min:
-						if (newBatteryAlert == 1) {
-							contBattery++;
-						}
-						else {
-							contBattery = 0;
-						}
-						if (contBattery > 100) {
-							contBattery = 0;
-							contBattery5min = 0;
-							currentBatteryAlert = newBatteryAlert;
-							batteryAlert = BATTERY_NO_ALARM;
-							digitalWrite(LUMINB, LOW);
-							sendSerialData();
-						}
-						contBattery5min++;
-						if (contBattery5min > 6000) {
-							contBattery = 0;
-							contBattery5min = 0;
-							batteryAlert = batteryAlarm5min;
-						}
-						break;
-					case batteryAlarm5min:
-						if (newBatteryAlert == 1) {
-							contBattery++;
-						}
-						if (contBattery > 100) {
-							contBattery = 0;
-							currentBatteryAlert = newBatteryAlert;
-							batteryAlert = BATTERY_NO_ALARM;
-							digitalWrite(LUMINB, LOW);
-							sendSerialData();
-						}
-						break;
-					default:
-						break;
-					}
-
-					// verifica la condicion de silenciar alarmas
-					silenceInterruptAttention();
-					// activacion alerta de bateria
-					if (currentBatteryAlert == 0) {
-						menuAlerta[6] = BATTERY;
-						if (batteryAlert == 2) {
-							menuAlerta[7] = ALE_BATTERY_10MIN;
-						}
-						else if (batteryAlert == 3) {
-							menuAlerta[7] = ALE_BATTERY_5MIN;
-							flagAlerta = true;
-						}
-						flagBatteryAlert = true;
-					}
-					else {
-						menuAlerta[6] = 0;
-						menuAlerta[7] = 0;
-						flagBatteryAlert = false;
-					}
-					// activacion alerta general
-					if (alerObstruccion == 1) {
-						menuAlerta[5] = ALE_OBSTRUCCION;
-						flagAlerta = true;
-					}
-					else {
-						menuAlerta[5] = 0;
-					}
-					// activacion alerta presion alta
-					if (alerPresionPIP == 1) {
-						menuAlerta[4] = ALE_PRES_PIP;
-						flagAlerta = true;
-					}
-					else {
-						menuAlerta[4] = 0;
-					}
-					if (alerPresionPeep == 1) {
-						digitalWrite(LUMING, LOW);
-						menuAlerta[3] = ALE_PRES_PEEP;
-						flagAlerta = true;
-					}
-					else {
-						menuAlerta[3] = 0;
-
-					}
-					// activacion alerta desconexion
-					if (alerDesconexion == 1) {
-						menuAlerta[2] = ALE_PRES_DES;
-						flagAlerta = true;
-					}
-					else {
-						menuAlerta[2] = 0;
-					}
-					if (alerGeneral == 1) {
-						flagAlerta = true;
-						menuAlerta[1] = ALE_GENERAL;
-						stateMachine = FAILURE_STATE;
-						digitalWrite(STANDBY_LED, LOW);
-					}
-					else {
-						menuAlerta[1] = 0;
-					}
-					// desactivacion alertas
-					if ((alerPresionPIP == 0) && (alerDesconexion == 0) && (alerObstruccion == 0) &&
-						(alerPresionPeep == 0) && (alerGeneral == 0) && (menuAlerta[7] != ALE_BATTERY_5MIN)) {
-						flagAlerta = false;
-						for (int i = 1; i < ALARM_QUANTITY - 1; i++) {
-							menuAlerta[i] = 0;
-						}
-						portENTER_CRITICAL_ISR(&mux);
-						flagSilenceInterrupt = false;
-						portEXIT_CRITICAL_ISR(&mux);
-						contSilence = 0;
-					}
-				}
 			}
 		}
 	}
@@ -748,9 +614,21 @@ void encoderRoutine() {
 						maxPresion = MAX_PRESION;
 					}
 				}
+				else if (flagMinFR == true) {
+					maxFR++;
+					if (maxFR > MAX_MAX_FR) {
+						maxFR = MAX_MAX_FR;
+					}	
+				}
+				else if (flagVE == true) {
+					maxVE++;
+					if (maxVE > MAX_MAX_VE) {
+						maxVE = MAX_MAX_VE;
+					}
+				}
 				else if (insideMenuFlag == true) {
 					optionConfigMenu++;
-					if (optionConfigMenu > 1) {
+					if (optionConfigMenu > 3) {
 						optionConfigMenu = 0;
 					}
 				}
@@ -833,10 +711,22 @@ void encoderRoutine() {
 						maxPresion = MIN_PRESION;
 					}
 				}
+				else if (flagMinFR == true) {
+					maxFR--;
+					if (maxFR > MAX_MAX_FR) {
+						maxFR = MIN_MAX_FR;
+					}
+				}
+				else if (flagVE == true) {
+					maxVE--;
+					if (maxVE > MAX_MAX_VE) {
+						maxVE = MIN_MAX_VE;
+					}
+				}
 				else if (insideMenuFlag == true) {
 					optionConfigMenu--;
-					if (optionConfigMenu > 1) {
-						optionConfigMenu = 1;
+					if (optionConfigMenu > 3) {
+						optionConfigMenu = 3;
 					}
 				}
 				break;
@@ -916,16 +806,19 @@ void switchRoutine() {
 		}
 		else if (optionVentMenu == 1) {
 			menu = CONFIG_MENU;
+			stateMachine = PCMV_STATE;
 			currentVentilationMode = 0;
 			optionVentMenu = 0;
 		}
 		else if (optionVentMenu == 2) {
 			menu = CONFIG_MENU;
+			stateMachine = AC_STATE;
 			currentVentilationMode = 1;
 			optionVentMenu = 0;
 		}
 		else if (optionVentMenu == 3) {
 			menu = CONFIG_MENU;
+			stateMachine = CPAP_STATE;
 			currentVentilationMode = 2;
 			optionVentMenu = 0;
 		}
@@ -959,12 +852,17 @@ void switchRoutine() {
 				sendSerialData();
 			}
 		}
-		else {
+		else if(optionConfigMenu == 1) {
 			flagPresion = !flagPresion;
+		}
+		else if (optionConfigMenu == 2) {
+			flagMinFR = !flagMinFR;
+		}
+		else if (optionConfigMenu == 3) {
+			flagVE = !flagVE;
 		}
 		break;
 	}
-
 	menuImprimir = menu;
 	lineaAlerta = menu;
 	flagAlreadyPrint = false;
@@ -1009,7 +907,20 @@ void standbyInterruptAttention() {
 
 			contStandby = 0;
 			if (stateMachine == STANDBY_STATE) {
-				stateMachine = PCMV_STATE;
+				switch (currentVentilationMode) {
+				case 0:
+					stateMachine = PCMV_STATE;
+					break;
+				case 1:
+					stateMachine = AC_STATE;
+					break;
+				case 2:
+					stateMachine = CPAP_STATE;
+					break;
+				default:
+					stateMachine = STANDBY_STATE;
+					break;
+				}
 				//Serial.println("I am on Cycling state");
 				digitalWrite(STANDBY_LED, LOW);
 			}
@@ -1060,11 +971,18 @@ void lcd_show_comp() {
 		lcd.setCursor(15, 1);
 		lcd.print(String(Ppico, 0));
 		lcd.setCursor(0, 2);
-		lcd.print("I:E       PCON      ");
+		if (stateMachine == AC_STATE) {
+			lcd.print("I:E       VE        ");
+			lcd.setCursor(15, 2);
+			lcd.print(String(currentVE, 0));
+		}
+		else {
+			lcd.print("I:E       PCON      ");
+			lcd.setCursor(15, 2);
+			lcd.print(String(Pcon, 0));
+		}
 		lcd.setCursor(4, 2);
 		lcd.print(calculatedRelacion_IE);
-		lcd.setCursor(15, 2);
-		lcd.print(String(Pcon, 0));
 		lcd.setCursor(0, 3);
 		lcd.print("VT        PEEP      ");
 		lcd.setCursor(4, 3);
@@ -1146,12 +1064,18 @@ void lcd_show_comp() {
 		lcd.setCursor(0, 1);
 		lcd.print("                    ");
 		lcd.setCursor(0, 2);
-		lcd.print("  PIP:    cmH2O     ");
-		lcd.setCursor(7, 2);
-		lcd.print(maxPresion);
+		lcd.print("  PIP |  FR  |  VE  ");
 		lcd.setCursor(0, 3);
-		lcd.print("                    ");
+		lcd.print("      |      |      ");
+		lcd.setCursor(2, 3);
+		lcd.print(maxPresion);
+		lcd.setCursor(9, 3);
+		lcd.print(maxFR);
+		lcd.setCursor(16, 3);
+		lcd.print(maxVE);
 		maxPresionAnte = maxPresion;
+		minFR_Ante = maxFR;
+		minVE_Ante = maxVE;
 		break;
 	case CHECK_MENU:
 		lcd.setCursor(0, 1);
@@ -1235,14 +1159,28 @@ void lcd_show_part() {
 			frecRespiratoriaAnte = frecRespiratoriaCalculada;
 			// Serial.println("Changed freq");
 		}
-		if (Ppico != PpicoAnte) {
-			lcd.setCursor(15, 1);
-			lcd.print(String(Ppico, 0));
-			if (Ppico < 10) {
-				lcd.print(" ");
+		if (stateMachine == AC_STATE) {
+			if (newVE != currentVE) {
+				lcd.setCursor(15, 1);
+				lcd.print(String(newVE, 0));
+				if (Ppico < 10) {
+					lcd.print(" ");
+				}
+				currentVE = newVE;
+				// Serial.println("Changed Ppico");
 			}
-			PpicoAnte = Ppico;
-			// Serial.println("Changed Ppico");
+		}
+		else {
+			if (Ppico != PpicoAnte) {
+				lcd.setCursor(15, 1);
+				lcd.print(String(Ppico, 0));
+				if (Ppico < 10) {
+					lcd.print(" ");
+				}
+				PpicoAnte = Ppico;
+				// Serial.println("Changed Ppico");
+			}
+		
 		}
 		if ((I != IAnte) || (calculatedE != EAnte)) {
 			lcd.setCursor(4, 2);
@@ -1463,14 +1401,14 @@ void lcd_show_part() {
 		{
 			lcd.print(' ');
 		}
-		lcd.setCursor(1, 2);
+		lcd.setCursor(0, 2);
 		if (optionConfigMenu == 1) {
 			lcd.write(126);
-			lcd.setCursor(15, 2);
+			lcd.setCursor(5, 3);
 			if (flagPresion == true) {
 				lcd.write(60);
 				if (maxPresion != maxPresionAnte) {
-					lcd.setCursor(7, 2);
+					lcd.setCursor(2, 3);
 					lcd.print(maxPresion);
 					if (maxPresion < 10) {
 						lcd.print(" ");
@@ -1485,6 +1423,51 @@ void lcd_show_part() {
 		else {
 			lcd.print(' ');
 		}
+		lcd.setCursor(7, 2);
+		if (optionConfigMenu == 2) {
+			lcd.write(126);
+			lcd.setCursor(12, 3);
+			if (flagMinFR == true) {
+				lcd.write(60);
+				if (maxFR != minFR_Ante) {
+					lcd.setCursor(9, 3);
+					lcd.print(maxFR);
+					if (maxFR < 10) {
+						lcd.print(" ");
+					}
+					minFR_Ante = maxFR;
+				}
+			}
+			else {
+				lcd.print(' ');
+			}
+		}
+		else {
+			lcd.print(' ');
+		}
+		lcd.setCursor(14, 2);
+		if (optionConfigMenu == 3) {
+			lcd.write(126);
+			lcd.setCursor(19, 3);
+			if (flagVE == true) {
+				lcd.write(60);
+				if (maxVE != minVE_Ante) {
+					lcd.setCursor(16, 3);
+					lcd.print(maxVE);
+					if (maxVE < 10) {
+						lcd.print(" ");
+					}
+					minVE_Ante = maxVE;
+				}
+			}
+			else {
+				lcd.print(' ');
+			}
+		}
+		else {
+			lcd.print(' ');
+		}
+
 
 		break;
 	case CONFIRM_MENU:
@@ -1521,7 +1504,7 @@ void lcdPrintFirstLine() {
 			lcd.print("    Modo Standby    ");
 		}
 		else {
-			lcd.print("  GIBIC NEUMA ");
+			lcd.print("  GIBIC Neuma ");
 			if (currentVentilationMode == 0) {
 				lcd.print("P-CMV ");
 			}
@@ -1577,6 +1560,12 @@ void lcdPrintFirstLine() {
 		break;
 	case ALE_BATTERY_5MIN:
 		lcd.print(" Bateria baja 5 Min ");
+		break;
+	case ALE_FR_ALTA:
+		lcd.print("      FR alta       ");
+		break;
+	case ALE_VE_ALTO:
+		lcd.print("    Vol/min alto    ");
 		break;
 	case CHECK_MENU:
 		lcd.print("Comprobacion Inicial");
@@ -1635,9 +1624,12 @@ void task_Receive(void* pvParameters) {
 			alerGeneral = dataIn2[7].toInt();
 			frecRespiratoriaCalculada = dataIn2[8].toInt();
 			calculatedE = dataIn2[9].toInt();
+			alerFR_Alta = dataIn2[10].toInt();
+			alerVE_Alto = dataIn2[11].toInt();
+			newVE = dataIn2[12].toInt();
 			Serial2.flush();
 			//Serial.flush();  // solo para pruebas
-			//Serial.println(calculatedE);
+			//Serial.println(alerFR_Alta);
 		}
 		vTaskDelay(10 / portTICK_PERIOD_MS);
 	}
@@ -1660,7 +1652,7 @@ void sendSerialData() {
 		String(E) + ',' + String(maxPresion) + ',' + String(batteryAlert) + ',' +
 		String(flagStabilityInterrupt) + ',' + String(stateMachine) + ',' +
 		String(currentVentilationMode) + ',' + String(trigger) + ',' + 
-		String(PeepMax) + ';';
+		String(PeepMax) + ',' + String(maxFR) + ',' + String(maxVE) + ';';
 	Serial2.print(dataToSend);
 	//Serial.println(stateMachine);
 }
@@ -1686,7 +1678,9 @@ void task_Display(void* pvParameters) {
 			}
 			menuAlerta[0] = menu;
 			contAlertas++;
+			
 			if (contAlertas == 3) {
+				
 				/*Serial.println(String(menuAlerta[0]) + ',' + String(menuAlerta[1]) + ',' +
 					String(menuAlerta[2]) + ',' + String(menuAlerta[3]) + ',' +
 					String(menuAlerta[4]) + ',' + String(menuAlerta[5]));
@@ -1694,7 +1688,6 @@ void task_Display(void* pvParameters) {
 				flagFirst = false;
 				flagEntre = false;
 				for (int i = 0; i < ALARM_QUANTITY + 1; i++) {
-					//Serial.println(i);
 					if ((menuAlerta[i] != 0) && (i > temp) && (flagFirst == false)) {
 						flagFirst = true;
 						flagEntre = true;
@@ -1816,6 +1809,181 @@ void setup()
 
 	// Clean Serial buffers
 	vTaskDelay(1000 / portTICK_PERIOD_MS);
+}
+
+/* ***************************************************************************
+* **** Atencion a las alertas ***********************************************
+* ***************************************************************************/
+void alarmMonitoring(void) {
+	
+	contLowAtten++;  // contador para generar atencion a bajas frecuencias
+	
+	// ejecuta tareas de baja prioridad en tiempo
+	if (contLowAtten == LOW_ATT_INT) {
+		contLowAtten = 0;
+
+		newBatteryAlert = digitalRead(BATTALARM);
+		switch (batteryAlert) {
+		case BATTERY_NO_ALARM:
+			if (newBatteryAlert == 0) { // Battery Alarm
+				portENTER_CRITICAL_ISR(&mux);
+				flagBatterySilence = false;
+				portEXIT_CRITICAL_ISR(&mux);
+				contSilenceBattery = 0;
+				currentBatteryAlert = newBatteryAlert;
+				batteryAlert = batteryAlarm;
+				digitalWrite(LUMINB, HIGH);
+				sendSerialData();
+			}
+			break;
+		case batteryAlarm:
+			if (newBatteryAlert == 1) {
+				contBattery++;
+			}
+			else if (contBattery > 2 && contBattery < 50) {
+				contBattery = 0;
+				batteryAlert = batteryAlarm10min;
+				sendSerialData();
+			}
+			if (contBattery > 100) {
+				contBattery = 0;
+				currentBatteryAlert = newBatteryAlert;
+				batteryAlert = BATTERY_NO_ALARM;
+				digitalWrite(LUMINB, LOW);
+				sendSerialData();
+			}
+			break;
+		case batteryAlarm10min:
+			if (newBatteryAlert == 1) {
+				contBattery++;
+			}
+			else {
+				contBattery = 0;
+			}
+			if (contBattery > 100) {
+				contBattery = 0;
+				contBattery5min = 0;
+				currentBatteryAlert = newBatteryAlert;
+				batteryAlert = BATTERY_NO_ALARM;
+				digitalWrite(LUMINB, LOW);
+				sendSerialData();
+			}
+			contBattery5min++;
+			if (contBattery5min > 6000) {
+				contBattery = 0;
+				contBattery5min = 0;
+				batteryAlert = batteryAlarm5min;
+			}
+			break;
+		case batteryAlarm5min:
+			if (newBatteryAlert == 1) {
+				contBattery++;
+			}
+			if (contBattery > 100) {
+				contBattery = 0;
+				currentBatteryAlert = newBatteryAlert;
+				batteryAlert = BATTERY_NO_ALARM;
+				digitalWrite(LUMINB, LOW);
+				sendSerialData();
+			}
+			break;
+		default:
+			break;
+		}
+
+		// verifica la condicion de silenciar alarmas
+		silenceInterruptAttention();
+		// activacion alerta de bateria
+		if (currentBatteryAlert == 0) {
+			menuAlerta[8] = BATTERY;
+			if (batteryAlert == 2) {
+				menuAlerta[9] = ALE_BATTERY_10MIN;
+			}
+			else if (batteryAlert == 3) {
+				menuAlerta[9] = ALE_BATTERY_5MIN;
+				flagAlerta = true;
+			}
+			flagBatteryAlert = true;
+		}
+		else {
+			menuAlerta[8] = 0;
+			menuAlerta[9] = 0;
+			flagBatteryAlert = false;
+		}
+
+		if ((alerVE_Alto == 1) && (stateMachine == AC_STATE)) {
+			menuAlerta[7] = ALE_VE_ALTO;
+			flagAlerta = true;
+		}
+		else {
+			menuAlerta[7] = 0;
+		}
+
+		if ((alerFR_Alta == 1) && (stateMachine == AC_STATE)) {
+			menuAlerta[6] = ALE_FR_ALTA;
+			flagAlerta = true;
+		}
+		else {
+			menuAlerta[6] = 0;
+		}
+
+		// activacion alerta general
+		if (alerObstruccion == 1) {
+			menuAlerta[5] = ALE_OBSTRUCCION;
+			flagAlerta = true;
+		}
+		else {
+			menuAlerta[5] = 0;
+		}
+		// activacion alerta presion alta
+		if (alerPresionPIP == 1) {
+			menuAlerta[4] = ALE_PRES_PIP;
+			flagAlerta = true;
+		}
+		else {
+			menuAlerta[4] = 0;
+		}
+
+		if (alerPresionPeep == 1) {
+			digitalWrite(LUMING, LOW);
+			menuAlerta[3] = ALE_PRES_PEEP;
+			flagAlerta = true;
+		}
+		else {
+			menuAlerta[3] = 0;
+
+		}
+		// activacion alerta desconexion
+		if (alerDesconexion == 1) {
+			menuAlerta[2] = ALE_PRES_DES;
+			flagAlerta = true;
+		}
+		else {
+			menuAlerta[2] = 0;
+		}
+		if (alerGeneral == 1) {
+			flagAlerta = true;
+			menuAlerta[1] = ALE_GENERAL;
+			stateMachine = FAILURE_STATE;
+			digitalWrite(STANDBY_LED, LOW);
+		}
+		else {
+			menuAlerta[1] = 0;
+		}
+		// desactivacion alertas
+		if ((alerPresionPIP == 0) && (alerDesconexion == 0) && (alerObstruccion == 0) &&
+			(alerPresionPeep == 0) && (alerGeneral == 0) && (menuAlerta[9] != ALE_BATTERY_5MIN) && 
+			(menuAlerta[7] == 0) && (menuAlerta[6] == 0)) {
+			flagAlerta = false;
+			for (int i = 1; i < ALARM_QUANTITY - 1; i++) {
+				menuAlerta[i] = 0;
+			}
+			portENTER_CRITICAL_ISR(&mux);
+			flagSilenceInterrupt = false;
+			portEXIT_CRITICAL_ISR(&mux);
+			contSilence = 0;
+		}
+	}
 }
 
 /* ***************************************************************************

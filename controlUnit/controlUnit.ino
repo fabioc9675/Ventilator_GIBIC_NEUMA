@@ -613,7 +613,7 @@ void cycling() {
                 flagInicio = false;
             }
 
-            currentVE = (VT * frecRespiratoriaCalculada / 1000.0);
+            currentVE = (VT * frecRespiratoriaCalculada) / 1000.0;
 
             alarmsDetection();
             currentStateMachineCycling = START_CYCLING;
@@ -678,7 +678,7 @@ void cycling() {
                 flagInicio = false;
             }
 
-            currentVE = (VT * frecRespiratoriaCalculada / 1000.0);
+            currentVE = (VT * frecRespiratoriaCalculada) / 1000.0;
 
             alarmsDetection();
             currentStateMachineCycling = START_CYCLING;

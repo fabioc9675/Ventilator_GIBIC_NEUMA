@@ -974,7 +974,7 @@ void lcd_show_comp() {
 		if (stateMachine == AC_STATE) {
 			lcd.print("I:E       VE        ");
 			lcd.setCursor(15, 2);
-			lcd.print(String(currentVE, 0));
+			lcd.print(String(currentVE));
 		}
 		else {
 			lcd.print("I:E       PCON      ");
@@ -1159,29 +1159,18 @@ void lcd_show_part() {
 			frecRespiratoriaAnte = frecRespiratoriaCalculada;
 			// Serial.println("Changed freq");
 		}
-		if (stateMachine == AC_STATE) {
-			if (newVE != currentVE) {
-				lcd.setCursor(15, 1);
-				lcd.print(String(newVE, 0));
-				if (Ppico < 10) {
-					lcd.print(" ");
-				}
-				currentVE = newVE;
-				// Serial.println("Changed Ppico");
-			}
-		}
-		else {
-			if (Ppico != PpicoAnte) {
-				lcd.setCursor(15, 1);
-				lcd.print(String(Ppico, 0));
-				if (Ppico < 10) {
-					lcd.print(" ");
-				}
-				PpicoAnte = Ppico;
-				// Serial.println("Changed Ppico");
-			}
+	
 		
+		if (Ppico != PpicoAnte) {
+			lcd.setCursor(15, 1);
+			lcd.print(String(Ppico, 0));
+			if (Ppico < 10) {
+				lcd.print(" ");
+			}
+			PpicoAnte = Ppico;
+			// Serial.println("Changed Ppico");
 		}
+		
 		if ((I != IAnte) || (calculatedE != EAnte)) {
 			lcd.setCursor(4, 2);
 			lcd.print(calculatedRelacion_IE);
@@ -1189,14 +1178,28 @@ void lcd_show_part() {
 			EAnte = calculatedE;
 			// Serial.println("Changed IE");
 		}
-		if (Pcon != PconAnte) {
-			lcd.setCursor(15, 2);
-			lcd.print(String(Pcon, 0));
-			if (Pcon < 10)
-			{
-				lcd.print(" ");
+
+		if (stateMachine == AC_STATE) {
+			if (newVE != currentVE) {
+				lcd.setCursor(15, 2);
+				lcd.print(String(newVE));
+				if (newVE < 10) {
+					lcd.print(" ");
+				}
+				currentVE = newVE;
+				// Serial.println("Changed Ppico");
 			}
-			PconAnte = Pcon;
+		}
+		else {
+			if (Pcon != PconAnte) {
+				lcd.setCursor(15, 2);
+				lcd.print(String(Pcon, 0));
+				if (Pcon < 10)
+				{
+					lcd.print(" ");
+				}
+				PconAnte = Pcon;
+			}
 		}
 		if (Peep != PeepAnte) {
 			lcd.setCursor(15, 3);

@@ -1,7 +1,7 @@
 /*
  Name:		controlUnit.ino
  Created:	4/3/2020 17:28:49
- Author:  GIBIC UdeA
+ Author:    Helber Carvajal
 */
 
 #include <Arduino.h>
@@ -640,7 +640,7 @@ void cycling() {
                 flagInicio = false;
             }
 
-            currentVE = (VT * frecRespiratoriaCalculada) / 1000.0;
+            currentVE = (int)((VT * frecRespiratoriaCalculada) / 1000.0);
 
             alarmsDetection();
             currentStateMachineCycling = START_CYCLING;
@@ -705,7 +705,7 @@ void cycling() {
                 flagInicio = false;
             }
 
-            currentVE = (VT * frecRespiratoriaCalculada) / 1000.0;
+            currentVE = (int)((VT * frecRespiratoriaCalculada) / 1000.0);
 
             alarmsDetection();
             currentStateMachineCycling = START_CYCLING;
@@ -1018,7 +1018,7 @@ void adcReading() {
             inspFlow + ',' + inspExp;
 
         // Envio de la cadena de datos (visualizacion Raspberry)
-        //Serial.println(RaspberryChain);
+        Serial.println(RaspberryChain);
 
         /* ********************************************************************
          * **** ENVIO DE VARIABLES PARA CALIBRACION ***************************

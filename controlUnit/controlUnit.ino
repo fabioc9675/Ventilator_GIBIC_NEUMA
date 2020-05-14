@@ -8,7 +8,7 @@
 #include <math.h>
 #include <EEPROM.h>
 
-#define VERSION_1_1       true           
+#define VERSION_1_0       true           
 
 #ifdef VERSION_1_0
 
@@ -47,29 +47,29 @@
 #define OFFS1      -15.092
 #define AMP2       0.0293
 #define OFFS2      -20.598
-#define AMP3       0.0292
-#define OFFS3      -21.429
+#define AMP3       0.0279606
+#define OFFS3      -20.41976
 
 // Calibracion de los sensores de flujo - coeficientes regresion lineal
 // Sensor de flujo Inspiratorio
-#define AMP_FI_1      0.116300
-#define OFFS_FI_1     -211.888900
-#define LIM_FI_1      1599
-#define AMP_FI_2      0.610700
-#define OFFS_FI_2     -1002.337700
-#define LIM_FI_2      1684
-#define AMP_FI_3      0.116300
-#define OFFS_FI_3     -169.789300
+#define AMP_FI_1      0.069300         
+#define OFFS_FI_1     -148.144600         
+#define LIM_FI_1      1750         
+#define AMP_FI_2      0.292800         
+#define OFFS_FI_2     -539.338300         
+#define LIM_FI_2      1933         
+#define AMP_FI_3      0.069300         
+#define OFFS_FI_3     -107.234500         
 
 // Sensor de flujo Espiratorio
-#define AMP_FE_1      0.091800
-#define OFFS_FE_1     -183.289800
-#define LIM_FE_1      1714
-#define AMP_FE_2      0.381000
-#define OFFS_FE_2     -678.984800
-#define LIM_FE_2      1850
-#define AMP_FE_3      0.091800
-#define OFFS_FE_3     -143.815400
+#define AMP_FE_1      0.065500         
+#define OFFS_FE_1     -140.941500         
+#define LIM_FE_1      1742         
+#define AMP_FE_2      0.297500         
+#define OFFS_FE_2     -544.925400         
+#define LIM_FE_2      1922         
+#define AMP_FE_3      0.065500         
+#define OFFS_FE_3     -99.149400
 
 // variable para ajustar el nivel cero de flujo y calcular el volumen
 #define FLOWUP_LIM        3
@@ -127,6 +127,8 @@ int alerObstruccion = 0;
 int alerPeep = 0;
 int alerBateria = 0;
 int alerGeneral = 0;
+int alerFR_Alta = 0;
+int alerVE_Alto = 0;
 int estabilidad = 0;
 int PeepEstable = 0;
 
@@ -161,6 +163,8 @@ bool flagAlarmPpico = false;
 bool flagAlarmGeneral = false;
 bool flagAlarmPatientDesconnection = false;
 bool flagAlarmObstruccion = false;
+bool flagAlarmFR_Alta = false;
+bool flagAlarmVE_Alto = false;
 volatile unsigned int contDetach = 0;
 unsigned int contCiclos = 0;
 unsigned int contEscrituraEEPROM = 0;
@@ -181,6 +185,8 @@ int currentVentilationMode = 0;
 int newVentilationMode = 0;
 int newTrigger = 2;
 int newPeepMax = 5;
+int maxFR = 12;
+int maxVE = 20;
 
 #define STOP_CYCLING			0
 #define START_CYCLING			1
@@ -217,12 +223,12 @@ float CalFout = 0; // almacena valor ADC para calibracion
 float CalPpac = 0; // almacena valor ADC para calibracion
 float CalPin = 0; // almacena valor ADC para calibracion
 float CalPout = 0; // almacena valor ADC para calibracion
-//- Se�ales
-float SFin = 0; //Se�al de flujo inspiratorio
-float SFout = 0; //Se�al de flujo espiratorio
-float SPpac = 0; //Se�al de presi�n en la via aerea del paciente
-float SPin = 0; //Se�al filtrada de presion en la camara
-float SPout = 0; //Se�al filtrada de presion en la bolsa
+//- Senales
+float SFin = 0; //Senal de flujo inspiratorio
+float SFout = 0; //Senal de flujo espiratorio
+float SPpac = 0; //Senal de presi�n en la via aerea del paciente
+float SPin = 0; //Senal filtrada de presion en la camara
+float SPout = 0; //Senal filtrada de presion en la bolsa
 
 //- Filtrado
 float Pin[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -264,6 +270,7 @@ int newE = currentE;
 int calculatedE = currentE;
 float relI = 0;
 float relE = 0;
+int currentVE = 0;
 int maxPresion = 30;
 
 
@@ -401,9 +408,7 @@ void loop() {
         portENTER_CRITICAL(&timerMux);
         flagTimerInterrupt = false;
         portEXIT_CRITICAL(&timerMux);
-
         receiveData();
-
         switch (currentStateMachine) {
         case CHECK_STATE:
             break;
@@ -436,9 +441,8 @@ void loop() {
             }
             break;
         case AC_STATE:
-            acRoutine();
+            cycling();
             adcReading();
-
             //Update data on LCD each 200ms
             contUpdateData++;
             if (contUpdateData >= 200) {
@@ -451,6 +455,7 @@ void loop() {
                 contEscrituraEEPROM = 0;
                 eeprom_wr_int(contCiclos, 'w');
             }
+            break;
         case CPAP_STATE:
             standbyRoutine();
             adcReading();
@@ -556,7 +561,9 @@ void cycling() {
             frecRespiratoriaCalculada = 60.0 / ((float)contCycling / 1000.0);
             calculatedE = (int)((((60.0 / (float)frecRespiratoriaCalculada)/(float)inspirationTime) - 1)*currentI*10);
             contCycling = 0;
-            
+            //Calculo de Peep
+            Peep = SPpac + newTrigger;// Peep como la presion en la via aerea al final de la espiracion
+
             if (Peep < 0) {// Si el valor de Peep es negativo
                 Peep = 0;// Lo limita a 0
             }
@@ -601,14 +608,19 @@ void cycling() {
             UmbralPpmin = 100;//Reinicia el umbral minimo de presion del paciente
             UmbralPpico = -100;//Reinicia el umbral maximo de presion del paciente
 
-            //Metodo de exclusi�n de alarmas
+            //Metodo de exclusion de alarmas
             if (Ppico > 2 && Peep > 2) {
                 flagInicio = false;
             }
 
+            currentVE = (VT * frecRespiratoriaCalculada / 1000.0);
+
             alarmsDetection();
             currentStateMachineCycling = START_CYCLING;
             
+            if (newStateMachine != currentStateMachine) {
+                currentStateMachine = newStateMachine;
+            }
         }
         if ((contCycling >= int(((inspirationTime + expirationTime) * 1000)))) {
             frecRespiratoriaCalculada = 60.0 / ((float)contCycling / 1000.0);
@@ -665,6 +677,8 @@ void cycling() {
             if (Ppico > 2 && Peep > 2) {
                 flagInicio = false;
             }
+
+            currentVE = (VT * frecRespiratoriaCalculada / 1000.0);
 
             alarmsDetection();
             currentStateMachineCycling = START_CYCLING;
@@ -752,6 +766,8 @@ void receiveData() {
         newVentilationMode = dataIn2[7].toInt();
         newTrigger = dataIn2[8].toInt();
         newPeepMax = dataIn2[9].toInt();
+        maxFR = dataIn2[10].toInt();
+        maxVE = dataIn2[11].toInt();
         Serial2.flush();
 
         /*Serial.println("State = " + String(currentStateMachine));
@@ -975,7 +991,7 @@ void adcReading() {
             inspFlow + ',' + inspExp;
 
         // Envio de la cadena de datos (visualizacion Raspberry)
-        Serial.println(RaspberryChain);
+        //Serial.println(RaspberryChain);
 
         /* ********************************************************************
          * **** ENVIO DE VARIABLES PARA CALIBRACION ***************************
@@ -1050,13 +1066,14 @@ void sendSerialData() {
     String dataToSend = String(Ppico) + ',' + String(Peep) + ',' + String(VT) + ',' +
         String(alerPresionPIP) + ',' + String(alerDesconexion) + ',' +
         String(alerObstruccion) + ',' + String(alerPeep) + ',' + String(alerGeneral) + ',' + 
-        String(int(frecRespiratoriaCalculada)) + ',' + String(int(calculatedE)) + ';';
+        String(int(frecRespiratoriaCalculada)) + ',' + String(int(calculatedE)) + ',' +
+        String(int(alerFR_Alta)) + ',' + String(int(alerVE_Alto)) + ',' + String(currentVE) + ';';
     Serial2.print(dataToSend);
 }
 
 void alarmsDetection() {
     // Ppico Alarm
-    if (flagInicio == false) {//Si hay habilitaci�n de alarmas
+    if (flagInicio == false) { //Si hay habilitacion de alarmas
       // Alarma por Ppico elevada
         if (Ppico > maxPresion) {
             flagAlarmPpico = true;
@@ -1077,7 +1094,7 @@ void alarmsDetection() {
             alerGeneral = 0;
         }
 
-        // Alarma por desconexi�n del paciente
+        // Alarma por desconexion del paciente
         if ((Ppico) < 2) {
             flagAlarmPatientDesconnection = true;
             alerDesconexion = 1;
@@ -1087,7 +1104,7 @@ void alarmsDetection() {
             alerDesconexion = 0;
         }
 
-        // Alarma por obstrucci�n
+        // Alarma por obstruccion
         if ((Vout_Ins >= 0.5 * Vin_Ins) && (Peep < 1)) {
             flagAlarmObstruccion = true;
             alerObstruccion = 1;
@@ -1099,6 +1116,25 @@ void alarmsDetection() {
 
         SFinMax = SFin;
         SFoutMax = SFout;
+
+        if (frecRespiratoriaCalculada > maxFR) {
+            flagAlarmFR_Alta = true;
+            alerFR_Alta = 1;
+        }
+        else {
+            flagAlarmFR_Alta = false;
+            alerFR_Alta = 0; 
+        }
+
+        if (currentVE > maxVE) {
+            flagAlarmVE_Alto = true;
+            alerVE_Alto = 1;
+        }
+        else {
+            flagAlarmVE_Alto = false;
+            alerVE_Alto = 0;
+        
+        }
     }
 }
 

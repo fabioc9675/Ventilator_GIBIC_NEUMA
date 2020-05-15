@@ -203,6 +203,7 @@ int newTrigger = 2;
 int newPeepMax = 5;
 int maxFR = 12;
 int maxVE = 20;
+int apneaTime = 10;
 
 #define STOP_CYCLING			0
 #define START_CYCLING			1
@@ -508,7 +509,7 @@ void loop() {
             }
             break;
         case CPAP_STATE:
-            stateFrecCPAP = CPAP_NONE;
+            //stateFrecCPAP = CPAP_NONE;
             cpapRoutine();
             adcReading();
             //Update data on LCD each 200ms
@@ -605,7 +606,7 @@ void cycling() {
             }
             //- Calculo promedio
             VT = SVtidal / 3;
-            frecRespiratoriaCalculada = (int) (frecRespiratoriaCalculada / 3);
+            frecRespiratoriaCalculada = (int) (frecRespiratoriaCalculada / 4);
 
             //Mediciones de flujo cero
             flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
@@ -765,6 +766,7 @@ void cycling() {
 
             if (newStateMachine != currentStateMachine) {
                 currentStateMachine = newStateMachine;
+                contCycling = 0;
             }
         }
         break;
@@ -802,7 +804,6 @@ void cpapRoutine() {
     digitalWrite(EV_ESC_CAM, LOW);  //Piloto conectado a PEEP -> Limita la presion de la via aerea a la PEEP configurada
     digitalWrite(EV_ESPIRA, LOW);   //Piloto conectado a ambiente -> Despresuriza la camara y permite el llenado de la bolsa
 
-    
     if ((SFpac > COMP_FLOW_MAX_CPAP) && ((SFpac - SFant) > COMP_DEL_F_MAX_CPAP) && (stateFrecCPAP != CPAP_INSPIRATION)){
         // Inicializa Maquina de estados para que inicie en CPAP
         stateFrecCPAP = CPAP_INSPIRATION; 
@@ -837,7 +838,7 @@ void cpapRoutine() {
 
     } 
     if ((SFpac < COMP_FLOW_MIN_CPAP) && ((SFpac - SFant) < COMP_DEL_F_MIN_CPAP) && (stateFrecCPAP != CPAP_ESPIRATION)) {
-        stateFrecCPAP = CPAP_ESPIRATION;
+        //stateFrecCPAP = CPAP_ESPIRATION;
 
         // Calculo de PIP
         Ppico = SPpac;// PIP como la presion en la via aerea al final de la espiracion
@@ -869,26 +870,25 @@ void cpapRoutine() {
     }
 
     // Maquina de estados para identificar la Inspiracion y la espiracion
-
-    switch (stateFrecCPAP)
-    {
-
+    switch (stateFrecCPAP){
     // Ciclo Inspiratorio
     case CPAP_INSPIRATION:
         contFrecCPAP++;  // Se incrementan los contadore para el calculo de frecuencia y relacion IE
         contInsCPAP++;
         break;
-
     // Ciclo Espiratorio
     case CPAP_ESPIRATION:
         contFrecCPAP++;
         contEspCPAP++;
         break;
-
     default:
         break;
     }
 
+    if (contCycling > apneaTime * 1000) {
+        newStateMachine = AC_STATE;
+        newVentilationMode = 1; // A/C Ventilation Mode
+    }
 }
 
 void acRoutine() {
@@ -898,8 +898,9 @@ void acRoutine() {
 void standbyRoutine() {
     if (newStateMachine != currentStateMachine) {
         currentStateMachine = newStateMachine;
+        contCycling = 0;
     }
-    contCycling = 0;
+    
     digitalWrite(EV_INSPIRA, LOW);  //Piloto conectado a presion de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
     digitalWrite(EV_ESC_CAM, LOW);  //Piloto conectado a PEEP -> Limita la presion de la via aerea a la PEEP configurada
     digitalWrite(EV_ESPIRA, LOW);   //Piloto conectado a ambiente -> Despresuriza la camara y permite el llenado de la bolsa
@@ -937,6 +938,7 @@ void receiveData() {
         newPeepMax = dataIn2[9].toInt();
         maxFR = dataIn2[10].toInt();
         maxVE = dataIn2[11].toInt();
+        apneaTime = dataIn2[12].toInt();
         Serial2.flush();
 
         /*Serial.println("State = " + String(currentStateMachine));

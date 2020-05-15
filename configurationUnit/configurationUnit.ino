@@ -138,6 +138,7 @@ byte minFR_Ante = 0;
 byte minVE_Ante = 0;
 byte maxFR = 12;
 byte maxVE = 20;
+byte apneaTime = 10;
 
 bool flagAlerta = false;
 bool flagBatteryAlert = false;
@@ -1655,7 +1656,8 @@ void sendSerialData() {
 		String(E) + ',' + String(maxPresion) + ',' + String(batteryAlert) + ',' +
 		String(flagStabilityInterrupt) + ',' + String(stateMachine) + ',' +
 		String(currentVentilationMode) + ',' + String(trigger) + ',' + 
-		String(PeepMax) + ',' + String(maxFR) + ',' + String(maxVE) + ';';
+		String(PeepMax) + ',' + String(maxFR) + ',' + String(maxVE) + ',' +
+		String(apneaTime) + ';';
 	Serial2.print(dataToSend);
 	//Serial.println(stateMachine);
 }

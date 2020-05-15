@@ -136,8 +136,8 @@ byte maxPresionAnte = 0;
 byte frecRespiratoriaAnte = 0;
 byte minFR_Ante = 0;
 byte minVE_Ante = 0;
-byte maxFR = 12;
-byte maxVE = 20;
+byte maxFR = 30;
+byte maxVE = 30;
 byte apneaTime = 10;
 
 bool flagAlerta = false;
@@ -456,7 +456,8 @@ void task_timer(void* arg) {
 
 				if (flagStabilityInterrupt == true) {
 					contStability++;
-					if (contStability > 200) {
+					if (contStability > 400) {
+						Serial.println("Estabilidad");
 						contStability = 0;
 						sendSerialData();
 						portENTER_CRITICAL(&timerMux);
@@ -466,20 +467,18 @@ void task_timer(void* arg) {
 						digitalWrite(LUMING, HIGH);
 					}
 				}
-
 				alarmMonitoring();
-
 			}
 		}
 	}
 }
 
-/* ***************************************************************************
- * **** Atencion a interrupcion por encoder **********************************
- * ***************************************************************************/
+/****************************************************************************
+ ***** Atencion a interrupcion por encoder **********************************
+ ****************************************************************************/
 void task_Encoder(void* arg) {
 	while (1) {
-		// Espero por la notificaci�n de la ISR por A
+		// Espero por la notificacion de la ISR por A
 		if (xSemaphoreTake(xSemaphoreEncoder, portMAX_DELAY) == pdTRUE) {
 			if (flagAEncoder == true) {
 

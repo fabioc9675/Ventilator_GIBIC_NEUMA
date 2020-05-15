@@ -9,7 +9,8 @@
 #include <EEPROM.h>
 
 #define VERSION_1_0       true           
-#define SERIAL_EQUI       "9GF100007LJD00004"
+//#define SERIAL_EQUI       "9GF100007LJD00004"
+#define SERIAL_EQUI       "1A"
 
 #ifdef VERSION_1_0
 
@@ -201,8 +202,8 @@ int currentVentilationMode = 0;
 int newVentilationMode = 0;
 int newTrigger = 2;
 int newPeepMax = 5;
-int maxFR = 12;
-int maxVE = 20;
+int maxFR = 30;
+int maxVE = 30;
 int apneaTime = 10;
 
 #define STOP_CYCLING			0
@@ -219,15 +220,15 @@ int milisecond = 0;
 
 
 // Definiciones para ciclado en mode CPAP
-#define COMP_FLOW_MAX_CPAP             5  // variable para comparacion de flujo y entrar en modo Inspiratorio en CPAP
-#define COMP_FLOW_MIN_CPAP            -5  // variable para comparacion de flujo y entrar en modo Inspiratorio en CPAP
+#define COMP_FLOW_MAX_CPAP             3  // variable para comparacion de flujo y entrar en modo Inspiratorio en CPAP
+#define COMP_FLOW_MIN_CPAP            -3  // variable para comparacion de flujo y entrar en modo Inspiratorio en CPAP
 #define COMP_DEL_F_MAX_CPAP            2  // variable para comparacion de flujo y entrar en modo Inspiratorio en CPAP
 #define COMP_DEL_F_MIN_CPAP           -2  // variable para comparacion de flujo y entrar en modo Inspiratorio en CPAP
 #define CPAP_NONE                      0  // Estado de inicializacion
 #define CPAP_INSPIRATION               1  // Entra en modo inspiratorio
 #define CPAP_ESPIRATION                2  // Entra en modo espiratorio
 
-float frecCalcCPAP = 0;
+
 
 // Variables de calculo
 //- Mediciones
@@ -608,7 +609,7 @@ void cycling() {
             //- Calculo promedio
             VT = SVtidal / 3;
 
-            frecRespiratoriaCalculada = (int) (frecRespiratoriaCalculada / 4);
+            //frecRespiratoriaCalculada = (int) (frecRespiratoriaCalculada / 4);
 
             //Mediciones de flujo cero
             flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
@@ -797,6 +798,7 @@ void cycling() {
 } // end cycling()
 
 void cpapRoutine() {
+    float frecCalcCPAP = 0;
     // esta funcion se ejecuta cada milisegundo
     if (newStateMachine != currentStateMachine) {
         currentStateMachine = newStateMachine;
@@ -807,12 +809,19 @@ void cpapRoutine() {
     digitalWrite(EV_ESPIRA, LOW);   //Piloto conectado a ambiente -> Despresuriza la camara y permite el llenado de la bolsa
 
     if ((SFpac > COMP_FLOW_MAX_CPAP) && ((SFpac - SFant) > COMP_DEL_F_MAX_CPAP) && (stateFrecCPAP != CPAP_INSPIRATION)){
-        // Inicializa Maquina de estados para que inicie en CPAP
+    //if ((SFpac > COMP_FLOW_MAX_CPAP)  && (stateFrecCPAP != CPAP_INSPIRATION)) {
+            // Inicializa Maquina de estados para que inicie en CPAP
         stateFrecCPAP = CPAP_INSPIRATION; 
 
         // Calculo de la frecuecnia respiratoria en CPAP
         frecCalcCPAP = 60.0 / ((float)contFrecCPAP / 1000.0);
         frecRespiratoriaCalculada = (int) frecCalcCPAP;
+        
+        /*Serial.print(contFrecCPAP);
+        Serial.print(',');
+        Serial.print(frecCalcCPAP);
+        Serial.print(',');
+        Serial.println(frecRespiratoriaCalculada);*/
         
         // Calculo de la relacion IE en CPAP
         if (contInsCPAP < contEspCPAP) {
@@ -840,7 +849,8 @@ void cpapRoutine() {
 
     } 
     if ((SFpac < COMP_FLOW_MIN_CPAP) && ((SFpac - SFant) < COMP_DEL_F_MIN_CPAP) && (stateFrecCPAP != CPAP_ESPIRATION)) {
-        //stateFrecCPAP = CPAP_ESPIRATION;
+    // if ((SFpac < COMP_FLOW_MIN_CPAP) && (stateFrecCPAP != CPAP_ESPIRATION)) {
+        stateFrecCPAP = CPAP_ESPIRATION;
 
         // // Calculo de PIP
         // Ppico = SPpac;// PIP como la presion en la via aerea al final de la espiracion
@@ -1143,24 +1153,24 @@ void adcReading() {
         //}
         patientFlow = String(SFpac);
         patientVolume = String(Vtidal);
-        pressPIP = String(Ppico, 0);
-        pressPEEP = String(Peep, 0);
+        pressPIP = String(int(Ppico));
+        pressPEEP = String(int(Peep));
         // frequency = String(currentFrecRespiratoria);
-        frequency = String(frecRespiratoriaCalculada);
+        frequency = String(int(frecRespiratoriaCalculada));
         if (currentI == 1) {
-            rInspir = String(relI, 0);
+            rInspir = String(int(relI));
         }
         else {
             rInspir = String(relI, 1);
         }
         if (currentE == 1) {
-            rEspir = String(relE, 0);
+            rEspir = String(int(relE));
         }
         else {
             rEspir = String(relE, 1);
         }
 
-        volumeT = String(VT, 0);
+        volumeT = String(int(VT));
         alertPip = String(alerPresionPIP);
         alertPeep = String(alerPeep);
         alertDiffPress = String(alerObstruccion);
@@ -1206,26 +1216,26 @@ void adcReading() {
             inspFlow + ',' + inspExp;
 
         // Envio de la cadena de datos (visualizacion Raspberry)
-        //Serial.println(RaspberryChain);
+        Serial.println(RaspberryChain);
 
         /* ********************************************************************
          * **** ENVIO DE VARIABLES PARA CALIBRACION ***************************
          * ********************************************************************/
-         //        Serial.print(CalFin);
-         //        Serial.print(",");
-         //        Serial.println(CalFout);  // informacion para calibracion de flujo
-             //    Serial.println(CalPpac);
-             //    Serial.println(CalPin);
-             //    Serial.println(CalPout); // informacion para calibracion de presion
+        //  Serial.print(CalFin);
+        //  Serial.print(",");
+        //  Serial.println(CalFout);  // informacion para calibracion de flujo
+        //  Serial.println(CalPpac);
+        //  Serial.println(CalPin);
+        //  Serial.println(CalPout); // informacion para calibracion de presion
 
 
  /* ********************************************************************
          * **** ENVIO DE VARIABLES PARA AJUSTE ALARMAS ************************
          * ********************************************************************/
-        Serial.print(", Ppac = ");
+        /*Serial.print(", Ppac = ");
         Serial.print(SPpac);
         Serial.print(", Pin_max = ");
-        Serial.println(Pin_max);  
+        Serial.println(Pin_max); */ 
     }
 }
 

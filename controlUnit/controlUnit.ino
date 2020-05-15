@@ -1206,7 +1206,7 @@ void adcReading() {
             inspFlow + ',' + inspExp;
 
         // Envio de la cadena de datos (visualizacion Raspberry)
-        Serial.println(RaspberryChain);
+        //Serial.println(RaspberryChain);
 
         /* ********************************************************************
          * **** ENVIO DE VARIABLES PARA CALIBRACION ***************************
@@ -1222,13 +1222,10 @@ void adcReading() {
  /* ********************************************************************
          * **** ENVIO DE VARIABLES PARA AJUSTE ALARMAS ************************
          * ********************************************************************/
-    //    Serial.print(", Ppac = ");
-    //    Serial.print(SPpac);
-    //    Serial.print(", SUMVin_Ins = ");
-    //    Serial.print(SUMVin_Ins);
-    //    Serial.print(", SUMVout_Ins = ");
-    //    Serial.print(SUMVout_Ins);
-    //    Serial.print(", Vt = ");
+        Serial.print(", Ppac = ");
+        Serial.print(SPpac);
+        Serial.print(", Pin_max = ");
+        Serial.println(Pin_max);  
     }
 }
 
@@ -1270,7 +1267,7 @@ void alarmsDetection() {
             alerPresionPIP = 0;
         }
         // Fallo general
-        if ((Pin_max) < 10) {
+        if ((Pin_max) < 6) {
             flagAlarmGeneral = true;
             alerGeneral = 1;
             newStateMachine = 1;
@@ -1292,7 +1289,7 @@ void alarmsDetection() {
 		}
 
         // Alarma por obstruccion
-		if ((Vout_Ins >= 0.5 * Vin_Ins) && (Peep < 1)) {
+		if ((Vout_Ins >= 0.5 * Vin_Ins) && (Peep < 2)) {
 		  flagAlarmObstruccion = true;
 		  alerObstruccion = 1;
 		}

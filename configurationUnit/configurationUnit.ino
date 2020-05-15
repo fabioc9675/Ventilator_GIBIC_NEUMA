@@ -64,7 +64,7 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);
 #define MIN_MAX_VE			1    // l/min
 #define MIN_PRESION			10
 #define MAX_TRIGGER			10
-#define MIN_TRIGGER			2
+#define MIN_TRIGGER			1
 #define MAX_FLUJO           40
 #define SILENCE_BTN_TIME        2*60*1000/LOW_ATT_INT  // tiempo, 2 minutos a 20 Hz
 #define SILENCE_BTN_BATTERY     30*60*1000/LOW_ATT_INT
@@ -674,7 +674,7 @@ void encoderRoutine() {
 				}
 				else if (flagTrigger == true) {
 					trigger--;
-					if (trigger > MAX_TRIGGER) {
+					if (trigger < MIN_TRIGGER) {
 						trigger = MIN_TRIGGER;
 					}
 				}

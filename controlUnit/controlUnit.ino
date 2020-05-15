@@ -248,7 +248,6 @@ float SPout = 0; //Senal filtrada de presion en la bolsa
 float SVtidal = 0; // informacion de promedio para Vtidal
 float Sfrec = 0; // informacion de promedio para frecuencia
 
-
 //- Filtrado
 float Pin[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 float Pout[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -589,7 +588,7 @@ void cycling() {
             contCycling = 0;
 
             //Calculo de Peep
-            Peep = SPpac + newTrigger;// Peep como la presion en la via aerea al final de la espiracion
+            //Peep = SPpac + newTrigger;// Peep como la presion en la via aerea al final de la espiracion
 
             if (Peep < 0) {// Si el valor de Peep es negativo
                 Peep = 0;// Lo limita a 0

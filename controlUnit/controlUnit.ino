@@ -509,7 +509,8 @@ void loop() {
             }
             break;
         case CPAP_STATE:
-            //stateFrecCPAP = CPAP_NONE;
+            // stateFrecCPAP = CPAP_NONE;
+
             cpapRoutine();
             adcReading();
             //Update data on LCD each 200ms
@@ -590,22 +591,23 @@ void cycling() {
             else {
                 VTidProm[3] = 0;
             }
-            FreqProm[3] = frecRespiratoriaCalculada;
+            // FreqProm[3] = frecRespiratoriaCalculada;
             // promediado del Vtidal
             for (int i = 3; i >= 1; i--) {
                 VTidProm[3 - i] = VTidProm[3 - i + 1];
-                FreqProm[3 - i] = FreqProm[3 - i + 1];
+               // FreqProm[3 - i] = FreqProm[3 - i + 1];
             }
             //- Inicializacion
             SVtidal = 0;
-            frecRespiratoriaCalculada = 0;
+            // frecRespiratoriaCalculada = 0;
             //- Actualizacion
             for (int i = 0; i <= 3; i++) {
                 SVtidal = SVtidal + VTidProm[i];
-                frecRespiratoriaCalculada = frecRespiratoriaCalculada + FreqProm[i];
+               // frecRespiratoriaCalculada = frecRespiratoriaCalculada + FreqProm[i];
             }
             //- Calculo promedio
             VT = SVtidal / 3;
+
             frecRespiratoriaCalculada = (int) (frecRespiratoriaCalculada / 4);
 
             //Mediciones de flujo cero
@@ -826,8 +828,8 @@ void cpapRoutine() {
             frecRespiratoriaCalculada = 35;
         }
 
-        // Calculo de PEEP
-        Peep = SPpac;// Peep como la presion en la via aerea al final de la espiracion
+        // // Calculo de PEEP
+        // Peep = SPpac;// Peep como la presion en la via aerea al final de la espiracion
 
         //Ajuste del valor de volumen
         Vtidal = 0;
@@ -840,8 +842,8 @@ void cpapRoutine() {
     if ((SFpac < COMP_FLOW_MIN_CPAP) && ((SFpac - SFant) < COMP_DEL_F_MIN_CPAP) && (stateFrecCPAP != CPAP_ESPIRATION)) {
         //stateFrecCPAP = CPAP_ESPIRATION;
 
-        // Calculo de PIP
-        Ppico = SPpac;// PIP como la presion en la via aerea al final de la espiracion
+        // // Calculo de PIP
+        // Ppico = SPpac;// PIP como la presion en la via aerea al final de la espiracion
 
         //Medicion de Volumen circulante
         if (Vtidal >= 0) {
@@ -850,23 +852,23 @@ void cpapRoutine() {
         else {
             VTidProm[3] = 0;
         }
-        FreqProm[3] = frecRespiratoriaCalculada;
+        // FreqProm[3] = frecRespiratoriaCalculada;
         // promediado del Vtidal
         for (int i = 3; i >= 1; i--) {
             VTidProm[3 - i] = VTidProm[3 - i + 1];
-            FreqProm[3 - i] = FreqProm[3 - i + 1];
+            // FreqProm[3 - i] = FreqProm[3 - i + 1];
         }
         //- Inicializacion
         SVtidal = 0;
-        frecRespiratoriaCalculada = 0;
+        // frecRespiratoriaCalculada = 0;
         //- Actualizacion
         for (int i = 0; i <= 3; i++) {
             SVtidal = SVtidal + VTidProm[i];
-            frecRespiratoriaCalculada = frecRespiratoriaCalculada + FreqProm[i];
+            // frecRespiratoriaCalculada = frecRespiratoriaCalculada + FreqProm[i];
         }
         //- Calculo promedio
         VT = SVtidal / 3;
-        frecRespiratoriaCalculada = (int) (frecRespiratoriaCalculada / 3);
+        // frecRespiratoriaCalculada = (int) (frecRespiratoriaCalculada / 3);
     }
 
     // Maquina de estados para identificar la Inspiracion y la espiracion

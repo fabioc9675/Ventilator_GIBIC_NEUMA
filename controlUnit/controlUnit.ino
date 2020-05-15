@@ -1,7 +1,7 @@
 /*
- Name:		controlUnit.ino
- Created:	4/3/2020 17:28:49
- Author:    GIBIC UdeA
+ Name:		  controlUnit.ino
+ Created:	  4/3/2020 17:28:49
+ Author:    Helber Carvajal
 */
 
 #include <Arduino.h>
@@ -261,6 +261,7 @@ float SPin = 0; //Senal filtrada de presion en la camara
 float SPout = 0; //Senal filtrada de presion en la bolsa
 float SVtidal = 0; // informacion de promedio para Vtidal
 float Sfrec = 0; // informacion de promedio para frecuencia
+
 
 // variables para calculo de frecuencia y relacion IE en CPAP
 float SFant = 0;
@@ -609,8 +610,8 @@ void cycling() {
             //Mediciones de flujo cero
             flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
             //Rutina de ciclado
-            BandInsp = 0;	// Desactiva la bandera, indicando que empezo la espiraci�n
-            digitalWrite(EV_INSPIRA, HIGH);//Piloto conectado a presi�n de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
+            BandInsp = 0;	// Desactiva la bandera, indicando que empezo la espiracion
+            digitalWrite(EV_INSPIRA, HIGH);//Piloto conectado a presion de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
             digitalWrite(EV_ESC_CAM, LOW);//Piloto conectado a PEEP -> Limita la presion de la via aerea a la PEEP configurada
             digitalWrite(EV_ESPIRA, LOW);//Piloto conectado a ambiente -> Despresuriza la camara y permite el llenado de la bolsa
             currentStateMachineCycling = EXPIRATION_CYCLING;

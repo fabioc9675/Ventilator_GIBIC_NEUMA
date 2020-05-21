@@ -47,31 +47,33 @@
 // Calibracion de los sensores de presion - coeficientes regresion lineal
 #define AMP1       0.0262
 #define OFFS1      -15.092
-#define AMP2       0.0293
-#define OFFS2      -20.598
-#define AMP3       0.0279606
-#define OFFS3      -20.41976
+#define AMP2       0.0292
+#define OFFS2      -23.094
+#define AMP3       0.0295
+#define OFFS3      -22.057
+
+
 
 // Calibracion de los sensores de flujo - coeficientes regresion lineal
 // Sensor de flujo Inspiratorio
-#define AMP_FI_1      0.069300         
-#define OFFS_FI_1     -148.144600         
-#define LIM_FI_1      1750         
-#define AMP_FI_2      0.292800         
-#define OFFS_FI_2     -539.338300         
-#define LIM_FI_2      1933         
-#define AMP_FI_3      0.069300         
-#define OFFS_FI_3     -107.234500         
+#define AMP_FI_1      0.077300         
+#define OFFS_FI_1     -154.316800         
+#define LIM_FI_1      1632         
+#define AMP_FI_2      0.271600         
+#define OFFS_FI_2     -471.320700         
+#define LIM_FI_2      1839         
+#define AMP_FI_3      0.077300         
+#define OFFS_FI_3     -114.121000         
 
 // Sensor de flujo Espiratorio
-#define AMP_FE_1      0.065500         
-#define OFFS_FE_1     -140.941500         
-#define LIM_FE_1      1742         
-#define AMP_FE_2      0.297500         
-#define OFFS_FE_2     -544.925400         
-#define LIM_FE_2      1922         
-#define AMP_FE_3      0.065500         
-#define OFFS_FE_3     -99.149400        
+#define AMP_FE_1      0.081800         
+#define OFFS_FE_1     -160.322900         
+#define LIM_FE_1      1616         
+#define AMP_FE_2      0.249600         
+#define OFFS_FE_2     -431.402400         
+#define LIM_FE_2      1841         
+#define AMP_FE_3      0.081800         
+#define OFFS_FE_3     -122.548100 
 
 
 // variable para ajustar el nivel cero de flujo y calcular el volumen
@@ -79,7 +81,7 @@
 #define FLOWLO_LIM        -3
 #define FLOW_CONV         16.666666    // conversion de L/min a mL/second
 #define DELTA_T           0.05         // delta de tiempo para realizar la integra
-#define VOL_SCALE         0.85         // Factor de escala para ajustar el volumen
+#define VOL_SCALE         0.90         // Factor de escala para ajustar el volumen
 
 // Variables de control del protocolo
 #define RXD2 16

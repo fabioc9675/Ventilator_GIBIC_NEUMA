@@ -24,8 +24,8 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);
 #define BUZZER_BTN          12
 #define SILENCE_BTN         26  // Silenciar alarma cambiar
 #define SILENCE_LED			27  // Led Boton silencio
-#define STABILITY_BTN       34
-#define STABILITY_LED		10
+#define STABILITY_BTN       25
+#define STABILITY_LED		34
 #define STANDBY				32  // Stabdby button
 #define STANDBY_LED			33  // Stabdby button
 
@@ -388,6 +388,9 @@ void task_timer(void* arg) {
 				case AC_STATE:
 					standbyInterruptAttention();
 					break;
+				case CPAP_STATE:
+					standbyInterruptAttention();
+					break;
 				case FAILURE_STATE:
 					break;
 				default:
@@ -457,7 +460,7 @@ void task_timer(void* arg) {
 				if (flagStabilityInterrupt == true) {
 					contStability++;
 					if (contStability > 400) {
-						Serial.println("Estabilidad");
+						//Serial.println("Estabilidad");
 						contStability = 0;
 						sendSerialData();
 						portENTER_CRITICAL(&timerMux);
@@ -806,19 +809,25 @@ void switchRoutine() {
 		}
 		else if (optionVentMenu == 1) {
 			menu = CONFIG_MENU;
-			stateMachine = PCMV_STATE;
+			if (stateMachine != STANDBY_STATE) {
+				stateMachine = PCMV_STATE;
+			}
 			currentVentilationMode = 0;
 			optionVentMenu = 0;
 		}
 		else if (optionVentMenu == 2) {
 			menu = CONFIG_MENU;
-			stateMachine = AC_STATE;
+			if (stateMachine != STANDBY_STATE) {
+				stateMachine = AC_STATE;
+			}
 			currentVentilationMode = 1;
 			optionVentMenu = 0;
 		}
 		else if (optionVentMenu == 3) {
 			menu = CONFIG_MENU;
-			stateMachine = CPAP_STATE;
+			if (stateMachine != STANDBY_STATE) {
+				stateMachine = CPAP_STATE;
+			}
 			currentVentilationMode = 2;
 			optionVentMenu = 0;
 		}
@@ -1556,7 +1565,7 @@ void lcdPrintFirstLine() {
 		lcd.print("  Perdida de PEEP   ");
 		break;
 	case BATTERY:
-		lcd.print("Fallo red electrica ");
+		lcd.print(" Fallo red electrica");
 		break;
 	case ALE_BATTERY_10MIN:
 		lcd.print("Bateria baja 10 Min");

@@ -54,41 +54,42 @@
 #endif
 
 // Calibracion de los sensores de presion - coeficientes regresion lineal
-#define AMP1          0.02769
-#define OFFS1         -22.4863
-#define AMP2          0.02769
-#define OFFS2         -22.4863
-#define AMP3          0.027960
-#define OFFS3         -20.4197
+#define AMP1          0.028244
+#define OFFS1         -19.5484
+#define AMP2          0.028244
+#define OFFS2         -19.5484
+#define AMP3          0.028244
+#define OFFS3         -19.5484
 
 
 // Calibracion de los sensores de flujo - coeficientes regresion lineal
 // Sensor de flujo Inspiratorio
-#define AMP_FI_1      0.120300         
-#define OFFS_FI_1     -216.532400         
-#define LIM_FI_1      1680         
-#define AMP_FI_2      0.493300         
-#define OFFS_FI_2     -843.147400         
-#define LIM_FI_2      1738         
-#define AMP_FI_3      0.120300         
-#define OFFS_FI_3     -194.756800         
+#define AMP_FI_1      0.089100         
+#define OFFS_FI_1     -181.278100         
+#define LIM_FI_1      1867         
+#define AMP_FI_2      0.544100         
+#define OFFS_FI_2     -1030.892300         
+#define LIM_FI_2      1922         
+#define AMP_FI_3      0.089100         
+#define OFFS_FI_3     -156.188400         
 
 // Sensor de flujo Espiratorio
-#define AMP_FE_1      0.090100         
-#define OFFS_FE_1     -169.071500         
-#define LIM_FE_1      1717         
-#define AMP_FE_2      0.521200         
-#define OFFS_FE_2     -909.352400         
-#define LIM_FE_2      1772         
-#define AMP_FE_3      0.090100         
-#define OFFS_FE_3     -145.248900 
+#define AMP_FE_1      0.080500         
+#define OFFS_FE_1     -151.199200         
+#define LIM_FE_1      1693         
+#define AMP_FE_2      0.665800         
+#define OFFS_FE_2     -1142.024000         
+#define LIM_FE_2      1738         
+#define AMP_FE_3      0.080500         
+#define OFFS_FE_3     -124.824600  
+
 
 // variable para ajustar el nivel cero de flujo y calcular el volumen
 #define FLOWUP_LIM        3
 #define FLOWLO_LIM        -3
 #define FLOW_CONV         16.666666    // conversion de L/min a mL/second
 #define DELTA_T           0.05         // delta de tiempo para realizar la integra
-#define VOL_SCALE         0.85         // Factor de escala para ajustar el volumen
+#define VOL_SCALE         0.90         // Factor de escala para ajustar el volumen
 
 #define ADC_FAST          3  // muestreo cada 3 ms
 #define ADC_SLOW          50  // muestreo cada 50 ms

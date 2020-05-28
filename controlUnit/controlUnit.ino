@@ -54,34 +54,34 @@
 #endif
 
 // Calibracion de los sensores de presion - coeficientes regresion lineal
-#define AMP1          0.028244
-#define OFFS1         -19.5484
-#define AMP2          0.028244
-#define OFFS2         -19.5484
-#define AMP3          0.028244
-#define OFFS3         -19.5484
+#define AMP1          0.029550
+#define OFFS1         -20.8454
+#define AMP2          0.029550
+#define OFFS2         -20.8454
+#define AMP3          0.029550
+#define OFFS3         -20.8454
 
 
 // Calibracion de los sensores de flujo - coeficientes regresion lineal
 // Sensor de flujo Inspiratorio
-#define AMP_FI_1      0.089100         
-#define OFFS_FI_1     -181.278100         
-#define LIM_FI_1      1867         
-#define AMP_FI_2      0.544100         
-#define OFFS_FI_2     -1030.892300         
-#define LIM_FI_2      1922         
-#define AMP_FI_3      0.089100         
-#define OFFS_FI_3     -156.188400         
+#define AMP_FI_1      0.077100         
+#define OFFS_FI_1     -146.012000         
+#define LIM_FI_1      1702         
+#define AMP_FI_2      0.484000         
+#define OFFS_FI_2     -838.755400         
+#define LIM_FI_2      1764         
+#define AMP_FI_3      0.077100         
+#define OFFS_FI_3     -121.125700         
 
 // Sensor de flujo Espiratorio
-#define AMP_FE_1      0.080500         
-#define OFFS_FE_1     -151.199200         
-#define LIM_FE_1      1693         
-#define AMP_FE_2      0.665800         
-#define OFFS_FE_2     -1142.024000         
-#define LIM_FE_2      1738         
-#define AMP_FE_3      0.080500         
-#define OFFS_FE_3     -124.824600  
+#define AMP_FE_1      0.076100         
+#define OFFS_FE_1     -144.637500         
+#define LIM_FE_1      1706         
+#define AMP_FE_2      0.686800         
+#define OFFS_FE_2     -1186.094700         
+#define LIM_FE_2      1749         
+#define AMP_FE_3      0.076100         
+#define OFFS_FE_3     -118.318600  
 
 
 // variable para ajustar el nivel cero de flujo y calcular el volumen
@@ -89,7 +89,7 @@
 #define FLOWLO_LIM        -3
 #define FLOW_CONV         16.666666    // conversion de L/min a mL/second
 #define DELTA_T           0.05         // delta de tiempo para realizar la integra
-#define VOL_SCALE         0.90         // Factor de escala para ajustar el volumen
+#define VOL_SCALE         1.00         // Factor de escala para ajustar el volumen
 
 #define ADC_FAST          3  // muestreo cada 3 ms
 #define ADC_SLOW          50  // muestreo cada 50 ms
@@ -174,6 +174,18 @@ String lFlowSup;
 String lFlowInf;
 String lVoluSup;
 String lVoluInf;
+
+
+String alertValve4Fail;
+String alertValve5Fail;
+String alertValve6Fail;
+String alertValve7Fail;
+String alertValve8Fail;
+String valve4Temp;
+String valve5Temp;
+String valve6Temp;
+String valve7Temp;
+String valve8Temp;
 
 // Cadena de impresion en raspberry
 String RaspberryChain = "";
@@ -799,24 +811,35 @@ void task_Adc(void* arg) {
           lVoluSup = String(int(vmax));
           lVoluInf = String(int(vmin));
 
+          alertValve4Fail = String(0);
+          alertValve5Fail = String(0);
+          alertValve6Fail = String(0);
+          alertValve7Fail = String(0);
+          alertValve8Fail = String(0);
+          valve4Temp = String(int(32));
+          valve5Temp = String(int(32));
+          valve6Temp = String(int(32));
+          valve7Temp = String(int(32));
+          valve8Temp = String(int(32));
+
 
           //- Composicion de cadena
-          /* RaspberryChain = idEqupiment + ',' + patientPress + ',' + patientFlow + ',' + patientVolume + ',' +
+          RaspberryChain = idEqupiment + ',' + patientPress + ',' + patientFlow + ',' + patientVolume + ',' +
                            pressPIP + ',' + pressPEEP + ',' + frequency + ',' + rInspir + ',' + rEspir + ',' + volumeT + ',' +
                            alertPip + ',' + alertPeep + ',' + alertObstruction + ',' + alertConnPat + ',' + alertGeneralFailure + ',' +
                            alertConnEquipment + ',' + alertValve1Fail + ',' + alertValve2Fail + ',' + alertValve3Fail + ',' +
                            alertValve4Fail + ',' + alertValve5Fail + ',' + alertValve6Fail + ',' + alertValve7Fail + ',' +
                            alertValve8Fail + ',' + valve1Temp + ',' + valve2Temp + ',' + valve3Temp + ',' + valve4Temp + ',' +
                            valve5Temp + ',' + valve6Temp + ',' + valve7Temp + ',' + valve8Temp + ',' + cameraPress + ',' + bagPress + ',' +
-                           inspFlow + ',' + EspFlow; */
-            RaspberryChain = idEqupiment + ',' + patientPress + ',' + patientFlow + ',' + patientVolume + ',' + pressPIP + ',' + 
-                            pressPEEP + ',' + frequency + ',' + xSpeed + ',' + rInspir + ',' + rEspir + ',' + volumeT + ',' + 
-                            alertPip + ',' + alertPeep + ',' + alertObstruction + ',' + alertConnPat + ',' + alertGeneralFailure + ',' + 
-                            alertConnEquipment + ',' + alertFrequency + ',' + alertMinuteVentilation + ',' + alertValve1Fail + ',' + alertValve2Fail + ',' + 
-                            alertValve3Fail + ',' + valve1Temp + ',' + valve2Temp + ',' + valve3Temp + ',' + valve1Current + ',' + valve2Current + ',' + 
-                            valve3Current + ',' + source5v0Voltage + ',' + source5v0Current + ',' + source5v0SWVoltage + ',' + source5v0SWCurrent + ',' + 
-                            cameraPress + ',' + bagPress + ',' + inspFlow + ',' + EspFlow + ',' + lPresSup + ',' + lPresInf + ',' + lFlowSup + ',' + 
-                            lFlowInf + ',' + lVoluSup + ',' + lVoluInf;
+                           inspFlow + ',' + EspFlow;
+          /* RaspberryChain = idEqupiment + ',' + patientPress + ',' + patientFlow + ',' + patientVolume + ',' + pressPIP + ',' +
+                           pressPEEP + ',' + frequency + ',' + xSpeed + ',' + rInspir + ',' + rEspir + ',' + volumeT + ',' +
+                           alertPip + ',' + alertPeep + ',' + alertObstruction + ',' + alertConnPat + ',' + alertGeneralFailure + ',' +
+                           alertConnEquipment + ',' + alertFrequency + ',' + alertMinuteVentilation + ',' + alertValve1Fail + ',' + alertValve2Fail + ',' +
+                           alertValve3Fail + ',' + valve1Temp + ',' + valve2Temp + ',' + valve3Temp + ',' + valve1Current + ',' + valve2Current + ',' +
+                           valve3Current + ',' + source5v0Voltage + ',' + source5v0Current + ',' + source5v0SWVoltage + ',' + source5v0SWCurrent + ',' +
+                           cameraPress + ',' + bagPress + ',' + inspFlow + ',' + EspFlow + ',' + lPresSup + ',' + lPresInf + ',' + lFlowSup + ',' +
+                           lFlowInf + ',' + lVoluSup + ',' + lVoluInf; */
 
           // Envio de la cadena de datos (visualizacion Raspberry)
           Serial.println(RaspberryChain);

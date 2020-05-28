@@ -139,35 +139,35 @@ String patientVolume;
 String pressPIP;
 String pressPEEP;
 String frequency;
+String xSpeed;
 String rInspir;
 String rEspir;
 String volumeT;
 String alertPip;
 String alertPeep;
-String alertDiffPress;
+String alertObstruction;
 String alertConnPat;
-String alertLeak;
+String alertGeneralFailure;
 String alertConnEquipment;
+String alertFrequency;
+String alertMinuteVentilation;
 String alertValve1Fail;
 String alertValve2Fail;
 String alertValve3Fail;
-String alertValve4Fail;
-String alertValve5Fail;
-String alertValve6Fail;
-String alertValve7Fail;
-String alertValve8Fail;
 String valve1Temp;
 String valve2Temp;
 String valve3Temp;
-String valve4Temp;
-String valve5Temp;
-String valve6Temp;
-String valve7Temp;
-String valve8Temp;
+String valve1Current;
+String valve2Current;
+String valve3Current;
+String source5v0Voltage;
+String source5v0Current;
+String source5v0SWVoltage;
+String source5v0SWCurrent;
 String cameraPress;
 String bagPress;
 String inspFlow;
-String inspExp;
+String EspFlow;
 String lPresSup;
 String lPresInf;
 String lFlowSup;
@@ -435,35 +435,35 @@ void init_MEMORY() {
   pressPIP = String("");
   pressPEEP = String("");
   frequency = String("");
+  xSpeed = String("");
   rInspir = String("");
   rEspir = String("");
   volumeT = String("");
   alertPip = String("");
   alertPeep = String("");
-  alertDiffPress = String("");
+  alertObstruction = String("");
   alertConnPat = String("");
-  alertLeak = String("");
+  alertGeneralFailure = String("");
   alertConnEquipment = String("");
+  alertFrequency = String("");
+  alertMinuteVentilation = String("");
   alertValve1Fail = String("");
   alertValve2Fail = String("");
   alertValve3Fail = String("");
-  alertValve4Fail = String("");
-  alertValve5Fail = String("");
-  alertValve6Fail = String("");
-  alertValve7Fail = String("");
-  alertValve8Fail = String("");
   valve1Temp = String("");
   valve2Temp = String("");
   valve3Temp = String("");
-  valve4Temp = String("");
-  valve5Temp = String("");
-  valve6Temp = String("");
-  valve7Temp = String("");
-  valve8Temp = String("");
+  valve1Current = String("");
+  valve2Current = String("");
+  valve3Current = String("");
+  source5v0Voltage = String("");
+  source5v0Current = String("");
+  source5v0SWVoltage = String("");
+  source5v0SWCurrent = String("");
   cameraPress = String("");
   bagPress = String("");
   inspFlow = String("");
-  inspExp = String("");
+  EspFlow = String("");
   lPresSup = String("");
   lPresInf = String("");
   lFlowSup = String("");
@@ -743,6 +743,17 @@ void task_Adc(void* arg) {
           pressPEEP = String(int(Peep));
           // frequency = String(currentFrecRespiratoria);
           frequency = String(int(frecRespiratoriaCalculada));
+          // seleccion de la velocidad de graficacion
+          if (frecRespiratoriaCalculada < 6) {
+            xSpeed = String(int(6));
+          }
+          else if (frecRespiratoriaCalculada < 20) {
+            xSpeed = String(int(12));
+          }
+          else {
+            xSpeed = String(int(20));
+          }
+          // envio de relacion I:E
           if (currentI == 1) {
             rInspir = String(int(relI));
           }
@@ -755,35 +766,32 @@ void task_Adc(void* arg) {
           else {
             rEspir = String(relE, 1);
           }
-
           volumeT = String(int(VT));
           alertPip = String(alerPresionPIP);
           alertPeep = String(alerPeep);
-          alertDiffPress = String(alerObstruccion);
+          alertObstruction = String(alerObstruccion);
           alertConnPat = String(alerDesconexion);
-          alertLeak = String(alerGeneral);
+          alertGeneralFailure = String(alerGeneral);
           alertConnEquipment = String(alerBateria);
-          //alertConnEquipment = String(0);
+          alertFrequency = String(int(alerFR_Alta));
+          alertMinuteVentilation = String(int(alerVE_Alto));
           alertValve1Fail = String(0);
           alertValve2Fail = String(0);
           alertValve3Fail = String(0);
-          alertValve4Fail = String(0);
-          alertValve5Fail = String(0);
-          alertValve6Fail = String(0);
-          alertValve7Fail = String(0);
-          alertValve8Fail = String(0);
-          valve1Temp = String(25.1);
-          valve2Temp = String(25.2);
-          valve3Temp = String(25.3);
-          valve4Temp = String(25.4);
-          valve5Temp = String(24.1);
-          valve6Temp = String(24.2);
-          valve7Temp = String(24.3);
-          valve8Temp = String(24.4);
+          valve1Temp = String(int(32));
+          valve2Temp = String(int(33));
+          valve3Temp = String(int(34));
+          valve1Current = String(int(500));
+          valve2Current = String(int(400));
+          valve3Current = String(int(450));
+          source5v0Voltage = String(5.0);
+          source5v0Current = String(int(1500));
+          source5v0SWVoltage = String(5.1);
+          source5v0SWCurrent = String(int(800));
           cameraPress = String(SPin);
           bagPress = String(SPout);
           inspFlow = String(SFin);
-          inspExp = String(SFout);
+          EspFlow = String(SFout);
           lPresSup = String(int(pmax));
           lPresInf = String(int(pmin));
           lFlowSup = String(int(flmax));
@@ -791,15 +799,24 @@ void task_Adc(void* arg) {
           lVoluSup = String(int(vmax));
           lVoluInf = String(int(vmin));
 
+
           //- Composicion de cadena
-          RaspberryChain = idEqupiment + ',' + patientPress + ',' + patientFlow + ',' + patientVolume + ',' +
+          /* RaspberryChain = idEqupiment + ',' + patientPress + ',' + patientFlow + ',' + patientVolume + ',' +
                            pressPIP + ',' + pressPEEP + ',' + frequency + ',' + rInspir + ',' + rEspir + ',' + volumeT + ',' +
-                           alertPip + ',' + alertPeep + ',' + alertDiffPress + ',' + alertConnPat + ',' + alertLeak + ',' +
+                           alertPip + ',' + alertPeep + ',' + alertObstruction + ',' + alertConnPat + ',' + alertGeneralFailure + ',' +
                            alertConnEquipment + ',' + alertValve1Fail + ',' + alertValve2Fail + ',' + alertValve3Fail + ',' +
                            alertValve4Fail + ',' + alertValve5Fail + ',' + alertValve6Fail + ',' + alertValve7Fail + ',' +
                            alertValve8Fail + ',' + valve1Temp + ',' + valve2Temp + ',' + valve3Temp + ',' + valve4Temp + ',' +
                            valve5Temp + ',' + valve6Temp + ',' + valve7Temp + ',' + valve8Temp + ',' + cameraPress + ',' + bagPress + ',' +
-                           inspFlow + ',' + inspExp;
+                           inspFlow + ',' + EspFlow; */
+            RaspberryChain = idEqupiment + ',' + patientPress + ',' + patientFlow + ',' + patientVolume + ',' + pressPIP + ',' + 
+                            pressPEEP + ',' + frequency + ',' + xSpeed + ',' + rInspir + ',' + rEspir + ',' + volumeT + ',' + 
+                            alertPip + ',' + alertPeep + ',' + alertObstruction + ',' + alertConnPat + ',' + alertGeneralFailure + ',' + 
+                            alertConnEquipment + ',' + alertFrequency + ',' + alertMinuteVentilation + ',' + alertValve1Fail + ',' + alertValve2Fail + ',' + 
+                            alertValve3Fail + ',' + valve1Temp + ',' + valve2Temp + ',' + valve3Temp + ',' + valve1Current + ',' + valve2Current + ',' + 
+                            valve3Current + ',' + source5v0Voltage + ',' + source5v0Current + ',' + source5v0SWVoltage + ',' + source5v0SWCurrent + ',' + 
+                            cameraPress + ',' + bagPress + ',' + inspFlow + ',' + EspFlow + ',' + lPresSup + ',' + lPresInf + ',' + lFlowSup + ',' + 
+                            lFlowInf + ',' + lVoluSup + ',' + lVoluInf;
 
           // Envio de la cadena de datos (visualizacion Raspberry)
           Serial.println(RaspberryChain);

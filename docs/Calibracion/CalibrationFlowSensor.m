@@ -3,7 +3,7 @@ clear all, close all, clc
 
 
 %% Carga del archivo para la calibracion
-varName = 'Equipos/Calibracion_00001.mat';
+varName = 'Equipos/Calibracion_00003.mat';
 load(varName);
 sens = 1;  % esta variable controla en que puntos cercanos al cero se realiza particion de los segmentos de la linealizacion
 

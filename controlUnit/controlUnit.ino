@@ -83,7 +83,7 @@
 #define OFFS_FE_2     -1186.094700         
 #define LIM_FE_2      1749         
 #define AMP_FE_3      0.076100         
-#define OFFS_FE_3     -118.318600  
+#define OFFS_FE_3     -118.318600    
 
 
 // variable para ajustar el nivel cero de flujo y calcular el volumen
@@ -213,7 +213,8 @@ float Pressure3 = 0;
 float flow1 = 0;
 float flow2 = 0;
 float flowZero = 0;
-float flowTotal = 0;
+float flowTotalV = 0;
+float flowTotalC = 0;
 
 // Limites de presion, flujo y volumen para las graficas
 float lMaxPres;
@@ -307,7 +308,8 @@ int newE = currentE;
 // mediciones
 float Peep = 0;
 float Ppico = 0;
-float Vtidal = 0;
+float VtidalV = 0;
+float VtidalC = 0;
 float VT = 0;
 float SUMVin_Ins = 0;
 float SUMVout_Ins = 0;
@@ -690,24 +692,38 @@ void task_Adc(void* arg) {
           }
 
           // Calculo de volumen circulante
-          flowTotal = SFin - SFout - flowZero;
+          flowTotalV = SFin - SFout - flowZero;
+          flowTotalC = SFin - SFout;
           SFant = SFpac;
           SFpac = SFin - SFout;  // flujo del paciente
           if (alerGeneral == 0) {
-            if ((flowTotal <= FLOWLO_LIM) || (flowTotal >= FLOWUP_LIM)) {
-              Vtidal = Vtidal + (flowTotal * DELTA_T * FLOW_CONV * VOL_SCALE);
+            if ((flowTotalC <= FLOWLO_LIM) || (flowTotalC >= FLOWUP_LIM)) {
+              VtidalC = VtidalC + (flowTotalC * DELTA_T * FLOW_CONV * VOL_SCALE);
 
-              if (Vtidal < 0) {
-                Vtidal = 0;
+              if (VtidalC < 0) {
+                VtidalC = 0;
               }
 
-              if (Vtidal > 3000) {
-                Vtidal = 3000;
+              if (VtidalC > 3000) {
+                VtidalC = 3000;
+              }
+
+            }
+            if ((flowTotalV <= FLOWLO_LIM) || (flowTotalV >= FLOWUP_LIM)) {
+              VtidalV = VtidalV + (flowTotalV * DELTA_T * FLOW_CONV * VOL_SCALE);
+
+              if (VtidalV < 0) {
+                VtidalV = 0;
+              }
+
+              if (VtidalV > 3000) {
+                VtidalV = 3000;
               }
             }
           }
           else {
-            Vtidal = 0;
+            VtidalC = 0;
+            VtidalV = 0;
           }
 
           // Calculo Presiones maximas y minimas en la via aerea
@@ -727,11 +743,11 @@ void task_Adc(void* arg) {
           }
 
           // Calculo Volumenes maximos y minimos en la via aerea
-          if (UmbralVmin > Vtidal) {
-            UmbralVmin = Vtidal;
+          if (UmbralVmin > VtidalV) {
+            UmbralVmin = VtidalV;
           }
-          if (UmbralVmax < Vtidal) {
-            UmbralVmax = Vtidal;
+          if (UmbralVmax < VtidalV) {
+            UmbralVmax = VtidalV;
           }
 
           // Transmicon serial
@@ -745,7 +761,8 @@ void task_Adc(void* arg) {
           if (flagAlarmPatientDesconnection == true) {
             SPpac = 0;
             SFpac = 0;
-            Vtidal = 0;
+            VtidalV = 0;
+            VtidalC = 0;
             Ppico = 0;
             Peep = 0;
             currentFrecRespiratoria = 0;
@@ -986,15 +1003,15 @@ void cycling() {
         if (Ppico < 0) {// Si el valor de Ppico es negativo
           Ppico = 0;// Lo limita a 0
         }
-        Ppico = int(Ppico);
+        Ppico = int(round(Ppico));
 
         //Mediciones de presion del sistema
         Pin_max = SPin;//Presion maxima de la camara
         Pout_max = SPout;//Presion maxima de la bolsa
 
         //Medicion de Volumen circulante
-        if (Vtidal >= 0) {
-          VTidProm[2] = Vtidal;
+        if (VtidalC >= 0) {
+          VTidProm[2] = VtidalC;
         }
         else {
           VTidProm[2] = 0;
@@ -1035,7 +1052,7 @@ void cycling() {
         if (Peep < 0) {// Si el valor de Peep es negativo
           Peep = 0;// Lo limita a 0
         }
-        Peep = int(Peep);
+        Peep = int(round(Peep));
         if (estabilidad) {
           PeepEstable = Peep;
           estabilidad = 0;
@@ -1050,7 +1067,8 @@ void cycling() {
         }
 
         //Ajuste del valor de volumen
-        Vtidal = 0;
+        VtidalV = 0;
+        VtidalC = 0;
         flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
 
         //Calculos de volumenes
@@ -1109,7 +1127,7 @@ void cycling() {
         if (Peep < 0) {// Si el valor de Peep es negativo
           Peep = 0;// Lo limita a 0
         }
-        Peep = int(Peep);
+        Peep = int(round(Peep));
         if (estabilidad) {
           PeepEstable = Peep;
           estabilidad = 0;
@@ -1123,7 +1141,8 @@ void cycling() {
           }
         }
         //Ajuste del valor de volumen
-        Vtidal = 0;
+        VtidalV = 0;
+        VtidalC = 0;
         flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
 
         //Calculos de volumenes
@@ -1236,7 +1255,8 @@ void cpapRoutine() {
     // Peep = SPpac;// Peep como la presion en la via aerea al final de la espiracion
 
     //Ajuste del valor de volumen
-    Vtidal = 0;
+    VtidalV = 0;
+    VtidalC = 0;
     // flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
     contFrecCPAP = 0;
     contEspCPAP = 0;
@@ -1250,8 +1270,8 @@ void cpapRoutine() {
     // Ppico = SPpac;// PIP como la presion en la via aerea al final de la espiracion
 
     //Medicion de Volumen circulante
-    if (Vtidal >= 0) {
-      VTidProm[2] = Vtidal;
+    if (VtidalC >= 0) {
+      VTidProm[2] = VtidalC;
     }
     else {
       VTidProm[2] = 0;
@@ -1371,7 +1391,8 @@ void task_sendSerialData(void* arg) {
     if (flagAlarmPatientDesconnection == true) {
       SPpac = 0;
       SFpac = 0;
-      Vtidal = 0;
+      VtidalV = 0;
+      VtidalC = 0;
       Ppico = 0;
       Peep = 0;
       frecRespiratoriaCalculada = 0;

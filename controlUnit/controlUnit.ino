@@ -17,8 +17,9 @@
 
 //********DEFINICION DE VERSION*********
 #define VERSION_1_0       TRUE
-// #define SERIAL_DEVICE     "9GF100007LJD00000"
-#define SERIAL_DEVICE     "1A"
+// #define SERIAL_DEVICE     "9GF100007LJD00003"
+#define SERIAL_DEVICE     "1NEUMA0002"
+
 
 //********COMPILACION CONDICIONAL*******
 #ifdef VERSION_1_0
@@ -26,7 +27,7 @@
 // Definiciones para controlar el shiel DFRobot quad motor driver
 // Definiciones para controlar el shiel DFRobot quad motor driver
 #define EV_INSPIRA      13  // out 7 // Valvula 3/2 de control de la via inspiratoria (pin 3 del shield, velocidad motor 1)
-#define EV_ESC_CAM      14  // out 6 // Valvula 3/2 de activaci�n de la camara (pin 6 del shield, velocidad motor 4)
+#define EV_ESC_CAM      14  // out 6 // Valvula 3/2 de activacion de la camara (pin 6 del shield, velocidad motor 4)
 #define EV_ESPIRA       12  // out 8 // Valvula 3/2 de control de presiones PCON y PEEP (pin 11 del shield, velocidad motor 2)
 
 // Definiciones para el manejo del ADC
@@ -125,6 +126,7 @@
 //creo el manejador para el semaforo como variable global
 SemaphoreHandle_t xSemaphoreTimer = NULL;
 SemaphoreHandle_t xSemaphoreAdc = NULL;
+SemaphoreHandle_t xSemaphoreRaspberry = NULL;
 //xQueueHandle timer_queue = NULL;
 
 // definicion de los core para ejecucion
@@ -189,6 +191,7 @@ String valve8Temp;
 
 // Cadena de impresion en raspberry
 String RaspberryChain = "";
+unsigned int contSendData = 0;
 
 // contadores de tiempo
 int second = 0;
@@ -699,12 +702,21 @@ void task_Adc(void* arg) {
               if (VtidalC < 0) {
                 VtidalC = 0;
               }
+
+              if (VtidalC > 3000) {
+                VtidalC = 3000;
+              }
+
             }
             if ((flowTotalV <= FLOWLO_LIM) || (flowTotalV >= FLOWUP_LIM)) {
               VtidalV = VtidalV + (flowTotalV * DELTA_T * FLOW_CONV * VOL_SCALE);
 
               if (VtidalV < 0) {
                 VtidalV = 0;
+              }
+
+              if (VtidalV > 3000) {
+                VtidalV = 3000;
               }
             }
           }
@@ -758,116 +770,180 @@ void task_Adc(void* arg) {
             VT = 0;
           }
 
-          // almacenamiento de los datos para envio a la raspberry
-          patientPress = String(SPpac);
-          //}
-          patientFlow = String(SFpac);
-          patientVolume = String(VtidalV);
-          pressPIP = String(int(Ppico));
-          pressPEEP = String(int(Peep));
-          // frequency = String(currentFrecRespiratoria);
-          frequency = String(int(frecRespiratoriaCalculada));
-          // seleccion de la velocidad de graficacion
-          if (frecRespiratoriaCalculada < 6) {
-            xSpeed = String(int(6));
-          }
-          else if (frecRespiratoriaCalculada < 20) {
-            xSpeed = String(int(12));
-          }
-          else {
-            xSpeed = String(int(20));
-          }
-          // envio de relacion I:E
-          if (currentI == 1) {
-            rInspir = String(int(relI));
-          }
-          else {
-            rInspir = String(relI, 1);
-          }
-          if (currentE == 1) {
-            rEspir = String(int(relE));
-          }
-          else {
-            rEspir = String(relE, 1);
-          }
-          volumeT = String(int(VT));
-          alertPip = String(alerPresionPIP);
-          alertPeep = String(alerPeep);
-          alertObstruction = String(alerObstruccion);
-          alertConnPat = String(alerDesconexion);
-          alertGeneralFailure = String(alerGeneral);
-          alertConnEquipment = String(alerBateria);
-          alertFrequency = String(int(alerFR_Alta));
-          alertMinuteVentilation = String(int(alerVE_Alto));
-          alertValve1Fail = String(0);
-          alertValve2Fail = String(0);
-          alertValve3Fail = String(0);
-          valve1Temp = String(int(32));
-          valve2Temp = String(int(33));
-          valve3Temp = String(int(34));
-          valve1Current = String(int(500));
-          valve2Current = String(int(400));
-          valve3Current = String(int(450));
-          source5v0Voltage = String(5.0);
-          source5v0Current = String(int(1500));
-          source5v0SWVoltage = String(5.1);
-          source5v0SWCurrent = String(int(800));
-          cameraPress = String(SPin);
-          bagPress = String(SPout);
-          inspFlow = String(SFin);
-          EspFlow = String(SFout);
-          lPresSup = String(int(pmax));
-          lPresInf = String(int(pmin));
-          lFlowSup = String(int(flmax));
-          lFlowInf = String(int(flmin));
-          lVoluSup = String(int(vmax));
-          lVoluInf = String(int(vmin));
+          // activacion de secuencia para el envío por Raspberry
+          xSemaphoreGive(xSemaphoreRaspberry);  // asignacion y liberacion de semaforos
 
-          alertValve4Fail = String(0);
-          alertValve5Fail = String(0);
-          alertValve6Fail = String(0);
-          alertValve7Fail = String(0);
-          alertValve8Fail = String(0);
-          valve4Temp = String(int(32));
-          valve5Temp = String(int(32));
-          valve6Temp = String(int(32));
-          valve7Temp = String(int(32));
-          valve8Temp = String(int(32));
-
-
-          //- Composicion de cadena
-          RaspberryChain = idEqupiment + ',' + patientPress + ',' + patientFlow + ',' + patientVolume + ',' +
-                           pressPIP + ',' + pressPEEP + ',' + frequency + ',' + rInspir + ',' + rEspir + ',' + volumeT + ',' +
-                           alertPip + ',' + alertPeep + ',' + alertObstruction + ',' + alertConnPat + ',' + alertGeneralFailure + ',' +
-                           alertConnEquipment + ',' + alertValve1Fail + ',' + alertValve2Fail + ',' + alertValve3Fail + ',' +
-                           alertValve4Fail + ',' + alertValve5Fail + ',' + alertValve6Fail + ',' + alertValve7Fail + ',' +
-                           alertValve8Fail + ',' + valve1Temp + ',' + valve2Temp + ',' + valve3Temp + ',' + valve4Temp + ',' +
-                           valve5Temp + ',' + valve6Temp + ',' + valve7Temp + ',' + valve8Temp + ',' + cameraPress + ',' + bagPress + ',' +
-                           inspFlow + ',' + EspFlow;
-          /* RaspberryChain = idEqupiment + ',' + patientPress + ',' + patientFlow + ',' + patientVolume + ',' + pressPIP + ',' +
-                           pressPEEP + ',' + frequency + ',' + xSpeed + ',' + rInspir + ',' + rEspir + ',' + volumeT + ',' +
-                           alertPip + ',' + alertPeep + ',' + alertObstruction + ',' + alertConnPat + ',' + alertGeneralFailure + ',' +
-                           alertConnEquipment + ',' + alertFrequency + ',' + alertMinuteVentilation + ',' + alertValve1Fail + ',' + alertValve2Fail + ',' +
-                           alertValve3Fail + ',' + valve1Temp + ',' + valve2Temp + ',' + valve3Temp + ',' + valve1Current + ',' + valve2Current + ',' +
-                           valve3Current + ',' + source5v0Voltage + ',' + source5v0Current + ',' + source5v0SWVoltage + ',' + source5v0SWCurrent + ',' +
-                           cameraPress + ',' + bagPress + ',' + inspFlow + ',' + EspFlow + ',' + lPresSup + ',' + lPresInf + ',' + lFlowSup + ',' +
-                           lFlowInf + ',' + lVoluSup + ',' + lVoluInf; */
-
-          // Envio de la cadena de datos (visualizacion Raspberry)
-          Serial.println(RaspberryChain);
-
-          /* ********************************************************************
-           * **** ENVIO DE VARIABLES PARA CALIBRACION ***************************
-           * ********************************************************************/
-          //  Serial.print(CalFin);
-          //  Serial.print(",");
-          //  Serial.println(CalFout);  // informacion para calibracion de flujo
-          //  Serial.println(CalPpac);
-          //  Serial.println(CalPin);
-          //  Serial.println(CalPout); // informacion para calibracion de presion
         }
       }
     }
+  }
+  vTaskDelete(NULL);
+}
+
+/************************************************************
+ ***** ENVÍO DE TRAMA DE DATOS HACIA LA RASPBERRY ***********
+ ************************************************************/
+void task_Raspberry (void* arg) {
+
+  while (1) {
+    // se atiende solicitud de envio a traves de serial 1 para raspberry
+    if (xSemaphoreTake(xSemaphoreRaspberry, portMAX_DELAY) == pdTRUE){
+      // almacenamiento de los datos para envio a la raspberry
+      patientPress = String(SPpac,1);
+      //}
+      patientFlow = String(SFpac,1);
+      patientVolume = String(VtidalV,1);
+      pressPIP = String(int(Ppico));
+      pressPEEP = String(int(Peep));
+      // frequency = String(currentFrecRespiratoria);
+      frequency = String(int(frecRespiratoriaCalculada));
+      // seleccion de la velocidad de graficacion
+      if (frecRespiratoriaCalculada < 6) {
+        xSpeed = String(int(6));
+      }
+      else if (frecRespiratoriaCalculada < 20) {
+        xSpeed = String(int(12));
+      }
+      else {
+        xSpeed = String(int(20));
+      }
+      // envio de relacion I:E
+      if (currentI == 1) {
+        rInspir = String(int(relI));
+      }
+      else {
+        rInspir = String(relI, 1);
+      }
+      if (currentE == 1) {
+        rEspir = String(int(relE));
+      }
+      else {
+        rEspir = String(relE, 1);
+      }
+      volumeT = String(int(VT));
+      alertPip = String(alerPresionPIP);
+      alertPeep = String(alerPeep);
+      alertObstruction = String(alerObstruccion);
+      alertConnPat = String(alerDesconexion);
+      alertGeneralFailure = String(alerGeneral);
+      alertConnEquipment = String(alerBateria);
+      alertFrequency = String(int(alerFR_Alta));
+      alertMinuteVentilation = String(int(alerVE_Alto));
+      alertValve1Fail = String(0);
+      alertValve2Fail = String(0);
+      alertValve3Fail = String(0);
+      valve1Temp = String(int(32));
+      valve2Temp = String(int(33));
+      valve3Temp = String(int(34));
+      valve1Current = String(int(500));
+      valve2Current = String(int(400));
+      valve3Current = String(int(450));
+      source5v0Voltage = String(5.0);
+      source5v0Current = String(int(1500));
+      source5v0SWVoltage = String(5.1);
+      source5v0SWCurrent = String(int(800));
+      cameraPress = String(SPin,1);
+      bagPress = String(SPout,1);
+      inspFlow = String(SFin,1);
+      EspFlow = String(SFout,1);
+
+      if (pmax < 20) {
+        lPresSup = String(int(20));
+      } 
+      else if (pmax < 40) {
+        lPresSup = String(int(40));
+      }
+      else if (pmax < 60) {
+        lPresSup = String(int(60));
+      } else {
+        lPresSup = String(int(100));
+      }
+      lPresInf = String(int(-5));
+      // lPresInf = String(int(pmin));
+
+      if (flmax < 20) {
+        lFlowSup = String(int(20));
+        lFlowInf = String(int(-20));
+      } 
+      else if (flmax < 40) {
+        lFlowSup = String(int(40));
+        lFlowInf = String(int(-40));
+      }
+      else if (flmax < 60) {
+        lFlowSup = String(int(60));
+        lFlowInf = String(int(-60));
+      } else {
+        lFlowSup = String(int(100));
+        lFlowInf = String(int(-100));
+      }
+
+      // lFlowSup = String(int(flmax));
+      // lFlowInf = String(int(flmin));
+
+      if (vmax < 400) {
+        lVoluSup = String(int(400));
+      } 
+      else if (vmax < 800) {
+        lVoluSup = String(int(800));
+      }
+      else if (vmax < 1200) {
+        lVoluSup = String(int(1200));
+      } else {
+        lVoluSup = String(int(1600));
+      }
+      lVoluInf = String(int(-50));
+
+      // lVoluSup = String(int(vmax));
+      // lVoluInf = String(int(vmin));
+
+      alertValve4Fail = String(0);
+      alertValve5Fail = String(0);
+      alertValve6Fail = String(0);
+      alertValve7Fail = String(0);
+      alertValve8Fail = String(0);
+      valve4Temp = String(int(32));
+      valve5Temp = String(int(32));
+      valve6Temp = String(int(32));
+      valve7Temp = String(int(32));
+      valve8Temp = String(int(32));
+
+
+      //- Composicion de cadena
+      /* RaspberryChain = idEqupiment + ',' + patientPress + ',' + patientFlow + ',' + patientVolume + ',' +
+                        pressPIP + ',' + pressPEEP + ',' + frequency + ',' + rInspir + ',' + rEspir + ',' + volumeT + ',' +
+                        alertPip + ',' + alertPeep + ',' + alertObstruction + ',' + alertConnPat + ',' + alertGeneralFailure + ',' +
+                        alertConnEquipment + ',' + alertValve1Fail + ',' + alertValve2Fail + ',' + alertValve3Fail + ',' +
+                        alertValve4Fail + ',' + alertValve5Fail + ',' + alertValve6Fail + ',' + alertValve7Fail + ',' +
+                        alertValve8Fail + ',' + valve1Temp + ',' + valve2Temp + ',' + valve3Temp + ',' + valve4Temp + ',' +
+                        valve5Temp + ',' + valve6Temp + ',' + valve7Temp + ',' + valve8Temp + ',' + cameraPress + ',' + bagPress + ',' +
+                        inspFlow + ',' + EspFlow; */
+      RaspberryChain = idEqupiment + ',' + patientPress + ',' + patientFlow + ',' + patientVolume + ',' + pressPIP + ',' +
+                        pressPEEP + ',' + frequency + ',' + xSpeed + ',' + rInspir + ',' + rEspir + ',' + volumeT + ',' +
+                        alertPip + ',' + alertPeep + ',' + alertObstruction + ',' + alertConnPat + ',' + alertGeneralFailure + ',' +
+                        alertConnEquipment + ',' + alertFrequency + ',' + alertMinuteVentilation + ',' + alertValve1Fail + ',' + alertValve2Fail + ',' +
+                        alertValve3Fail + ',' + valve1Temp + ',' + valve2Temp + ',' + valve3Temp + ',' + valve1Current + ',' + valve2Current + ',' +
+                        valve3Current + ',' + source5v0Voltage + ',' + source5v0Current + ',' + source5v0SWVoltage + ',' + source5v0SWCurrent + ',' +
+                        cameraPress + ',' + bagPress + ',' + inspFlow + ',' + EspFlow + ',' + lPresSup + ',' + lPresInf + ',' + lFlowSup + ',' +
+                        lFlowInf + ',' + lVoluSup + ',' + lVoluInf;
+
+      // Envio de la cadena de datos (visualizacion Raspberry)
+      contSendData++;
+      if (contSendData == 1) {
+        contSendData = 0;
+        Serial.println(RaspberryChain);
+      }
+      
+      /* ********************************************************************
+        * **** ENVIO DE VARIABLES PARA CALIBRACION ***************************
+        * ********************************************************************/
+      //  Serial.print(CalFin);
+      //  Serial.print(",");
+      //  Serial.println(CalFout);  // informacion para calibracion de flujo
+      //  Serial.println(CalPpac);
+      //  Serial.println(CalPin);
+      //  Serial.println(CalPout); // informacion para calibracion de presion
+    }
+    vTaskDelay(20 / portTICK_PERIOD_MS);
   }
   vTaskDelete(NULL);
 }
@@ -1425,16 +1501,18 @@ void setup()
   // xSemaphoreEncoder = xSemaphoreCreateBinary();
   xSemaphoreTimer = xSemaphoreCreateBinary();
   xSemaphoreAdc = xSemaphoreCreateBinary();
+  xSemaphoreRaspberry = xSemaphoreCreateBinary();
 
   // // creo la tarea task_pulsador
   // xTaskCreatePinnedToCore(task_Encoder, "task_Encoder", 2048, NULL, 4, NULL, taskCoreOne);
   // // xTaskCreatePinnedToCore(task_Encoder_B, "task_Encoder_B", 10000, NULL, 1, NULL, taskCoreZero);
 
-  xTaskCreatePinnedToCore(task_Timer, "task_Timer", 2048, NULL, 5, NULL, taskCoreOne);
-  xTaskCreatePinnedToCore(task_Adc, "task_Adc", 2048, NULL, 4, NULL, taskCoreOne);
+  xTaskCreatePinnedToCore(task_Timer, "task_Timer", 4096, NULL, 5, NULL, taskCoreOne);
+  xTaskCreatePinnedToCore(task_Adc, "task_Adc", 4096, NULL, 4, NULL, taskCoreOne);
   // xTaskCreatePinnedToCore(task_Display, "task_Display", 2048, NULL, 3, NULL, taskCoreOne);  // se puede colocar en el core cero
-  xTaskCreatePinnedToCore(task_Receive, "task_Receive", 2048, NULL, 1, NULL, taskCoreOne);
-  xTaskCreatePinnedToCore(task_sendSerialData, "task_sendSerialData", 2048, NULL, 1, NULL, taskCoreOne);
+  xTaskCreatePinnedToCore(task_Receive, "task_Receive", 4096, NULL, 1, NULL, taskCoreOne);
+  xTaskCreatePinnedToCore(task_sendSerialData, "task_sendSerialData", 4096, NULL, 1, NULL, taskCoreOne);
+  xTaskCreatePinnedToCore(task_Raspberry, "task_Raspberry", 4096, NULL, 4, NULL, taskCoreOne);
 
   // Clean Serial buffers
   vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -1454,3 +1532,5 @@ void loop() {
 /* ***************************************************************************
  * **** FIN DEL PROGRAMA *****************************************************
  * ***************************************************************************/
+
+

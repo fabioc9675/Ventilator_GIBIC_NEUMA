@@ -17,9 +17,8 @@
 
 //********DEFINICION DE VERSION*********
 #define VERSION_1_0       TRUE
-// #define SERIAL_DEVICE     "9GF100007LJD00000"
+// #define SERIAL_DEVICE     "9GF100007LJD00001"
 #define SERIAL_DEVICE     "1NEUMA0001"
-// #define SERIAL_DEVICE     "1A"
 
 
 //********COMPILACION CONDICIONAL*******
@@ -790,10 +789,10 @@ void task_Raspberry (void* arg) {
     // se atiende solicitud de envio a traves de serial 1 para raspberry
     if (xSemaphoreTake(xSemaphoreRaspberry, portMAX_DELAY) == pdTRUE){
       // almacenamiento de los datos para envio a la raspberry
-      patientPress = String(SPpac,2);
+      patientPress = String(SPpac,1);
       //}
-      patientFlow = String(SFpac,2);
-      patientVolume = String(VtidalV,2);
+      patientFlow = String(SFpac,1);
+      patientVolume = String(VtidalV,1);
       pressPIP = String(int(Ppico));
       pressPEEP = String(int(Peep));
       // frequency = String(currentFrecRespiratoria);
@@ -843,10 +842,10 @@ void task_Raspberry (void* arg) {
       source5v0Current = String(int(1500));
       source5v0SWVoltage = String(5.1);
       source5v0SWCurrent = String(int(800));
-      cameraPress = String(SPin,2);
-      bagPress = String(SPout,2);
-      inspFlow = String(SFin,2);
-      EspFlow = String(SFout,2);
+      cameraPress = String(SPin,1);
+      bagPress = String(SPout,1);
+      inspFlow = String(SFin,1);
+      EspFlow = String(SFout,1);
 
       if (pmax < 20) {
         lPresSup = String(int(20));
@@ -1508,12 +1507,12 @@ void setup()
   // xTaskCreatePinnedToCore(task_Encoder, "task_Encoder", 2048, NULL, 4, NULL, taskCoreOne);
   // // xTaskCreatePinnedToCore(task_Encoder_B, "task_Encoder_B", 10000, NULL, 1, NULL, taskCoreZero);
 
-  xTaskCreatePinnedToCore(task_Timer, "task_Timer", 2048, NULL, 5, NULL, taskCoreOne);
-  xTaskCreatePinnedToCore(task_Adc, "task_Adc", 2048, NULL, 4, NULL, taskCoreOne);
+  xTaskCreatePinnedToCore(task_Timer, "task_Timer", 4096, NULL, 5, NULL, taskCoreOne);
+  xTaskCreatePinnedToCore(task_Adc, "task_Adc", 4096, NULL, 4, NULL, taskCoreOne);
   // xTaskCreatePinnedToCore(task_Display, "task_Display", 2048, NULL, 3, NULL, taskCoreOne);  // se puede colocar en el core cero
-  xTaskCreatePinnedToCore(task_Receive, "task_Receive", 2048, NULL, 1, NULL, taskCoreOne);
-  xTaskCreatePinnedToCore(task_sendSerialData, "task_sendSerialData", 2048, NULL, 1, NULL, taskCoreOne);
-  xTaskCreatePinnedToCore(task_Raspberry, "task_Raspberry", 2048, NULL, 5, NULL, taskCoreOne);
+  xTaskCreatePinnedToCore(task_Receive, "task_Receive", 4096, NULL, 1, NULL, taskCoreOne);
+  xTaskCreatePinnedToCore(task_sendSerialData, "task_sendSerialData", 4096, NULL, 1, NULL, taskCoreOne);
+  xTaskCreatePinnedToCore(task_Raspberry, "task_Raspberry", 4096, NULL, 4, NULL, taskCoreOne);
 
   // Clean Serial buffers
   vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -1533,3 +1532,5 @@ void loop() {
 /* ***************************************************************************
  * **** FIN DEL PROGRAMA *****************************************************
  * ***************************************************************************/
+
+

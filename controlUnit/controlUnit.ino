@@ -95,6 +95,41 @@
 #define ADC_FAST          3  // muestreo cada 3 ms
 #define ADC_SLOW          50  // muestreo cada 50 ms
 
+
+
+// **********************************************************
+// Calibracion sensores Sitio
+// Calibracion de los sensores de presion - coeficientes regresion lineal
+#define AMP1_SITE          1.00
+#define OFFS1_SITE         0.00
+#define AMP2_SITE          1.00
+#define OFFS2_SITE         0.00
+#define AMP3_SITE          1.00
+#define OFFS3_SITE         0.00
+
+
+// Calibracion de los sensores de flujo - coeficientes regresion lineal
+// Sensor de flujo Inspiratorio
+#define AMP_FI_1_SITE      1.00         
+#define OFFS_FI_1_SITE     0.00         
+#define LIM_FI_1_SITE      1702         
+#define AMP_FI_2_SITE      1.00         
+#define OFFS_FI_2_SITE     0.00         
+#define LIM_FI_2_SITE      1764         
+#define AMP_FI_3_SITE      1.00         
+#define OFFS_FI_3_SITE     0.00         
+
+// Sensor de flujo Espiratorio
+#define AMP_FE_1_SITE      1.00         
+#define OFFS_FE_1_SITE     0.00         
+#define LIM_FE_1_SITE      1706         
+#define AMP_FE_2_SITE      1.00         
+#define OFFS_FE_2_SITE     0.00         
+#define LIM_FE_2_SITE      1749         
+#define AMP_FE_3_SITE      1.00        
+#define OFFS_FE_3_SITE     0.00    
+
+
 // Variables de control del protocolo
 #define RXD2 16
 #define TXD2 17
@@ -242,22 +277,34 @@ float CalPpac = 0; // almacena valor ADC para calibracion
 float CalPin = 0; // almacena valor ADC para calibracion
 float CalPout = 0; // almacena valor ADC para calibracion
 //- Senales
+float SFpac = 0; //Senal de flujo del paciente
+
 float SFin = 0; //Senal de flujo inspiratorio
 float SFout = 0; //Senal de flujo espiratorio
-
 float SPpac = 0; //Senal de presion en la via aerea del paciente
-float SFpac = 0; //Senal de flujo del paciente
 float SPin = 0; //Senal filtrada de presion en la camara
 float SPout = 0; //Senal filtrada de presion en la bolsa
+
+float SFinADC = 0; //Senal de flujo inspiratorio
+float SFoutADC = 0; //Senal de flujo espiratorio
+float SPpacADC = 0; //Senal de presion en la via aerea del paciente
+float SPinADC = 0; //Senal filtrada de presion en la camara
+float SPoutADC = 0; //Senal filtrada de presion en la bolsa
+float SFinFACTORY = 0; //Senal de flujo inspiratorio
+float SFoutFACTORY = 0; //Senal de flujo espiratorio
+float SPpacFACTORY = 0; //Senal de presion en la via aerea del paciente
+float SPinFACTORY = 0; //Senal filtrada de presion en la camara
+float SPoutFACTORY = 0; //Senal filtrada de presion en la bolsa
+
 float SVtidal = 0; // informacion de promedio para Vtidal
 float Sfrec = 0; // informacion de promedio para frecuencia
 
 //- Filtrado
-float Pin[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-float Pout[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-float Ppac[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-float Fin[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-float Fout[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+float PinADC[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+float PoutADC[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+float PpacADC[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+float FinADC[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+float FoutADC[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 float VTidProm[3] = {0, 0, 0};
 float FreqProm[3] = {0, 0, 0};
 
@@ -277,6 +324,7 @@ int maxPresion = 30;
 //- Mediciones derivadas
 float UmbralPpmin = 100;
 float UmbralPpico = -100;
+float UmbralPpicoDistal = -100;
 float UmbralFmin = 100;
 float UmbralFmax = -100;
 float UmbralVmin  = 100;
@@ -307,6 +355,10 @@ int newE = currentE;
 // mediciones
 float Peep = 0;
 float Ppico = 0;
+float PeepProximal = 0;   // medicion realizada con sensor distal a paciente
+float PpicoProximal = 0;  // medicion realizada con sensor distal a paciente
+float PeepDistal = 0;   // medicion realizada con sensor distal a paciente
+float PpicoDistal = 0;  // medicion realizada con sensor distal a paciente
 float VtidalV = 0;
 float VtidalC = 0;
 float VT = 0;
@@ -598,77 +650,111 @@ void task_Adc(void* arg) {
 
           // Procesamiento senales
           //- Almacenamiento
-          Fin[39] = ADC4_Value;
-          Fout[39] = ADC5_Value;
-          Ppac[39] = ADC3_Value;
-          Pin[39] = ADC1_Value;
-          Pout[39] = ADC2_Value;
+          FinADC[39] = ADC4_Value;
+          FoutADC[39] = ADC5_Value;
+          PpacADC[39] = ADC3_Value;
+          PinADC[39] = ADC1_Value;
+          PoutADC[39] = ADC2_Value;
 
           //- Corrimiento inicial
           for (int i = 39; i >= 1; i--) {
-            Fin[39 - i] = Fin[39 - i + 1];
-            Fout[39 - i] = Fout[39 - i + 1];
-            Pin[39 - i] = Pin[39 - i + 1];
-            Pout[39 - i] = Pout[39 - i + 1];
-            Ppac[39 - i] = Ppac[39 - i + 1];
+            FinADC[39 - i] = FinADC[39 - i + 1];
+            FoutADC[39 - i] = FoutADC[39 - i + 1];
+            PinADC[39 - i] = PinADC[39 - i + 1];
+            PoutADC[39 - i] = PoutADC[39 - i + 1];
+            PpacADC[39 - i] = PpacADC[39 - i + 1];
           }
 
           //- Inicializacion
-          SFin = 0;
-          SFout = 0;
-          SPin = 0;
-          SPout = 0;
-          SPpac = 0;
+          SFinADC = 0;
+          SFoutADC = 0;
+          SPinADC = 0;
+          SPoutADC = 0;
+          SPpacADC = 0;
 
           //- Actualizacion
           for (int i = 0; i <= 39; i++) {
-            SFin = SFin + Fin[i];
-            SFout = SFout + Fout[i];
-            SPin = SPin + Pin[i];
-            SPout = SPout + Pout[i];
-            SPpac = SPpac + Ppac[i];
+            SFinADC = SFinADC + FinADC[i];
+            SFoutADC = SFoutADC + FoutADC[i];
+            SPinADC = SPinADC + PinADC[i];
+            SPoutADC = SPoutADC + PoutADC[i];
+            SPpacADC = SPpacADC + PpacADC[i];
           }
 
           //- Calculo promedio
-          SFin = SFin / 40;
-          SFout = SFout / 40;
-          SPin = SPin / 40;
-          SPout = SPout / 40;
-          SPpac = SPpac / 40;
+          SFin = SFinADC / 40;
+          SFoutADC = SFoutADC / 40;
+          SPinADC = SPinADC / 40;
+          SPoutADC = SPoutADC / 40;
+          SPpacADC = SPpacADC / 40;
 
           // Actualizacion de valores para realizar calibracion
-          CalFin = SFin;
-          CalFout = SFout;
-          CalPpac = SPpac;
-          CalPin = SPin;
-          CalPout = SPout;
+          CalFin = SFinADC;
+          CalFout = SFoutADC;
+          CalPpac = SPpacADC;
+          CalPin = SPinADC;
+          CalPout = SPoutADC;
 
-          //- Conversion ADC-Presion
-          SPin = AMP1 * float(SPin) + OFFS1;
-          SPout = AMP2 * float(SPout) + OFFS2;
-          SPpac = AMP3 * float(SPpac) + OFFS3;// Presion de la via aerea
+          //- Conversion ADC-Presion de fabrica
+          SPinFACTORY = AMP1 * float(SPinADC) + OFFS1;
+          SPoutFACTORY = AMP2 * float(SPoutADC) + OFFS2;
+          SPpacFACTORY = AMP3 * float(SPpacADC) + OFFS3;// Presion de la via aerea
 
-          // Conversion ADC Flujo Inspiratorio, ajuste por tramos para linealizacion
-          if (SFin <= LIM_FI_1) {
-            SFin = AMP_FI_1 * float(SFin) + OFFS_FI_1;
+          // Conversion ADC Flujo Inspiratorio de fabrica, ajuste por tramos para linealizacion
+          if (SFinADC <= LIM_FI_1) {
+            SFinFACTORY = AMP_FI_1 * float(SFinADC) + OFFS_FI_1;
           }
-          else if (SFin <= LIM_FI_2) {
-            SFin = AMP_FI_2 * float(SFin) + OFFS_FI_2;
+          else if (SFinADC <= LIM_FI_2) {
+            SFinFACTORY = AMP_FI_2 * float(SFinADC) + OFFS_FI_2;
           }
           else {
-            SFin = AMP_FI_3 * float(SFin) + OFFS_FI_3;
+            SFinFACTORY = AMP_FI_3 * float(SFinADC) + OFFS_FI_3;
           }
 
-          // Conversion ADC Flujo Espiratorio, ajuste por tramos para linealizacion
-          if (SFout <= LIM_FE_1) {
-            SFout = AMP_FE_1 * float(SFout) + OFFS_FE_1;
+          // Conversion ADC Flujo Espiratorio de fabrica, ajuste por tramos para linealizacion
+          if (SFoutADC <= LIM_FE_1) {
+            SFoutFACTORY = AMP_FE_1 * float(SFoutADC) + OFFS_FE_1;
           }
-          else if (SFout <= LIM_FE_2) {
-            SFout = AMP_FE_2 * float(SFout) + OFFS_FE_2;
+          else if (SFoutADC <= LIM_FE_2) {
+            SFoutFACTORY = AMP_FE_2 * float(SFoutADC) + OFFS_FE_2;
           }
           else {
-            SFout = AMP_FE_3 * float(SFout) + OFFS_FE_3;
+            SFoutFACTORY = AMP_FE_3 * float(SFoutADC) + OFFS_FE_3;
           }
+
+          // *********************************************************
+          // Conversion de valores de fabrica a valores de sitio 
+          //- Conversion ADC-Presion de fabrica
+          SPin = AMP1_SITE * float(SPinFACTORY) + OFFS1_SITE;
+          SPout = AMP2_SITE * float(SPoutFACTORY) + OFFS2_SITE;
+          SPpac = AMP3_SITE * float(SPpacFACTORY) + OFFS3_SITE;// Presion de la via aerea
+
+          // Conversion ADC Flujo Inspiratorio de fabrica, ajuste por tramos para linealizacion
+          if (SFinADC <= LIM_FI_1_SITE) {
+            SFin = AMP_FI_1_SITE * float(SFinFACTORY) + OFFS_FI_1_SITE;
+          }
+          else if (SFinADC <= LIM_FI_2_SITE) {
+            SFin = AMP_FI_2_SITE * float(SFinFACTORY) + OFFS_FI_2_SITE;
+          }
+          else {
+            SFin = AMP_FI_3_SITE * float(SFinFACTORY) + OFFS_FI_3_SITE;
+          }
+
+          // Conversion ADC Flujo Espiratorio de fabrica, ajuste por tramos para linealizacion
+          if (SFoutADC <= LIM_FE_1_SITE) {
+            SFout = AMP_FE_1_SITE * float(SFoutFACTORY) + OFFS_FE_1_SITE;
+          }
+          else if (SFoutADC <= LIM_FE_2_SITE) {
+            SFout = AMP_FE_2_SITE * float(SFoutFACTORY) + OFFS_FE_2_SITE;
+          }
+          else {
+            SFout = AMP_FE_3_SITE * float(SFoutFACTORY) + OFFS_FE_3_SITE;
+          }
+
+
+
+
+
 
         }
 
@@ -732,6 +818,9 @@ void task_Adc(void* arg) {
           if (UmbralPpico < SPpac) {
             UmbralPpico = SPpac;
           }
+          if (UmbralPpicoDistal < SPout) {
+            UmbralPpicoDistal = SPout;
+          }
 
           // Calculo Flujos maximos y minimos en la via aerea
           if (UmbralFmin > SFpac) {
@@ -764,9 +853,30 @@ void task_Adc(void* arg) {
             VtidalC = 0;
             Ppico = 0;
             Peep = 0;
+            PpicoProximal = 0;
+            PeepProximal = 0;
+            PpicoDistal = 0;
+            PeepDistal = 0;
             currentFrecRespiratoria = 0;
             relI = 0;
             relE = 0;
+            VT = 0;
+          }
+
+          if (currentStateMachine == STANDBY_STATE) {
+            SPpac = 0;
+            SFpac = 0;
+            VtidalV = 0;
+            VtidalC = 0;
+            //Ppico = 0;
+            //Peep = 0;
+            //PpicoProximal = 0;
+            //PeepProximal = 0;
+            //PpicoDistal = 0;
+            //PeepDistal = 0;
+            //currentFrecRespiratoria = 0;
+            //relI = 0;
+            //relE = 0;
             VT = 0;
           }
 
@@ -1047,6 +1157,16 @@ void cycling() {
 
         //Calculo de Peep
         // Peep = SPpac + newTrigger;// Peep como la presion en la via aerea al final de la espiracion
+        //Calculo de Peep
+        // PeepProximal = SPpac;
+        // PeepDistal = SPout; 
+        /* *******************************************************************
+         * *** Aqui se debe verificar cual es el valor de Peep a utlizar *****
+         * *******************************************************************/
+        // Peep = PeepProximal;// Peep como la presion en la via aerea al final de la espiracion
+
+
+
 
         if (Peep < 0) {// Si el valor de Peep es negativo
           Peep = 0;// Lo limita a 0
@@ -1094,13 +1214,21 @@ void cycling() {
         flmax = UmbralFmax;  //asigna el flujo maximo encontrada en todo el periodo
         vmin = UmbralVmin;  //asigna el volumen minimo encontrada en todo el periodo
         vmax = UmbralVmax;  //asigna el volumen maximo encontrada en todo el periodo
-        Ppico = pmax;
         UmbralPpmin = 100;  //Reinicia el umbral minimo de presion del paciente
         UmbralPpico = -100;  //Reinicia el umbral maximo de presion del paciente
+        UmbralPpicoDistal = -100;  //Reinicia el umbral maximo de presion del paciente
         UmbralFmin = 100;  //Reinicia el umbral minimo de flujo del paciente
         UmbralFmax = -100;  //Reinicia el umbral maximo de flujo del paciente
         UmbralVmin = 100;  //Reinicia el umbral minimo de volumen del paciente
         UmbralVmax = -100;  //Reinicia el umbral maximo de volumen del paciente
+
+        //Calculo de PIP
+        PpicoProximal = pmax;
+        PpicoDistal = UmbralPpicoDistal; 
+        /* *******************************************************************
+          * *** Aqui se debe verificar cual es el valor de Ppico a utlizar *****
+          * *******************************************************************/
+        Ppico = PpicoProximal;// PIP como la presion en la via aerea al final de la espiracion
 
         //Metodo de exclusion de alarmas
         if (Ppico > 2 && Peep > 2) {
@@ -1116,13 +1244,19 @@ void cycling() {
           currentStateMachine = newStateMachine;
         }
       }
+      // Add to C-PMV mode
       if ((contCycling >= int(((inspirationTime + expirationTime) * 1000)))) {
         frecRespiratoriaCalculada = 60.0 / ((float)contCycling / 1000.0);
         calculatedE = (int)((((60.0 / (float)frecRespiratoriaCalculada) / (float)inspirationTime) - 1) * currentI * 10);
         contCycling = 0;
         //Calculo de Peep
-        Peep = SPpac;// Peep como la presion en la via aerea al final de la espiracion
-
+        PeepProximal = SPpac;
+        PeepDistal = SPout; 
+        /* *******************************************************************
+         * *** Aqui se debe verificar cual es el valor de Peep a utlizar *****
+         * *******************************************************************/
+        Peep = PeepProximal;// Peep como la presion en la via aerea al final de la espiracion
+        
         if (Peep < 0) {// Si el valor de Peep es negativo
           Peep = 0;// Lo limita a 0
         }
@@ -1168,13 +1302,21 @@ void cycling() {
         flmax = UmbralFmax;  //asigna el flujo maximo encontrada en todo el periodo
         vmin = UmbralVmin;  //asigna el volumen minimo encontrada en todo el periodo
         vmax = UmbralVmax;  //asigna el volumen maximo encontrada en todo el periodo
-        Ppico = pmax;
         UmbralPpmin = 100;  //Reinicia el umbral minimo de presion del paciente
         UmbralPpico = -100;  //Reinicia el umbral maximo de presion del paciente
+        UmbralPpicoDistal = -100;  //Reinicia el umbral maximo de presion del paciente
         UmbralFmin = 100;  //Reinicia el umbral minimo de flujo del paciente
         UmbralFmax = -100;  //Reinicia el umbral maximo de flujo del paciente
         UmbralVmin = 100;  //Reinicia el umbral minimo de volumen del paciente
         UmbralVmax = -100;  //Reinicia el umbral maximo de volumen del paciente
+
+        //Calculo de PIP
+        PpicoProximal = pmax;
+        PpicoDistal = UmbralPpicoDistal; 
+        /* *******************************************************************
+          * *** Aqui se debe verificar cual es el valor de Ppico a utlizar *****
+          * *******************************************************************/
+        Ppico = PpicoProximal;// PIP como la presion en la via aerea al final de la espiracion
 
         //Metodo de exclusion de alarmas
         if (Ppico > 2 && Peep > 2) {
@@ -1250,8 +1392,13 @@ void cpapRoutine() {
       frecRespiratoriaCalculada = 35;
     }
 
-    // // Calculo de PEEP
-    // Peep = SPpac;// Peep como la presion en la via aerea al final de la espiracion
+    //Calculo de Peep
+    PeepProximal = SPpac;
+    PeepDistal = SPout; 
+    /* *******************************************************************
+      * *** Aqui se debe verificar cual es el valor de Peep a utlizar *****
+      * *******************************************************************/
+    Peep = PeepProximal;// Peep como la presion en la via aerea al final de la espiracion
 
     //Ajuste del valor de volumen
     VtidalV = 0;
@@ -1265,8 +1412,13 @@ void cpapRoutine() {
   if ((SFpac < COMP_FLOW_MIN_CPAP) && ((SFpac - SFant) < COMP_DEL_F_MIN_CPAP) && (stateFrecCPAP != CPAP_ESPIRATION)) {  // si inicia la espiracion
     stateFrecCPAP = CPAP_ESPIRATION;
 
-    // // Calculo de PIP
-    // Ppico = SPpac;// PIP como la presion en la via aerea al final de la espiracion
+    //Calculo de PIP
+    PpicoProximal = SPpac;
+    PpicoDistal = SPout; 
+    /* *******************************************************************
+      * *** Aqui se debe verificar cual es el valor de Ppico a utlizar *****
+      * *******************************************************************/
+    Ppico = PpicoProximal;// PIP como la presion en la via aerea al final de la espiracion
 
     //Medicion de Volumen circulante
     if (VtidalC >= 0) {
@@ -1394,6 +1546,10 @@ void task_sendSerialData(void* arg) {
       VtidalC = 0;
       Ppico = 0;
       Peep = 0;
+      PpicoProximal = 0;
+      PeepProximal = 0;
+      PpicoDistal = 0;
+      PeepDistal = 0;
       frecRespiratoriaCalculada = 0;
       calculatedE = 0;
       currentVE = 0;

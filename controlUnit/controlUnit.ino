@@ -790,10 +790,10 @@ void task_Raspberry (void* arg) {
     // se atiende solicitud de envio a traves de serial 1 para raspberry
     if (xSemaphoreTake(xSemaphoreRaspberry, portMAX_DELAY) == pdTRUE){
       // almacenamiento de los datos para envio a la raspberry
-      patientPress = String(SPpac,1);
+      patientPress = String(SPpac,2);
       //}
-      patientFlow = String(SFpac,1);
-      patientVolume = String(VtidalV,1);
+      patientFlow = String(SFpac,2);
+      patientVolume = String(VtidalV,2);
       pressPIP = String(int(Ppico));
       pressPEEP = String(int(Peep));
       // frequency = String(currentFrecRespiratoria);
@@ -836,17 +836,17 @@ void task_Raspberry (void* arg) {
       valve1Temp = String(int(32));
       valve2Temp = String(int(33));
       valve3Temp = String(int(34));
-      valve1Current = String(int(50));
-      valve2Current = String(int(40));
-      valve3Current = String(int(45));
-      source5v0Voltage = String(50);
-      source5v0Current = String(int(150));
-      source5v0SWVoltage = String(51);
-      source5v0SWCurrent = String(int(80));
-      cameraPress = String(SPin,1);
-      bagPress = String(SPout,1);
-      inspFlow = String(SFin,1);
-      EspFlow = String(SFout,1);
+      valve1Current = String(int(500));
+      valve2Current = String(int(400));
+      valve3Current = String(int(450));
+      source5v0Voltage = String(5.0);
+      source5v0Current = String(int(1500));
+      source5v0SWVoltage = String(5.1);
+      source5v0SWCurrent = String(int(800));
+      cameraPress = String(SPin,2);
+      bagPress = String(SPout,2);
+      inspFlow = String(SFin,2);
+      EspFlow = String(SFout,2);
 
       if (pmax < 20) {
         lPresSup = String(int(20));

@@ -793,7 +793,7 @@ void task_Raspberry (void* arg) {
       patientPress = String(SPpac,1);
       //}
       patientFlow = String(SFpac,1);
-      patientVolume = String(Vtidal,1);
+      patientVolume = String(VtidalV,1);
       pressPIP = String(int(Ppico));
       pressPEEP = String(int(Peep));
       // frequency = String(currentFrecRespiratoria);

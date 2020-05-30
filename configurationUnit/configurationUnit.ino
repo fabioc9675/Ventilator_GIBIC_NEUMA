@@ -75,8 +75,9 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);
 #define CONFIG_MENU         1	// Configuracion de frecuencias
 #define CONFIG_ALARM        2	// Configuracion Alarma
 #define VENT_MENU		    3	// Ventilation menu selection
+#define SERVICE_MENU		4   
 
-#define ALE_PRES_PIP        4	// presion pico
+#define ALE_PRES_PIP        17	// presion pico
 #define ALE_PRES_DES        5	// desconexion del paciente
 #define ALE_OBSTRUCCION     6	// fallo OBSTRUCCION
 #define BATTERY             7	// Bateria
@@ -131,7 +132,7 @@ byte EAnte = 1;
 float PpicoAnte = 1;
 float PeepAnte = 0;
 float PconAnte = 0;
-float VTAnte = 1;
+unsigned int VTAnte = 1;
 byte maxPresionAnte = 0;
 byte frecRespiratoriaAnte = 0;
 byte minFR_Ante = 0;
@@ -185,7 +186,7 @@ float Peep = 0;
 byte PeepMax = 10;
 float Ppico = 0;
 float Pcon = 0;
-float VT = 0;
+unsigned int VT = 0;
 byte sensibilityCPAP = 0;
 
 int alerPresionPIP = 0;
@@ -275,7 +276,7 @@ void init_GPIO() {
 	attachInterrupt(digitalPinToInterrupt(SW), swInterrupt, RISING);
 	attachInterrupt(digitalPinToInterrupt(STANDBY), standbyButtonInterrupt, FALLING);
 	attachInterrupt(digitalPinToInterrupt(SILENCE_BTN), silenceButtonInterrupt, FALLING);
-	attachInterrupt(digitalPinToInterrupt(STABILITY_BTN), stabilityButtonInterrupt, FALLING);
+	//attachInterrupt(digitalPinToInterrupt(STABILITY_BTN), stabilityButtonInterrupt, FALLING);
 
 	digitalWrite(STANDBY_LED, HIGH);
 	digitalWrite(STABILITY_LED, HIGH);
@@ -467,6 +468,7 @@ void task_timer(void* arg) {
 						flagStabilityInterrupt = false;
 						attachInterrupt(digitalPinToInterrupt(STABILITY_BTN), stabilityButtonInterrupt, FALLING);
 						portEXIT_CRITICAL(&timerMux);
+						digitalWrite(STABILITY_LED, HIGH);
 						digitalWrite(LUMING, HIGH);
 					}
 				}
@@ -905,42 +907,79 @@ void silenceInterruptAttention() {
 }
 
 void standbyInterruptAttention() {
-	//Serial.println("Standby Interrupt");
 	if (flagStandbyInterrupt) {
 		contStandby++;
-		if (contStandby > 400) {
+		Serial.println(digitalRead(STANDBY));
+		if (stateMachine == STANDBY_STATE && contStandby > 500 && digitalRead(STANDBY) == 0) {
 			portENTER_CRITICAL(&mux);
 			attachInterrupt(digitalPinToInterrupt(STANDBY), standbyButtonInterrupt, FALLING);
 			flagStandbyInterrupt = false;
 			portEXIT_CRITICAL(&mux);
-
 			contStandby = 0;
-			if (stateMachine == STANDBY_STATE) {
-				switch (currentVentilationMode) {
-				case 0:
-					stateMachine = PCMV_STATE;
-					break;
-				case 1:
-					stateMachine = AC_STATE;
-					break;
-				case 2:
-					stateMachine = CPAP_STATE;
-					break;
-				default:
-					stateMachine = STANDBY_STATE;
-					break;
-				}
-				//Serial.println("I am on Cycling state");
-				digitalWrite(STANDBY_LED, LOW);
-			}
-			else {
+
+			switch (currentVentilationMode) {
+			case 0:
+				stateMachine = PCMV_STATE;
+				portENTER_CRITICAL_ISR(&mux);
+				attachInterrupt(digitalPinToInterrupt(STABILITY_BTN), stabilityButtonInterrupt, FALLING);
+				portEXIT_CRITICAL_ISR(&mux);
+				break;
+			case 1:
+				stateMachine = AC_STATE;
+				portENTER_CRITICAL_ISR(&mux);
+				attachInterrupt(digitalPinToInterrupt(STABILITY_BTN), stabilityButtonInterrupt, FALLING);
+				portEXIT_CRITICAL_ISR(&mux);
+				break;
+			case 2:
+				stateMachine = CPAP_STATE;
+				digitalWrite(STABILITY_LED, LOW);
+				digitalWrite(LUMING, LOW);
+				portENTER_CRITICAL_ISR(&mux);
+				detachInterrupt(digitalPinToInterrupt(STABILITY_BTN));
+				portEXIT_CRITICAL_ISR(&mux);
+				break;
+			default:
 				stateMachine = STANDBY_STATE;
 				digitalWrite(STANDBY_LED, HIGH);
-				//Serial.println("I am on Standby state");
+				digitalWrite(STABILITY_LED, LOW);
+				digitalWrite(LUMING, LOW);
+				portENTER_CRITICAL_ISR(&mux);
+				detachInterrupt(digitalPinToInterrupt(STABILITY_BTN));
+				portEXIT_CRITICAL_ISR(&mux);
+				break;
 			}
+			//Serial.println("I am on Cycling state");
+			digitalWrite(STANDBY_LED, LOW);
 			lineaAnterior = MODE_CHANGE;
 			sendSerialData();
+
+		} else if (stateMachine != STANDBY_STATE){
+			Serial.println(digitalRead(STANDBY));
+			if (contStandby < 3000 && digitalRead(STANDBY) == 1) {
+				Serial.println("Standby Interrupt");
+				contStandby = 0;
+				portENTER_CRITICAL_ISR(&mux);
+				attachInterrupt(digitalPinToInterrupt(STANDBY), standbyButtonInterrupt, FALLING);
+				flagStandbyInterrupt = false;
+				portEXIT_CRITICAL_ISR(&mux);
+			}
+			else if (contStandby > 3000) {
+				contStandby = 0;
+				stateMachine = STANDBY_STATE;
+				digitalWrite(STANDBY_LED, HIGH);
+				digitalWrite(STABILITY_LED, LOW);
+				digitalWrite(LUMING, LOW);
+				portENTER_CRITICAL_ISR(&mux);
+				attachInterrupt(digitalPinToInterrupt(STANDBY), standbyButtonInterrupt, FALLING);
+				flagStandbyInterrupt = false;
+				detachInterrupt(digitalPinToInterrupt(STABILITY_BTN));
+				portEXIT_CRITICAL_ISR(&mux);
+				lineaAnterior = MODE_CHANGE;
+				sendSerialData();
+				//Serial.println("I am on Standby state");
+			}
 		}
+			
 	}
 }
 
@@ -980,24 +1019,24 @@ void lcd_show_comp() {
 		lcd.setCursor(15, 1);
 		lcd.print(String(Ppico, 0));
 		lcd.setCursor(0, 2);
-		if (stateMachine == AC_STATE) {
-			lcd.print("I:E       VE        ");
-			lcd.setCursor(15, 2);
-			lcd.print(String(currentVE));
-		}
-		else {
+		if (currentVentilationMode == 0) {
 			lcd.print("I:E       PCON      ");
 			lcd.setCursor(15, 2);
-			lcd.print(String(Pcon, 0));
+			lcd.print(String(int(Pcon)));
+		}
+		else {
+			lcd.print("I:E       VE        ");
+			lcd.setCursor(15, 2);
+			lcd.print(String(int(currentVE)));
 		}
 		lcd.setCursor(4, 2);
 		lcd.print(calculatedRelacion_IE);
 		lcd.setCursor(0, 3);
 		lcd.print("VT        PEEP      ");
 		lcd.setCursor(4, 3);
-		lcd.print(String(VT, 0));
+		lcd.print(String(VT));
 		lcd.setCursor(15, 3);
-		lcd.print(String(Peep, 0));
+		lcd.print(String(int(Peep)));
 
 		frecRespiratoriaAnte = frecRespiratoriaCalculada;
 		PpicoAnte = Ppico;
@@ -1119,6 +1158,13 @@ void lcd_show_comp() {
 		lcd.setCursor(14, 2);
 		lcd.print(int(Peep));
 		break;
+	case SERVICE_MENU:
+		lcd.setCursor(0, 1);
+		lcd.print("                    ");
+		lcd.setCursor(0, 2);
+		lcd.print("   PEEP CPAP =      ");
+		lcd.setCursor(14, 2);
+		break;
 	default:
 		lcd.setCursor(0, 0);
 		lcd.print("                    ");
@@ -1172,7 +1218,7 @@ void lcd_show_part() {
 		
 		if (Ppico != PpicoAnte) {
 			lcd.setCursor(15, 1);
-			lcd.print(String(Ppico, 0));
+			lcd.print(String(int(Ppico)));
 			if (Ppico < 10) {
 				lcd.print(" ");
 			}
@@ -1188,21 +1234,10 @@ void lcd_show_part() {
 			// Serial.println("Changed IE");
 		}
 
-		if (stateMachine == AC_STATE) {
-			if (newVE != currentVE) {
-				lcd.setCursor(15, 2);
-				lcd.print(String(newVE));
-				if (newVE < 10) {
-					lcd.print(" ");
-				}
-				currentVE = newVE;
-				// Serial.println("Changed Ppico");
-			}
-		}
-		else {
+		if (currentVentilationMode == 0) {
 			if (Pcon != PconAnte) {
 				lcd.setCursor(15, 2);
-				lcd.print(String(Pcon, 0));
+				lcd.print(String(int(Pcon)));
 				if (Pcon < 10)
 				{
 					lcd.print(" ");
@@ -1210,9 +1245,20 @@ void lcd_show_part() {
 				PconAnte = Pcon;
 			}
 		}
+		else {
+			if (newVE != currentVE) {
+				lcd.setCursor(15, 2);
+				lcd.print(String(int(newVE)));
+				if (newVE < 10) {
+					lcd.print(" ");
+				}
+				currentVE = newVE;
+				// Serial.println("Changed Ppico");
+			}
+		}
 		if (Peep != PeepAnte) {
 			lcd.setCursor(15, 3);
-			lcd.print(String(Peep, 0));
+			lcd.print(String(int(Peep)));
 			if (Peep < 10) {
 				lcd.print(" ");
 			}
@@ -1221,7 +1267,7 @@ void lcd_show_part() {
 		}
 		if (VT != VTAnte) {
 			lcd.setCursor(4, 3);
-			lcd.print(String(VT, 0));
+			lcd.print(String(VT));
 			if (VT < 10) {
 				lcd.print("    ");
 			}
@@ -1528,13 +1574,6 @@ void lcdPrintFirstLine() {
 			}
 		}
 		break;
-	case VENT_MENU:
-		lcd.print(" Modo Ventilatorio ");
-		if (insideMenuFlag == true && optionVentMenu == 0) {
-			lcd.setCursor(0, 0);
-			lcd.write(126);
-		}
-		break;
 	case CONFIG_MENU:
 		if (currentVentilationMode == 0) {
 			lcd.print(" Configuracion P-CMV");
@@ -1548,6 +1587,16 @@ void lcdPrintFirstLine() {
 		break;
 	case CONFIG_ALARM:
 		lcd.print("      Alarmas       ");
+		break;
+	case VENT_MENU:
+		lcd.print(" Modo Ventilatorio ");
+		if (insideMenuFlag == true && optionVentMenu == 0) {
+			lcd.setCursor(0, 0);
+			lcd.write(126);
+		}
+		break;
+	case SERVICE_MENU:
+		lcd.print("  Chequeo de fugas  ");
 		break;
 	case ALE_PRES_PIP:
 		lcd.print("Presion PIP elevada ");
@@ -1628,7 +1677,7 @@ void task_Receive(void* pvParameters) {
 			Ppico = dataIn2[0].toFloat();
 			Peep = dataIn2[1].toFloat();
 			Pcon = Ppico - Peep;
-			VT = dataIn2[2].toFloat();
+			VT = dataIn2[2].toInt();
 			alerPresionPIP = dataIn2[3].toInt();
 			alerDesconexion = dataIn2[4].toInt();
 			alerObstruccion = dataIn2[5].toInt();
@@ -1641,7 +1690,7 @@ void task_Receive(void* pvParameters) {
 			newVE = dataIn2[12].toInt();
 			Serial2.flush();
 			//Serial.flush();  // solo para pruebas
-			//Serial.println(alerFR_Alta);
+			//Serial.println(VT);
 		}
 		vTaskDelay(10 / portTICK_PERIOD_MS);
 	}

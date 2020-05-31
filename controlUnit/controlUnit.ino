@@ -17,8 +17,8 @@
 
 //********DEFINICION DE VERSION*********
 #define VERSION_1_0       TRUE
-// #define SERIAL_DEVICE     "9GF100007LJD00003"
-#define SERIAL_DEVICE     "1NEUMA0002"
+// #define SERIAL_DEVICE     "9GF100007LJD00001"
+#define SERIAL_DEVICE     "1NEUMA0001"
 
 
 //********COMPILACION CONDICIONAL*******
@@ -55,34 +55,34 @@
 #endif
 
 // Calibracion de los sensores de presion - coeficientes regresion lineal
-#define AMP1          0.029550
-#define OFFS1         -20.8454
-#define AMP2          0.029550
-#define OFFS2         -20.8454
-#define AMP3          0.029550
-#define OFFS3         -20.8454
+#define AMP1          0.027960
+#define OFFS1         -20.4197
+#define AMP2          0.027960
+#define OFFS2         -20.4197
+#define AMP3          0.027960
+#define OFFS3         -20.4197
 
 
 // Calibracion de los sensores de flujo - coeficientes regresion lineal
 // Sensor de flujo Inspiratorio
-#define AMP_FI_1      0.077100         
-#define OFFS_FI_1     -146.012000         
-#define LIM_FI_1      1702         
-#define AMP_FI_2      0.484000         
-#define OFFS_FI_2     -838.755400         
-#define LIM_FI_2      1764         
-#define AMP_FI_3      0.077100         
-#define OFFS_FI_3     -121.125700         
+#define AMP_FI_1      0.097100         
+#define OFFS_FI_1     -179.099400         
+#define LIM_FI_1      1682         
+#define AMP_FI_2      0.558700         
+#define OFFS_FI_2     -955.458600         
+#define LIM_FI_2      1738         
+#define AMP_FI_3      0.097100         
+#define OFFS_FI_3     -152.991100         
 
 // Sensor de flujo Espiratorio
-#define AMP_FE_1      0.076100         
-#define OFFS_FE_1     -144.637500         
-#define LIM_FE_1      1706         
-#define AMP_FE_2      0.686800         
-#define OFFS_FE_2     -1186.094700         
-#define LIM_FE_2      1749         
-#define AMP_FE_3      0.076100         
-#define OFFS_FE_3     -118.318600    
+#define AMP_FE_1      0.081500         
+#define OFFS_FE_1     -155.810700         
+#define LIM_FE_1      1718         
+#define AMP_FE_2      0.549200         
+#define OFFS_FE_2     -959.038600         
+#define LIM_FE_2      1775         
+#define AMP_FE_3      0.081500         
+#define OFFS_FE_3     -128.901300  
 
 
 // variable para ajustar el nivel cero de flujo y calcular el volumen
@@ -90,7 +90,7 @@
 #define FLOWLO_LIM        -3
 #define FLOW_CONV         16.666666    // conversion de L/min a mL/second
 #define DELTA_T           0.05         // delta de tiempo para realizar la integra
-#define VOL_SCALE         1.00         // Factor de escala para ajustar el volumen
+#define VOL_SCALE         0.90         // Factor de escala para ajustar el volumen
 
 #define ADC_FAST          3  // muestreo cada 3 ms
 #define ADC_SLOW          50  // muestreo cada 50 ms
@@ -682,7 +682,7 @@ void task_Adc(void* arg) {
           }
 
           //- Calculo promedio
-          SFin = SFinADC / 40;
+          SFinADC = SFinADC / 40;
           SFoutADC = SFoutADC / 40;
           SPinADC = SPinADC / 40;
           SPoutADC = SPoutADC / 40;
@@ -957,11 +957,17 @@ void task_Raspberry(void* arg) {
 			inspFlow = String(SFin, 1);
 			EspFlow = String(SFout, 1);
 
-			if (pmax < 20) {
-				lPresSup = String(int(20));
+			if (pmax < 10) {
+				lPresSup = String(int(10));
 			}
-			else if (pmax < 40) {
-				lPresSup = String(int(40));
+      else if (pmax < 25) {
+				lPresSup = String(int(25));
+			}
+      else if (pmax < 35) {
+				lPresSup = String(int(35));
+			}
+			else if (pmax < 45) {
+				lPresSup = String(int(45));
 			}
 			else if (pmax < 60) {
 				lPresSup = String(int(60));
@@ -972,13 +978,17 @@ void task_Raspberry(void* arg) {
 			lPresInf = String(int(-5));
 			// lPresInf = String(int(pmin));
 
-			if (flmax < 20) {
-				lFlowSup = String(int(20));
-				lFlowInf = String(int(-20));
+			if (flmax < 15) {
+				lFlowSup = String(int(15));
+				lFlowInf = String(int(-15));
 			}
-			else if (flmax < 40) {
-				lFlowSup = String(int(40));
-				lFlowInf = String(int(-40));
+			else if (flmax < 30) {
+				lFlowSup = String(int(30));
+				lFlowInf = String(int(-30));
+			}
+      else if (flmax < 45) {
+				lFlowSup = String(int(45));
+				lFlowInf = String(int(-45));
 			}
 			else if (flmax < 60) {
 				lFlowSup = String(int(60));
@@ -995,8 +1005,14 @@ void task_Raspberry(void* arg) {
 			if (vmax < 400) {
 				lVoluSup = String(int(400));
 			}
+      else if (vmax < 600) {
+				lVoluSup = String(int(600));
+			}
 			else if (vmax < 800) {
 				lVoluSup = String(int(800));
+			}
+      else if (vmax < 1000) {
+				lVoluSup = String(int(1000));
 			}
 			else if (vmax < 1200) {
 				lVoluSup = String(int(1200));
@@ -1144,14 +1160,12 @@ void cycling() {
         contCycling = 0;
 
         //Calculo de Peep
-        // Peep = SPpac + newTrigger;// Peep como la presion en la via aerea al final de la espiracion
-        //Calculo de Peep
-        // PeepProximal = SPpac;
-        // PeepDistal = SPout; 
+        PeepProximal = SPpac + newTrigger;// Peep como la presion en la via aerea al final de la espiracion
+        PeepDistal = SPout; 
         /* *******************************************************************
          * *** Aqui se debe verificar cual es el valor de Peep a utlizar *****
          * *******************************************************************/
-        // Peep = PeepProximal;// Peep como la presion en la via aerea al final de la espiracion
+        Peep = PeepProximal;// Peep como la presion en la via aerea al final de la espiracion
 
 
         if (Peep < 0) {// Si el valor de Peep es negativo
@@ -1217,7 +1231,7 @@ void cycling() {
         Ppico = PpicoProximal;// PIP como la presion en la via aerea al final de la espiracion
 
         //Metodo de exclusion de alarmas
-        if (Ppico > 2 && Peep > 2) {
+        if (Ppico > 3 && Peep > 1) {
           flagInicio = false;
         }
 
@@ -1412,6 +1426,21 @@ void cpapRoutine() {
     contEspCPAP = 0;
     contInsCPAP = 0;
 
+    //Asignacion de valores maximos y minimos de presion
+    pmin = UmbralPpmin;  //asigna la presion minima encontrada en todo el periodo
+    pmax = UmbralPpico;  //asigna la presion maxima encontrada en todo el periodo
+    flmin = UmbralFmin;  //asigna el flujo minimo encontrada en todo el periodo
+    flmax = UmbralFmax;  //asigna el flujo maximo encontrada en todo el periodo
+    vmin = UmbralVmin;  //asigna el volumen minimo encontrada en todo el periodo
+    vmax = UmbralVmax;  //asigna el volumen maximo encontrada en todo el periodo
+    UmbralPpmin = 100;  //Reinicia el umbral minimo de presion del paciente
+    UmbralPpico = -100;  //Reinicia el umbral maximo de presion del paciente
+    UmbralPpicoDistal = -100;  //Reinicia el umbral maximo de presion del paciente
+    UmbralFmin = 100;  //Reinicia el umbral minimo de flujo del paciente
+    UmbralFmax = -100;  //Reinicia el umbral maximo de flujo del paciente
+    UmbralVmin = 100;  //Reinicia el umbral minimo de volumen del paciente
+    UmbralVmax = -100;  //Reinicia el umbral maximo de volumen del paciente
+
   }
   if ((SFpac < COMP_FLOW_MIN_CPAP) && ((SFpac - SFant) < COMP_DEL_F_MIN_CPAP) && (stateFrecCPAP != CPAP_ESPIRATION)) {  // si inicia la espiracion
     stateFrecCPAP = CPAP_ESPIRATION;
@@ -1589,7 +1618,7 @@ void alarmsDetection() {
 		}
 
 		// Alarma por desconexion del paciente
-		if ((Ppico) < 2) {
+		if ((Ppico) < 4) {
 			flagAlarmPatientDesconnection = true;
 			alerDesconexion = 1;
 		}
@@ -1599,7 +1628,7 @@ void alarmsDetection() {
 		}
 
 		// Alarma por obstruccion
-		if ((Vout_Ins >= 0.5 * Vin_Ins) && (Peep < 2)) {
+		if ((Vout_Ins >= 0.5 * Vin_Ins) && (Peep < 3)) {
 			flagAlarmObstruccion = true;
 			alerObstruccion = 1;
 		}

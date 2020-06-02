@@ -1857,7 +1857,7 @@ void setup()
 
 	// nvs_flash_init();
 
-	// se crea el sem�foro binario
+	// se crea el semaforo binario
 	xSemaphoreEncoder = xSemaphoreCreateBinary();
 	xSemaphoreTimer = xSemaphoreCreateBinary();
 

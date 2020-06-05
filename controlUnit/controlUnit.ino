@@ -1,7 +1,7 @@
 /*
-  Name:    controlUnit.ino
+  Name:     controlUnit.ino
   Created:  6/5/2020 11:40:24
-  Author: GIBIC UdeA
+  Author:   Helber Carvajal
 */
 
 #include <Arduino.h>
@@ -17,9 +17,9 @@
 
 //********DEFINICION DE VERSION*********
 #define VERSION_1_0       TRUE
-// #define SERIAL_DEVICE     "9GF100007LJD00001"
-#define SERIAL_DEVICE     "1NEUMA0001"
 
+// #define SERIAL_DEVICE     "9GF100007LJD00004"
+#define SERIAL_DEVICE     "1NEUMA0004"
 
 //********COMPILACION CONDICIONAL*******
 #ifdef VERSION_1_0
@@ -55,35 +55,33 @@
 #endif
 
 // Calibracion de los sensores de presion - coeficientes regresion lineal
-#define AMP1          0.027960
-#define OFFS1         -20.4197
-#define AMP2          0.027960
-#define OFFS2         -20.4197
-#define AMP3          0.027960
+#define AMP1          0.027692
+#define OFFS1         -22.4863
+#define AMP2          0.027692
+#define OFFS2         -22.4863
+#define AMP3          0.027961
 #define OFFS3         -20.4197
-
 
 // Calibracion de los sensores de flujo - coeficientes regresion lineal
 // Sensor de flujo Inspiratorio
-#define AMP_FI_1      0.097100         
-#define OFFS_FI_1     -179.099400         
-#define LIM_FI_1      1682         
-#define AMP_FI_2      0.558700         
-#define OFFS_FI_2     -955.458600         
-#define LIM_FI_2      1738         
-#define AMP_FI_3      0.097100         
-#define OFFS_FI_3     -152.991100         
+#define AMP_FI_1      0.077300         
+#define OFFS_FI_1     -155.737300         
+#define LIM_FI_1      1810         
+#define AMP_FI_2      0.502700         
+#define OFFS_FI_2     -925.849500         
+#define LIM_FI_2      1873         
+#define AMP_FI_3      0.077300         
+#define OFFS_FI_3     -128.824200         
 
 // Sensor de flujo Espiratorio
-#define AMP_FE_1      0.081500         
-#define OFFS_FE_1     -155.810700         
-#define LIM_FE_1      1718         
-#define AMP_FE_2      0.549200         
-#define OFFS_FE_2     -959.038600         
-#define LIM_FE_2      1775         
-#define AMP_FE_3      0.081500         
-#define OFFS_FE_3     -128.901300  
-
+#define AMP_FE_1      0.073300         
+#define OFFS_FE_1     -147.978800         
+#define LIM_FE_1      1801         
+#define AMP_FE_2      0.523500         
+#define OFFS_FE_2     -958.921300         
+#define LIM_FE_2      1862         
+#define AMP_FE_3      0.073300         
+#define OFFS_FE_3     -120.632700 
 
 // variable para ajustar el nivel cero de flujo y calcular el volumen
 #define FLOWUP_LIM        3
@@ -95,8 +93,6 @@
 #define ADC_FAST          3  // muestreo cada 3 ms
 #define ADC_SLOW          50  // muestreo cada 50 ms
 
-
-
 // **********************************************************
 // Calibracion sensores Sitio
 // Calibracion de los sensores de presion - coeficientes regresion lineal
@@ -106,7 +102,6 @@
 #define OFFS2_SITE         0.00
 #define AMP3_SITE          1.00
 #define OFFS3_SITE         0.00
-
 
 // Calibracion de los sensores de flujo - coeficientes regresion lineal
 // Sensor de flujo Inspiratorio
@@ -269,21 +264,28 @@ int newPeepMax = 5;
 int maxFR = 30;
 int maxVE = 30;
 int apneaTime = 10;
+byte AC_stateMachine = 0;
 
 // variables para calibracion de sensores
-float CalFin = 0; // almacena valor ADC para calibracion
-float CalFout = 0; // almacena valor ADC para calibracion
-float CalPpac = 0; // almacena valor ADC para calibracion
-float CalPin = 0; // almacena valor ADC para calibracion
-float CalPout = 0; // almacena valor ADC para calibracion
-//- Senales
-float SFpac = 0; //Senal de flujo del paciente
+float CalFin = 0;	// almacena valor ADC para calibracion
+float CalFout = 0;	// almacena valor ADC para calibracion
+float CalPpac = 0;	// almacena valor ADC para calibracion
+float CalPin = 0;	// almacena valor ADC para calibracion
+float CalPout = 0;	// almacena valor ADC para calibracion
 
-float SFin = 0; //Senal de flujo inspiratorio
-float SFout = 0; //Senal de flujo espiratorio
-float SPpac = 0; //Senal de presion en la via aerea del paciente
-float SPin = 0; //Senal filtrada de presion en la camara
-float SPout = 0; //Senal filtrada de presion en la bolsa
+//- Senales
+float SFin = 0;		//Senal de flujo inspiratorio
+float SFout = 0;	//Senal de flujo espiratorio
+
+float SPpac = 0;	// Senal de presion en la via aerea del paciente
+float SPpac0 = 0;
+float SPpac1 = 0;
+float dPpac = 0;	// Derivada de SPpac
+float SFpac = 0;	// Senal de flujo del paciente
+float SPin = 0;		// Senal filtrada de presion en la camara
+float SPout = 0;	// Senal filtrada de presion en la bolsa
+float SVtidal = 0;	// informacion de promedio para Vtidal
+float Sfrec = 0;	// informacion de promedio para frecuencia
 
 float SFinADC = 0; //Senal de flujo inspiratorio
 float SFoutADC = 0; //Senal de flujo espiratorio
@@ -295,9 +297,6 @@ float SFoutFACTORY = 0; //Senal de flujo espiratorio
 float SPpacFACTORY = 0; //Senal de presion en la via aerea del paciente
 float SPinFACTORY = 0; //Senal filtrada de presion en la camara
 float SPoutFACTORY = 0; //Senal filtrada de presion en la bolsa
-
-float SVtidal = 0; // informacion de promedio para Vtidal
-float Sfrec = 0; // informacion de promedio para frecuencia
 
 //- Filtrado
 float PinADC[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -354,6 +353,7 @@ int newE = currentE;
 
 // mediciones
 float Peep = 0;
+float Peep_AC = 0;
 float Ppico = 0;
 float PeepProximal = 0;   // medicion realizada con sensor distal a paciente
 float PpicoProximal = 0;  // medicion realizada con sensor distal a paciente
@@ -401,6 +401,7 @@ volatile uint8_t flagAlarmObstruccion = false;
 volatile uint8_t flagAlarmFR_Alta = false;
 volatile uint8_t flagAlarmVE_Alto = false;
 volatile uint8_t flagStandbyInterrupt = false;
+uint8_t flagAC = false;
 
 // variables contadores
 volatile unsigned int contDetach = 0;
@@ -574,13 +575,13 @@ void task_Timer(void* arg) {
 				 * **** SECUENCIA DE FUNCIONAMIENTO, ESTADOS DEL VENTILADOR ****
 				 * *************************************************************/
 				switch (currentStateMachine) {
-				case CHECK_STATE:   // estado de checkeo
+				case CHECK_STATE:		// Estado de checkeo
 					break;
-				case STANDBY_STATE:  // Modo StandBy
+				case STANDBY_STATE:		// Modo StandBy
 					standbyRoutine();
 					//Serial.println("Standby state on control Unit");
 					break;
-				case PCMV_STATE:  // Modo Controlado por presion
+				case PCMV_STATE:		// Modo Controlado por presion
 					cycling();
 					// Write the EEPROM each 10 minutes
 					contEscrituraEEPROM++;
@@ -623,7 +624,6 @@ void task_Timer(void* arg) {
  ***** FUNCIONES DE ATENCION A INTERRUPCION TAREA ADC *******
  ************************************************************/
 void task_Adc(void* arg) {
-
   while (1) {
     // Se atiende la interrpcion del timer
     if (xSemaphoreTake(xSemaphoreAdc, portMAX_DELAY) == pdTRUE) {
@@ -750,18 +750,48 @@ void task_Adc(void* arg) {
           else {
             SFout = AMP_FE_3_SITE * float(SFoutFACTORY) + OFFS_FE_3_SITE;
           }
-
-
-
-
-
-
         }
 
         // muestreo lento de ADC
         if (contADC == ADC_SLOW) {
           contADC = 0;
-
+          // Derivada SPpac
+					SPpac0 = SPpac1;
+					SPpac1 = SPpac;
+					dPpac = SPpac1 - SPpac0;
+					//Serial.println(String(SPpac) + ';' + String(10*dPpac));
+					if ((newVentilationMode == 1) && (currentStateMachineCycling == EXPIRATION_CYCLING) &&
+						(contCycling >= int(inspirationTime*1000 + expirationTime*100))) {
+						switch (AC_stateMachine) {
+						case 0:
+							//Serial.println("Estado 0 AC");
+							if (dPpac > -0.2 && dPpac < 0.2) {	// dP/dt
+								AC_stateMachine = 1;
+							}
+							break;
+						case 1:
+							//Calculo de Peep
+							if (dPpac > -0.2 && dPpac < 0.2) {	// dP/dt
+								Peep_AC = SPpac1;
+								if (Peep_AC < 0) {	// Si el valor de Peep es negativo
+									Peep_AC = 0;	// Lo limita a 0
+								}
+							}
+							if (dPpac < -1) {
+								AC_stateMachine = 2;
+							}
+							break;
+						case 2:
+							//Serial.println("Estado 2 AC");
+							if (SPpac1 < Peep_AC - newTrigger) {
+								flagAC = true;
+								AC_stateMachine = 0;
+							}
+							else {
+								AC_stateMachine = 1;
+							}
+						}
+					}
           // Calculo de relaciones I:E
           if (currentI != 1) {
             relI = (float)(currentI / 10.0);
@@ -896,28 +926,31 @@ void task_Adc(void* arg) {
 void task_Raspberry(void* arg) {
 
 	while (1) {
-		// se atiende solicitud de envio a traves de serial 1 para raspberry
+		// Se atiende solicitud de envio a traves de serial 1 para raspberry
 		if (xSemaphoreTake(xSemaphoreRaspberry, portMAX_DELAY) == pdTRUE) {
-			// almacenamiento de los datos para envio a la raspberry
+			// Almacenamiento de los datos para envio a la raspberry
 			patientPress = String(SPpac, 1);
 			//}
 			patientFlow = String(SFpac, 1);
 			patientVolume = String(VtidalV, 1);
 			pressPIP = String(int(Ppico));
 			pressPEEP = String(int(Peep));
-			// frequency = String(currentFrecRespiratoria);
+			// Frequency = String(currentFrecRespiratoria);
 			frequency = String(int(frecRespiratoriaCalculada));
-			// seleccion de la velocidad de graficacion
+			// Seleccion de la velocidad de graficacion
 			if (frecRespiratoriaCalculada < 6) {
-				xSpeed = String(int(6));
+				// xSpeed = String(int(6));
+				xSpeed = String(int(12));
 			}
 			else if (frecRespiratoriaCalculada < 20) {
+				// xSpeed = String(int(12));
 				xSpeed = String(int(12));
 			}
 			else {
-				xSpeed = String(int(20));
+				// xSpeed = String(int(20));
+				xSpeed = String(int(12));
 			}
-			// envio de relacion I:E
+			// Envio de relacion I:E
 			if (currentI == 1) {
 				rInspir = String(int(relI));
 			}
@@ -1036,7 +1069,6 @@ void task_Raspberry(void* arg) {
 			valve7Temp = String(int(32));
 			valve8Temp = String(int(32));
 
-
 			//- Composicion de cadena
 			/* RaspberryChain = idEqupiment + ',' + patientPress + ',' + patientFlow + ',' + patientVolume + ',' +
 							  pressPIP + ',' + pressPEEP + ',' + frequency + ',' + rInspir + ',' + rEspir + ',' + volumeT + ',' +
@@ -1154,41 +1186,37 @@ void cycling() {
       break;
     case EXPIRATION_CYCLING:
       //Add para el modo A/C
-      if ((newVentilationMode == 1) && (SPpac <= Peep - newTrigger) && (contCycling >= int(inspirationTime) * 1000 + (expirationTime * 100))) {
-        frecRespiratoriaCalculada = 60.0 / ((float)contCycling / 1000.0);
-        calculatedE = (int)((((60.0 / (float)frecRespiratoriaCalculada) / (float)inspirationTime) - 1) * currentI * 10);
-        contCycling = 0;
+		if (flagAC == true) {
+			flagAC = false;
+      frecRespiratoriaCalculada = 60.0 / ((float)contCycling / 1000.0);
+      calculatedE = (int)((((60.0 / (float)frecRespiratoriaCalculada) / (float)inspirationTime) - 1) * currentI * 10);
+      contCycling = 0;
 
         //Calculo de Peep
         PeepProximal = SPpac + newTrigger;// Peep como la presion en la via aerea al final de la espiracion
         PeepDistal = SPout; 
-        /* *******************************************************************
-         * *** Aqui se debe verificar cual es el valor de Peep a utlizar *****
-         * *******************************************************************/
-        Peep = PeepProximal;// Peep como la presion en la via aerea al final de la espiracion
+      
+      Peep = Peep_AC;
 
+			if (estabilidad) {
+				PeepEstable = Peep;
+				estabilidad = 0;
+			}
+			else {
+				if (Peep <= PeepEstable - 1.5) {
+					alerPeep = 1;
+				}
+				else {
+					alerPeep = 0;
+				}
+			}
 
-        if (Peep < 0) {// Si el valor de Peep es negativo
-          Peep = 0;// Lo limita a 0
-        }
-        Peep = int(round(Peep));
-        if (estabilidad) {
-          PeepEstable = Peep;
-          estabilidad = 0;
-        }
-        else {
-          if (Peep <= PeepEstable - 1.5) {
-            alerPeep = 1;
-          }
-          else {
-            alerPeep = 0;
-          }
-        }
-
-        //Ajuste del valor de volumen
-        VtidalV = 0;
-        VtidalC = 0;
-        flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
+			//Ajuste del valor de volumen
+			VtidalV = 0;
+			VtidalC = 0;
+			flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
+      
+        
 
         //Calculos de volumenes
         //- Asignacion
@@ -1206,22 +1234,22 @@ void cycling() {
         //Mediciones de presion del sistema
         Pin_min = SPin;  //Presion minima de la camara
         Pout_min = SPout;  //Presion minima de la bolsa
-
-        //Asignacion de valores maximos y minimos de presion
-        pmin = UmbralPpmin;  //asigna la presion minima encontrada en todo el periodo
-        pmax = UmbralPpico;  //asigna la presion maxima encontrada en todo el periodo
-        flmin = UmbralFmin;  //asigna el flujo minimo encontrada en todo el periodo
-        flmax = UmbralFmax;  //asigna el flujo maximo encontrada en todo el periodo
-        vmin = UmbralVmin;  //asigna el volumen minimo encontrada en todo el periodo
-        vmax = UmbralVmax;  //asigna el volumen maximo encontrada en todo el periodo
-        UmbralPpmin = 100;  //Reinicia el umbral minimo de presion del paciente
-        UmbralPpico = -100;  //Reinicia el umbral maximo de presion del paciente
-        UmbralPpicoDistal = -100;  //Reinicia el umbral maximo de presion del paciente
-        UmbralFmin = 100;  //Reinicia el umbral minimo de flujo del paciente
-        UmbralFmax = -100;  //Reinicia el umbral maximo de flujo del paciente
-        UmbralVmin = 100;  //Reinicia el umbral minimo de volumen del paciente
-        UmbralVmax = -100;  //Reinicia el umbral maximo de volumen del paciente
-
+        
+      //Asignacion de valores maximos y minimos de presion
+			pmin = UmbralPpmin;  //asigna la presion minima encontrada en todo el periodo
+			pmax = UmbralPpico;  //asigna la presion maxima encontrada en todo el periodo
+			flmin = UmbralFmin;  //asigna el flujo minimo encontrada en todo el periodo
+			flmax = UmbralFmax;  //asigna el flujo maximo encontrada en todo el periodo
+			vmin = UmbralVmin;  //asigna el volumen minimo encontrada en todo el periodo
+			vmax = UmbralVmax;  //asigna el volumen maximo encontrada en todo el periodo
+			Ppico = pmax;
+			UmbralPpmin = 100;  //Reinicia el umbral minimo de presion del paciente
+			UmbralPpico = -100;  //Reinicia el umbral maximo de presion del paciente
+			UmbralFmin = 100;  //Reinicia el umbral minimo de flujo del paciente
+			UmbralFmax = -100;  //Reinicia el umbral maximo de flujo del paciente
+			UmbralVmin = 100;  //Reinicia el umbral minimo de volumen del paciente
+			UmbralVmax = -100;  //Reinicia el umbral maximo de volumen del paciente
+      
         //Calculo de PIP
         PpicoProximal = pmax;
         PpicoDistal = UmbralPpicoDistal; 
@@ -1235,15 +1263,20 @@ void cycling() {
           flagInicio = false;
         }
 
-        currentVE = (int)((VT * frecRespiratoriaCalculada) / 1000.0);  // calculo de la ventilacion minuto
+			currentVE = (int)((VT * frecRespiratoriaCalculada) / 1000.0);  // calculo de la ventilacion minuto
 
-        alarmsDetection();  // se ejecuta la rutina de deteccion de alarmas
-        currentStateMachineCycling = START_CYCLING;
+			alarmsDetection();  // se ejecuta la rutina de deteccion de alarmas
+			currentStateMachineCycling = START_CYCLING;
+			AC_stateMachine = 0;
 
-        if (newStateMachine != currentStateMachine) {
-          currentStateMachine = newStateMachine;
-        }
-      }
+			if (newStateMachine != currentStateMachine) {
+				currentStateMachine = newStateMachine;
+				PeepEstable = 0;
+			}
+		}
+      
+      if ((newVentilationMode == 1) && (SPpac <= Peep - newTrigger) && (contCycling >= int(inspirationTime) * 1000 + (expirationTime * 100))) {
+        
       // Add to C-PMV mode
       if ((contCycling >= int(((inspirationTime + expirationTime) * 1000)))) {
         frecRespiratoriaCalculada = 60.0 / ((float)contCycling / 1000.0);
@@ -1550,7 +1583,7 @@ void task_Receive(void* pvParameters) {
 			  String(newE) + ',' + String(maxPresion) + ',' +
 			  String(alerBateria) + ',' + String(estabilidad) + ',' +
 			  String(newStateMachine) + ',' + String(newVentilationMode));*/
-			
+
 		}
 		vTaskDelay(10 / portTICK_PERIOD_MS);
 	}
@@ -1685,7 +1718,7 @@ void setup()
 	// xTaskCreatePinnedToCore(task_Encoder, "task_Encoder", 2048, NULL, 4, NULL, taskCoreOne);
 	// // xTaskCreatePinnedToCore(task_Encoder_B, "task_Encoder_B", 10000, NULL, 1, NULL, taskCoreZero);
 
-	xTaskCreatePinnedToCore(task_Timer, "task_Timer", 4096, NULL, 5, NULL, taskCoreOne);
+	xTaskCreatePinnedToCore(task_Timer, "task_Timer", 4096, NULL, 7, NULL, taskCoreOne);
 	xTaskCreatePinnedToCore(task_Adc, "task_Adc", 4096, NULL, 4, NULL, taskCoreOne);
 	// xTaskCreatePinnedToCore(task_Display, "task_Display", 2048, NULL, 3, NULL, taskCoreOne);  // se puede colocar en el core cero
 	xTaskCreatePinnedToCore(task_Receive, "task_Receive", 4096, NULL, 1, NULL, taskCoreOne);

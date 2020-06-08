@@ -1,0 +1,37 @@
+// Calibracion de los sensores de presion - coeficientes regresion lineal
+#define AMP1          0.027692
+#define OFFS1         -22.4863
+#define AMP2          0.027692
+#define OFFS2         -22.4863
+#define AMP3          0.027961
+#define OFFS3         -20.4197
+
+
+// Calibracion de los sensores de flujo - coeficientes regresion lineal
+// Sensor de flujo Inspiratorio
+#define AMP_FI_1      0.077300         
+#define OFFS_FI_1     -155.737300         
+#define LIM_FI_1      1810         
+#define AMP_FI_2      0.502700         
+#define OFFS_FI_2     -925.849500         
+#define LIM_FI_2      1873         
+#define AMP_FI_3      0.077300         
+#define OFFS_FI_3     -128.824200         
+
+// Sensor de flujo Espiratorio
+#define AMP_FE_1      0.073300         
+#define OFFS_FE_1     -147.978800         
+#define LIM_FE_1      1801         
+#define AMP_FE_2      0.523500         
+#define OFFS_FE_2     -958.921300         
+#define LIM_FE_2      1862         
+#define AMP_FE_3      0.073300         
+#define OFFS_FE_3     -120.632700 
+
+
+// variable para ajustar el nivel cero de flujo y calcular el volumen
+#define FLOWUP_LIM        3
+#define FLOWLO_LIM        -3
+#define FLOW_CONV         16.666666    // conversion de L/min a mL/second
+#define DELTA_T           0.05         // delta de tiempo para realizar la integra
+#define VOL_SCALE         0.90         // Factor de escala para ajustar el volumen

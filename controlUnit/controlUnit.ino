@@ -760,7 +760,13 @@ void task_Adc(void* arg) {
 					SPpac1 = SPpac;
 					dPpac = SPpac1 - SPpac0;
 					//Serial.println(String(SPpac) + ';' + String(10*dPpac));
-					if ((newVentilationMode == 1) && (currentStateMachineCycling == EXPIRATION_CYCLING) &&
+					if (currentStateMachineCycling == INSPIRATION_CYCLING) {
+						if (SPpac > maxPresion) {
+							flagAlarmPpico = true;
+							alerPresionPIP = 1;
+						}
+					}
+					else if ((newVentilationMode == 1) && (currentStateMachineCycling == EXPIRATION_CYCLING) &&
 						(contCycling >= int(inspirationTime * 1000 + expirationTime * 100))) {
 						switch (AC_stateMachine) {
 						case 0:
@@ -1143,7 +1149,7 @@ void cycling() {
 		}
 		break;
 	case INSPIRATION_CYCLING:
-		if (contCycling >= int(inspirationTime * 1000)) {
+		if ((contCycling >= int(inspirationTime * 1000)) || (flagAlarmPpico == true)) {
 			//Calculo PIP
 			if (Ppico < 0) {// Si el valor de Ppico es negativo
 				Ppico = 0;// Lo limita a 0
@@ -1633,11 +1639,12 @@ void alarmsDetection() {
 	// Ppico Alarm
 	if (flagInicio == false) { //Si hay habilitacion de alarmas
 	  // Alarma por Ppico elevada
-		if (Ppico > maxPresion) {
+		/*if (Ppico > maxPresion) {
 			flagAlarmPpico = true;
 			alerPresionPIP = 1;
 		}
-		else {
+		else {*/
+		if (Ppico < maxPresion){
 			flagAlarmPpico = false;
 			alerPresionPIP = 0;
 		}

@@ -995,7 +995,7 @@ void lcd_show_comp() {
 	if (currentRelacionIE > 0) {
 		//relacion_IE = "1:" + String((float)currentRelacionIE / 10, 1);
 		relacion_IE = "1:" + String((float)currentRelacionIE / 10, 1);
-		calculatedRelacion_IE = "1:" + String((float)calculatedE / 10, 1);
+		calculatedRelacion_IE = "1:" + String((float)calculatedE / 10.0, 1);
 		I = 1;
 		E = (char)currentRelacionIE;
 	}
@@ -1030,7 +1030,7 @@ void lcd_show_comp() {
 			lcd.print(String(int(currentVE)));
 		}
 		lcd.setCursor(4, 2);
-		lcd.print(calculatedRelacion_IE);
+		lcd.print(calculatedRelacion_IE + " ");
 		lcd.setCursor(0, 3);
 		lcd.print("VT        PEEP      ");
 		lcd.setCursor(4, 3);
@@ -1190,7 +1190,7 @@ void lcd_show_part() {
 	String calculatedRelacion_IE;
 	if (newRelacionIE > 0) {
 		newRelacion_IE = "1:" + String((float)newRelacionIE / 10, 1);
-		calculatedRelacion_IE = "1:" + String((float)calculatedE / 10, 1);
+		calculatedRelacion_IE = "1:" + String((float)calculatedE / 10.0, 1);
 	}
 	else {
 		newRelacion_IE = String(-(float)newRelacionIE / 10, 1) + ":1";
@@ -1228,7 +1228,7 @@ void lcd_show_part() {
 		
 		if ((I != IAnte) || (calculatedE != EAnte)) {
 			lcd.setCursor(4, 2);
-			lcd.print(calculatedRelacion_IE);
+			lcd.print(calculatedRelacion_IE + " ");
 			IAnte = I;
 			EAnte = calculatedE;
 			// Serial.println("Changed IE");

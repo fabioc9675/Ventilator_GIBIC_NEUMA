@@ -124,7 +124,6 @@
 #define AMP_FE_3_SITE      1.00        
 #define OFFS_FE_3_SITE     0.00    
 
-
 // Variables de control del protocolo
 #define RXD2 16
 #define TXD2 17
@@ -395,6 +394,7 @@ volatile uint8_t flagInicio = true;
 volatile uint8_t flagTimerInterrupt = false;
 volatile uint8_t flagAdcInterrupt = false;
 volatile uint8_t flagAlarmPpico = false;
+uint8_t flagMaxPresion = false;
 volatile uint8_t flagAlarmGeneral = false;
 volatile uint8_t flagAlarmPatientDesconnection = false;
 volatile uint8_t flagAlarmObstruccion = false;
@@ -454,11 +454,11 @@ void init_GPIO() {
 	pinMode(2, OUTPUT);   // PIN 3   velocidad
 	pinMode(4, OUTPUT);   // PIN 6   velocidad
 	pinMode(5, OUTPUT);   // PIN 12  velocidad
-	pinMode(12, OUTPUT);      // PIN 3   velocidad
-	pinMode(13, OUTPUT);      // PIN 6   velocidad
-	pinMode(14, OUTPUT);      // PIN 12  velocidad
-	pinMode(15, OUTPUT);      // PIN 3   velocidad
-	pinMode(18, OUTPUT);      // PIN 6   velocidad
+	pinMode(12, OUTPUT);  // PIN 3   velocidad
+	pinMode(13, OUTPUT);  // PIN 6   velocidad
+	pinMode(14, OUTPUT);  // PIN 12  velocidad
+	pinMode(15, OUTPUT);  // PIN 3   velocidad
+	pinMode(18, OUTPUT);  // PIN 6   velocidad
 
 	// inicializacion de los pines controladores de las EV como salidas
 	pinMode(EV_INSPIRA, OUTPUT);  // PIN 3   velocidad
@@ -583,6 +583,7 @@ void task_Timer(void* arg) {
 					break;
 				case PCMV_STATE:		// Modo Controlado por presion
 					cycling();
+					
 					// Write the EEPROM each 10 minutes
 					contEscrituraEEPROM++;
 					if (contEscrituraEEPROM > 3600000) {
@@ -761,8 +762,9 @@ void task_Adc(void* arg) {
 					dPpac = SPpac1 - SPpac0;
 					//Serial.println(String(SPpac) + ';' + String(10*dPpac));
 					if (currentStateMachineCycling == INSPIRATION_CYCLING) {
-						if (SPpac > maxPresion) {
+						if (SPpac > maxPresion && flagAlarmPpico == false) {
 							flagAlarmPpico = true;
+							flagMaxPresion = true;
 							alerPresionPIP = 1;
 						}
 					}
@@ -1133,23 +1135,34 @@ void standbyRoutine() {
 
 // Cycling of the Mechanical Ventilator
 void cycling() {
+	
 	contCycling++;  // contador que incrementa cada ms en la funcion de ciclado
-
-	 // Maquina de estados del ciclado
+	// Maquina de estados del ciclado
 	switch (currentStateMachineCycling) {
 	case STOP_CYCLING:
 		break;
 	case START_CYCLING:
-		if (contCycling >= 1) {        // Inicia el ciclado abriendo electrovalvula de entrada y cerrando electrovalvula de salida
-			BandInsp = 1;// Activa bandera que indica que empezo la inspiracion
-			digitalWrite(EV_INSPIRA, LOW);//Piloto conectado a ambiente -> Desbloquea valvula piloteada y permite el paso de aire
-			digitalWrite(EV_ESPIRA, HIGH);//Piloto conectado a PIP -> Limita la presion de la via aerea a la PIP configurada
-			digitalWrite(EV_ESC_CAM, HIGH);//Piloto conectado a Presion de activacion -> Presiona la camara
+		if (contCycling >= 1) {				// Inicia el ciclado abriendo electrovalvula de entrada y cerrando electrovalvula de salida
+			BandInsp = 1;					// Activa bandera que indica que empezo la inspiracion
+			digitalWrite(EV_INSPIRA, LOW);	// Piloto conectado a ambiente -> Desbloquea valvula piloteada y permite el paso de aire
+			digitalWrite(EV_ESPIRA, HIGH);	//Piloto conectado a PIP -> Limita la presion de la via aerea a la PIP configurada
+			digitalWrite(EV_ESC_CAM, HIGH);	//Piloto conectado a Presion de activacion -> Presiona la camara
 			currentStateMachineCycling = INSPIRATION_CYCLING;
 		}
 		break;
 	case INSPIRATION_CYCLING:
-		if ((contCycling >= int(inspirationTime * 1000)) || (flagAlarmPpico == true)) {
+		//if (flagAlarmPpico == true) {
+		//	flagAlarmPpico == false;
+		//	Serial.println("Entre");
+		//	//	alerPresionPIP = 0;
+		//		digitalWrite(EV_INSPIRA, HIGH);//Piloto conectado a presion de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
+		//		digitalWrite(EV_ESC_CAM, LOW);//Piloto conectado a PEEP -> Limita la presion de la via aerea a la PEEP configurada
+		//		digitalWrite(EV_ESPIRA, LOW);//Piloto conectado a ambiente -> Despresuriza la camara y permite el llenado de la bolsa
+		//	currentStateMachineCycling = EXPIRATION_CYCLING;
+		//	//contCycling = int(inspirationTime * 1000);
+		//}
+		if (contCycling >= int(inspirationTime * 1000) || flagMaxPresion == true) {
+			flagMaxPresion = false;
 			//Calculo PIP
 			if (Ppico < 0) {// Si el valor de Ppico es negativo
 				Ppico = 0;// Lo limita a 0
@@ -1274,14 +1287,17 @@ void cycling() {
 
 			currentVE = (int)((VT * frecRespiratoriaCalculada) / 1000.0);  // calculo de la ventilacion minuto
 
-			alarmsDetection();  // se ejecuta la rutina de deteccion de alarmas
-			currentStateMachineCycling = START_CYCLING;
-			AC_stateMachine = 0;
-
 			if (newStateMachine != currentStateMachine) {
 				currentStateMachine = newStateMachine;
 				PeepEstable = 0;
 			}
+
+			alarmsDetection();  // se ejecuta la rutina de deteccion de alarmas
+			flagAlarmPpico = false;
+			alerPresionPIP = 0;
+
+			currentStateMachineCycling = START_CYCLING;
+			AC_stateMachine = 0;
 		}
 
 		// Add to C-PMV mode
@@ -1366,6 +1382,8 @@ void cycling() {
 			currentVE = (int)((VT * frecRespiratoriaCalculada) / 1000.0);  // calculo de la ventilacion minuto
 
 			alarmsDetection();  // se ejecuta la rutina de deteccion de alarmas
+			flagAlarmPpico = false;
+			alerPresionPIP = 0;
 			currentStateMachineCycling = START_CYCLING;
 
 			if (newStateMachine != currentStateMachine) {
@@ -1388,7 +1406,6 @@ void cycling() {
 					inspirationTime = (float)((float)currentI / 10.0) * (float)expirationTime;
 				}
 			}
-
 		}
 		break;
 	default:
@@ -1644,10 +1661,10 @@ void alarmsDetection() {
 			alerPresionPIP = 1;
 		}
 		else {*/
-		if (Ppico < maxPresion){
+		/*if (Ppico < maxPresion){
 			flagAlarmPpico = false;
 			alerPresionPIP = 0;
-		}
+		}*/
 		// Fallo general
 		if ((Pin_max) < 6) {
 			flagAlarmGeneral = true;

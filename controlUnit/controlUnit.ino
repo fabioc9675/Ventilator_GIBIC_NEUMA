@@ -148,8 +148,9 @@
 #define COMP_DEL_F_MAX_CPAP            2  // variable para comparacion de flujo y entrar en modo Inspiratorio en CPAP
 #define COMP_DEL_F_MIN_CPAP           -2  // variable para comparacion de flujo y entrar en modo Inspiratorio en CPAP
 #define CPAP_NONE                      0  // Estado de inicializacion
-#define CPAP_INSPIRATION               1  // Entra en modo inspiratorio
-#define CPAP_ESPIRATION                2  // Entra en modo espiratorio
+#define CPAP_INIT                      1  // Estado de inicio de CPAP
+#define CPAP_INSPIRATION               2  // Entra en modo inspiratorio
+#define CPAP_ESPIRATION                3  // Entra en modo espiratorio
 
 
 //creo el manejador para el semaforo como variable global
@@ -262,7 +263,8 @@ int newTrigger = 2;
 int newPeepMax = 5;
 int maxFR = 30;
 int maxVE = 30;
-int apneaTime = 10;
+int apneaTime = 20;
+int minFR = 4;
 byte AC_stateMachine = 0;
 
 // variables para calibracion de sensores
@@ -1439,6 +1441,7 @@ void cpapRoutine() {
 	if (newStateMachine != currentStateMachine) {
 		currentStateMachine = newStateMachine;
 		PeepEstable = 0;
+		stateFrecCPAP = CPAP_INIT;
 	}
 	contCycling = 0;
 	digitalWrite(EV_INSPIRA, LOW);  //Piloto conectado a presion de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
@@ -1536,6 +1539,22 @@ void cpapRoutine() {
 
 	// Maquina de estados para identificar la Inspiracion y la espiracion
 	switch (stateFrecCPAP) {
+		// Inicio de CPAP
+	case CPAP_INIT:
+		frecRespiratoriaCalculada = 0;
+		VT = 0;
+		VtidalV = 0;
+		VtidalC = 0;
+		calculatedE = 0;
+		calculatedI = 0;
+		
+		PeepProximal = SPpac;
+		PeepDistal = SPout;
+		/* *******************************************************************
+		  * *** Aqui se debe verificar cual es el valor de Peep a utlizar *****
+		  * *******************************************************************/
+		Peep = PeepProximal;// Peep como la presion en la via aerea al final de la espiracion
+		break;
 		// Ciclo Inspiratorio
 	case CPAP_INSPIRATION:
 		contFrecCPAP++;  // Se incrementan los contadore para el calculo de frecuencia y relacion IE
@@ -1550,7 +1569,12 @@ void cpapRoutine() {
 		break;
 	}
 
-	if (contCycling > apneaTime * 1000) {
+	if ((contFrecCPAP > ((apneaTime * 1000) - 5000)) && (stateFrecCPAP != CPAP_INIT)) {
+		flagAlarmFR_Alta = true;
+		alerFR_Alta = 2;
+		frecRespiratoriaCalculada = 0;
+	}
+	if ((contFrecCPAP > apneaTime * 1000) && (stateFrecCPAP != CPAP_INIT)) {
 		newStateMachine = AC_STATE;
 		newVentilationMode = 1; // A/C Ventilation Mode
 	}
@@ -1702,6 +1726,10 @@ void alarmsDetection() {
 		if (frecRespiratoriaCalculada > maxFR) {
 			flagAlarmFR_Alta = true;
 			alerFR_Alta = 1;
+		}
+		else if (frecRespiratoriaCalculada < minFR) {
+			flagAlarmFR_Alta = true;
+			alerFR_Alta = 2;
 		}
 		else {
 			flagAlarmFR_Alta = false;

@@ -77,7 +77,7 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);
 #define VENT_MENU		    3	// Ventilation menu selection
 #define SERVICE_MENU		4   
 
-#define ALE_PRES_PIP        17	// presion pico
+
 #define ALE_PRES_DES        5	// desconexion del paciente
 #define ALE_OBSTRUCCION     6	// fallo OBSTRUCCION
 #define BATTERY             7	// Bateria
@@ -90,6 +90,8 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);
 #define ALE_GENERAL			14 
 #define ALE_FR_ALTA			15
 #define ALE_VE_ALTO			16
+#define ALE_PRES_PIP        17	// presion pico
+#define ALE_APNEA			18
 
 #define MODE_CHANGE         19 // definicion para obligar al cambio entre StandBy y modo normal en el LCD
 
@@ -139,7 +141,7 @@ byte minFR_Ante = 0;
 byte minVE_Ante = 0;
 byte maxFR = 30;
 byte maxVE = 30;
-byte apneaTime = 10;
+byte apneaTime = 20;
 
 bool flagAlerta = false;
 bool flagBatteryAlert = false;
@@ -661,7 +663,6 @@ void encoderRoutine() {
 		else {
 			switch (menu) {
 			case CONFIG_MENU:
-			
 				if (flagFrecuencia) {
 					newFrecRespiratoria--;
 					if (newFrecRespiratoria < MIN_FREC) {
@@ -995,7 +996,7 @@ void lcd_show_comp() {
 	if (currentRelacionIE > 0) {
 		//relacion_IE = "1:" + String((float)currentRelacionIE / 10, 1);
 		relacion_IE = "1:" + String((float)currentRelacionIE / 10, 1);
-		calculatedRelacion_IE = "1:" + String((float)calculatedE / 10, 1);
+		calculatedRelacion_IE = "1:" + String((float)calculatedE / 10.0, 1);
 		I = 1;
 		E = (char)currentRelacionIE;
 	}
@@ -1030,7 +1031,7 @@ void lcd_show_comp() {
 			lcd.print(String(int(currentVE)));
 		}
 		lcd.setCursor(4, 2);
-		lcd.print(calculatedRelacion_IE);
+		lcd.print(calculatedRelacion_IE + " ");
 		lcd.setCursor(0, 3);
 		lcd.print("VT        PEEP      ");
 		lcd.setCursor(4, 3);
@@ -1190,7 +1191,7 @@ void lcd_show_part() {
 	String calculatedRelacion_IE;
 	if (newRelacionIE > 0) {
 		newRelacion_IE = "1:" + String((float)newRelacionIE / 10, 1);
-		calculatedRelacion_IE = "1:" + String((float)calculatedE / 10, 1);
+		calculatedRelacion_IE = "1:" + String((float)calculatedE / 10.0, 1);
 	}
 	else {
 		newRelacion_IE = String(-(float)newRelacionIE / 10, 1) + ":1";
@@ -1228,7 +1229,7 @@ void lcd_show_part() {
 		
 		if ((I != IAnte) || (calculatedE != EAnte)) {
 			lcd.setCursor(4, 2);
-			lcd.print(calculatedRelacion_IE);
+			lcd.print(calculatedRelacion_IE + " ");
 			IAnte = I;
 			EAnte = calculatedE;
 			// Serial.println("Changed IE");
@@ -1628,6 +1629,9 @@ void lcdPrintFirstLine() {
 	case ALE_VE_ALTO:
 		lcd.print("    Vol/min alto    ");
 		break;
+	case ALE_APNEA:
+		lcd.print("       Apnea        ");
+		break;
 	case CHECK_MENU:
 		lcd.print("Comprobacion Inicial");
 		break;
@@ -1981,8 +1985,16 @@ void alarmMonitoring(void) {
 			menuAlerta[7] = 0;
 		}
 
-		if ((alerFR_Alta == 1) && (stateMachine == AC_STATE)) {
+		if ((alerFR_Alta == 1) && ((stateMachine == AC_STATE) || (stateMachine == CPAP_STATE))) {
 			menuAlerta[6] = ALE_FR_ALTA;
+			flagAlerta = true;
+		}
+		else if((alerFR_Alta == 2)){
+			menuAlerta[6] = ALE_APNEA;
+			if (stateMachine != STANDBY_STATE) {
+				stateMachine = AC_STATE;
+			}
+			currentVentilationMode = 1;
 			flagAlerta = true;
 		}
 		else {

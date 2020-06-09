@@ -124,7 +124,6 @@
 #define AMP_FE_3_SITE      1.00        
 #define OFFS_FE_3_SITE     0.00    
 
-
 // Variables de control del protocolo
 #define RXD2 16
 #define TXD2 17
@@ -149,8 +148,9 @@
 #define COMP_DEL_F_MAX_CPAP            2  // variable para comparacion de flujo y entrar en modo Inspiratorio en CPAP
 #define COMP_DEL_F_MIN_CPAP           -2  // variable para comparacion de flujo y entrar en modo Inspiratorio en CPAP
 #define CPAP_NONE                      0  // Estado de inicializacion
-#define CPAP_INSPIRATION               1  // Entra en modo inspiratorio
-#define CPAP_ESPIRATION                2  // Entra en modo espiratorio
+#define CPAP_INIT                      1  // Estado de inicio de CPAP
+#define CPAP_INSPIRATION               2  // Entra en modo inspiratorio
+#define CPAP_ESPIRATION                3  // Entra en modo espiratorio
 
 
 //creo el manejador para el semaforo como variable global
@@ -263,7 +263,8 @@ int newTrigger = 2;
 int newPeepMax = 5;
 int maxFR = 30;
 int maxVE = 30;
-int apneaTime = 10;
+int apneaTime = 20;
+int minFR = 4;
 byte AC_stateMachine = 0;
 
 // variables para calibracion de sensores
@@ -395,6 +396,7 @@ volatile uint8_t flagInicio = true;
 volatile uint8_t flagTimerInterrupt = false;
 volatile uint8_t flagAdcInterrupt = false;
 volatile uint8_t flagAlarmPpico = false;
+uint8_t flagMaxPresion = false;
 volatile uint8_t flagAlarmGeneral = false;
 volatile uint8_t flagAlarmPatientDesconnection = false;
 volatile uint8_t flagAlarmObstruccion = false;
@@ -454,11 +456,11 @@ void init_GPIO() {
 	pinMode(2, OUTPUT);   // PIN 3   velocidad
 	pinMode(4, OUTPUT);   // PIN 6   velocidad
 	pinMode(5, OUTPUT);   // PIN 12  velocidad
-	pinMode(12, OUTPUT);      // PIN 3   velocidad
-	pinMode(13, OUTPUT);      // PIN 6   velocidad
-	pinMode(14, OUTPUT);      // PIN 12  velocidad
-	pinMode(15, OUTPUT);      // PIN 3   velocidad
-	pinMode(18, OUTPUT);      // PIN 6   velocidad
+	pinMode(12, OUTPUT);  // PIN 3   velocidad
+	pinMode(13, OUTPUT);  // PIN 6   velocidad
+	pinMode(14, OUTPUT);  // PIN 12  velocidad
+	pinMode(15, OUTPUT);  // PIN 3   velocidad
+	pinMode(18, OUTPUT);  // PIN 6   velocidad
 
 	// inicializacion de los pines controladores de las EV como salidas
 	pinMode(EV_INSPIRA, OUTPUT);  // PIN 3   velocidad
@@ -583,6 +585,7 @@ void task_Timer(void* arg) {
 					break;
 				case PCMV_STATE:		// Modo Controlado por presion
 					cycling();
+					
 					// Write the EEPROM each 10 minutes
 					contEscrituraEEPROM++;
 					if (contEscrituraEEPROM > 3600000) {
@@ -760,7 +763,14 @@ void task_Adc(void* arg) {
 					SPpac1 = SPpac;
 					dPpac = SPpac1 - SPpac0;
 					//Serial.println(String(SPpac) + ';' + String(10*dPpac));
-					if ((newVentilationMode == 1) && (currentStateMachineCycling == EXPIRATION_CYCLING) &&
+					if (currentStateMachineCycling == INSPIRATION_CYCLING) {
+						if (SPpac > maxPresion && flagAlarmPpico == false) {
+							flagAlarmPpico = true;
+							flagMaxPresion = true;
+							alerPresionPIP = 1;
+						}
+					}
+					else if ((newVentilationMode == 1) && (currentStateMachineCycling == EXPIRATION_CYCLING) &&
 						(contCycling >= int(inspirationTime * 1000 + expirationTime * 100))) {
 						switch (AC_stateMachine) {
 						case 0:
@@ -1127,23 +1137,34 @@ void standbyRoutine() {
 
 // Cycling of the Mechanical Ventilator
 void cycling() {
+	
 	contCycling++;  // contador que incrementa cada ms en la funcion de ciclado
-
-	 // Maquina de estados del ciclado
+	// Maquina de estados del ciclado
 	switch (currentStateMachineCycling) {
 	case STOP_CYCLING:
 		break;
 	case START_CYCLING:
-		if (contCycling >= 1) {        // Inicia el ciclado abriendo electrovalvula de entrada y cerrando electrovalvula de salida
-			BandInsp = 1;// Activa bandera que indica que empezo la inspiracion
-			digitalWrite(EV_INSPIRA, LOW);//Piloto conectado a ambiente -> Desbloquea valvula piloteada y permite el paso de aire
-			digitalWrite(EV_ESPIRA, HIGH);//Piloto conectado a PIP -> Limita la presion de la via aerea a la PIP configurada
-			digitalWrite(EV_ESC_CAM, HIGH);//Piloto conectado a Presion de activacion -> Presiona la camara
+		if (contCycling >= 1) {				// Inicia el ciclado abriendo electrovalvula de entrada y cerrando electrovalvula de salida
+			BandInsp = 1;					// Activa bandera que indica que empezo la inspiracion
+			digitalWrite(EV_INSPIRA, LOW);	// Piloto conectado a ambiente -> Desbloquea valvula piloteada y permite el paso de aire
+			digitalWrite(EV_ESPIRA, HIGH);	//Piloto conectado a PIP -> Limita la presion de la via aerea a la PIP configurada
+			digitalWrite(EV_ESC_CAM, HIGH);	//Piloto conectado a Presion de activacion -> Presiona la camara
 			currentStateMachineCycling = INSPIRATION_CYCLING;
 		}
 		break;
 	case INSPIRATION_CYCLING:
-		if (contCycling >= int(inspirationTime * 1000)) {
+		//if (flagAlarmPpico == true) {
+		//	flagAlarmPpico == false;
+		//	Serial.println("Entre");
+		//	//	alerPresionPIP = 0;
+		//		digitalWrite(EV_INSPIRA, HIGH);//Piloto conectado a presion de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
+		//		digitalWrite(EV_ESC_CAM, LOW);//Piloto conectado a PEEP -> Limita la presion de la via aerea a la PEEP configurada
+		//		digitalWrite(EV_ESPIRA, LOW);//Piloto conectado a ambiente -> Despresuriza la camara y permite el llenado de la bolsa
+		//	currentStateMachineCycling = EXPIRATION_CYCLING;
+		//	//contCycling = int(inspirationTime * 1000);
+		//}
+		if (contCycling >= int(inspirationTime * 1000) || flagMaxPresion == true) {
+			flagMaxPresion = false;
 			//Calculo PIP
 			if (Ppico < 0) {// Si el valor de Ppico es negativo
 				Ppico = 0;// Lo limita a 0
@@ -1268,14 +1289,17 @@ void cycling() {
 
 			currentVE = (int)((VT * frecRespiratoriaCalculada) / 1000.0);  // calculo de la ventilacion minuto
 
-			alarmsDetection();  // se ejecuta la rutina de deteccion de alarmas
-			currentStateMachineCycling = START_CYCLING;
-			AC_stateMachine = 0;
-
 			if (newStateMachine != currentStateMachine) {
 				currentStateMachine = newStateMachine;
 				PeepEstable = 0;
 			}
+
+			alarmsDetection();  // se ejecuta la rutina de deteccion de alarmas
+			flagAlarmPpico = false;
+			alerPresionPIP = 0;
+
+			currentStateMachineCycling = START_CYCLING;
+			AC_stateMachine = 0;
 		}
 
 		// Add to C-PMV mode
@@ -1360,6 +1384,8 @@ void cycling() {
 			currentVE = (int)((VT * frecRespiratoriaCalculada) / 1000.0);  // calculo de la ventilacion minuto
 
 			alarmsDetection();  // se ejecuta la rutina de deteccion de alarmas
+			flagAlarmPpico = false;
+			alerPresionPIP = 0;
 			currentStateMachineCycling = START_CYCLING;
 
 			if (newStateMachine != currentStateMachine) {
@@ -1382,7 +1408,6 @@ void cycling() {
 					inspirationTime = (float)((float)currentI / 10.0) * (float)expirationTime;
 				}
 			}
-
 		}
 		break;
 	default:
@@ -1416,6 +1441,7 @@ void cpapRoutine() {
 	if (newStateMachine != currentStateMachine) {
 		currentStateMachine = newStateMachine;
 		PeepEstable = 0;
+		stateFrecCPAP = CPAP_INIT;
 	}
 	contCycling = 0;
 	digitalWrite(EV_INSPIRA, LOW);  //Piloto conectado a presion de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
@@ -1513,6 +1539,22 @@ void cpapRoutine() {
 
 	// Maquina de estados para identificar la Inspiracion y la espiracion
 	switch (stateFrecCPAP) {
+		// Inicio de CPAP
+	case CPAP_INIT:
+		frecRespiratoriaCalculada = 0;
+		VT = 0;
+		VtidalV = 0;
+		VtidalC = 0;
+		calculatedE = 0;
+		calculatedI = 0;
+		
+		PeepProximal = SPpac;
+		PeepDistal = SPout;
+		/* *******************************************************************
+		  * *** Aqui se debe verificar cual es el valor de Peep a utlizar *****
+		  * *******************************************************************/
+		Peep = PeepProximal;// Peep como la presion en la via aerea al final de la espiracion
+		break;
 		// Ciclo Inspiratorio
 	case CPAP_INSPIRATION:
 		contFrecCPAP++;  // Se incrementan los contadore para el calculo de frecuencia y relacion IE
@@ -1527,7 +1569,12 @@ void cpapRoutine() {
 		break;
 	}
 
-	if (contCycling > apneaTime * 1000) {
+	if ((contFrecCPAP > ((apneaTime * 1000) - 5000)) && (stateFrecCPAP != CPAP_INIT)) {
+		flagAlarmFR_Alta = true;
+		alerFR_Alta = 2;
+		frecRespiratoriaCalculada = 0;
+	}
+	if ((contFrecCPAP > apneaTime * 1000) && (stateFrecCPAP != CPAP_INIT)) {
 		newStateMachine = AC_STATE;
 		newVentilationMode = 1; // A/C Ventilation Mode
 	}
@@ -1633,14 +1680,15 @@ void alarmsDetection() {
 	// Ppico Alarm
 	if (flagInicio == false) { //Si hay habilitacion de alarmas
 	  // Alarma por Ppico elevada
-		if (Ppico > maxPresion) {
+		/*if (Ppico > maxPresion) {
 			flagAlarmPpico = true;
 			alerPresionPIP = 1;
 		}
-		else {
+		else {*/
+		/*if (Ppico < maxPresion){
 			flagAlarmPpico = false;
 			alerPresionPIP = 0;
-		}
+		}*/
 		// Fallo general
 		if ((Pin_max) < 6) {
 			flagAlarmGeneral = true;
@@ -1678,6 +1726,10 @@ void alarmsDetection() {
 		if (frecRespiratoriaCalculada > maxFR) {
 			flagAlarmFR_Alta = true;
 			alerFR_Alta = 1;
+		}
+		else if (frecRespiratoriaCalculada < minFR) {
+			flagAlarmFR_Alta = true;
+			alerFR_Alta = 2;
 		}
 		else {
 			flagAlarmFR_Alta = false;

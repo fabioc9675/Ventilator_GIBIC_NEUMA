@@ -1,7 +1,7 @@
 /*
   Name:		configurationUnit.ino
   Created:	4/3/2020 11:40:24
-  Author:	Helber Carvajal
+  Author:	GIBIC UdeA
 */
 
 #include <nvs_flash.h>
@@ -116,7 +116,7 @@ unsigned int contStability = 0;
 unsigned int contBattery5min = 0;
 unsigned int fl_StateEncoder = 0;
 
-bool flagStandbyInterrupt = false;
+bool flagStandbyInterrupt = true;   // inicia en modo standby
 unsigned int contStandby = 0;
 
 // variables de menu
@@ -910,7 +910,7 @@ void silenceInterruptAttention() {
 void standbyInterruptAttention() {
 	if (flagStandbyInterrupt) {
 		contStandby++;
-		Serial.println(digitalRead(STANDBY));
+		// Serial.println(digitalRead(STANDBY));
 		if (stateMachine == STANDBY_STATE && contStandby > 500 && digitalRead(STANDBY) == 0) {
 			portENTER_CRITICAL(&mux);
 			attachInterrupt(digitalPinToInterrupt(STANDBY), standbyButtonInterrupt, FALLING);
@@ -955,9 +955,9 @@ void standbyInterruptAttention() {
 			sendSerialData();
 
 		} else if (stateMachine != STANDBY_STATE){
-			Serial.println(digitalRead(STANDBY));
+			// Serial.println(digitalRead(STANDBY));
 			if (contStandby < 3000 && digitalRead(STANDBY) == 1) {
-				Serial.println("Standby Interrupt");
+				// Serial.println("Standby Interrupt");
 				contStandby = 0;
 				portENTER_CRITICAL_ISR(&mux);
 				attachInterrupt(digitalPinToInterrupt(STANDBY), standbyButtonInterrupt, FALLING);

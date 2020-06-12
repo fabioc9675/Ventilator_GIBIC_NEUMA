@@ -1,7 +1,7 @@
 /*
   Name:     controlUnit.ino
   Created:  6/5/2020 11:40:24
-  Author:   Helber Carvajal
+  Author:   GIBIC UdeA
 */
 
 #include <Arduino.h>

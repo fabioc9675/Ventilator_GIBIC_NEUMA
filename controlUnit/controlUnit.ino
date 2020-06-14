@@ -55,12 +55,12 @@
 #endif
 
 // Calibracion de los sensores de presion - coeficientes regresion lineal
-#define AMP1          0.027692
-#define OFFS1         -22.4863
-#define AMP2          0.027692
-#define OFFS2         -22.4863
-#define AMP3          0.027961
-#define OFFS3         -20.4197
+#define AMP_CAM_1          0.027692
+#define OFFS_CAM_1         -22.4863
+#define AMP_BAG_2          0.027692
+#define OFFS_BAG_2         -22.4863
+#define AMP_PAC_3          0.027961
+#define OFFS_PAC_3         -20.4197
 
 // Calibracion de los sensores de flujo - coeficientes regresion lineal
 // Sensor de flujo Inspiratorio
@@ -96,12 +96,12 @@
 // **********************************************************
 // Calibracion sensores Sitio
 // Calibracion de los sensores de presion - coeficientes regresion lineal
-#define AMP1_SITE          1.00
-#define OFFS1_SITE         0.00
-#define AMP2_SITE          1.00
-#define OFFS2_SITE         0.00
-#define AMP3_SITE          1.00
-#define OFFS3_SITE         0.00
+#define AMP_CAM_1_SITE          1.00
+#define OFFS_CAM_1_SITE         0.00
+#define AMP_BAG_2_SITE          1.00
+#define OFFS_BAG_2_SITE         0.00
+#define AMP_PAC_3_SITE          1.00
+#define OFFS_PAC_3_SITE         0.00
 
 // Calibracion de los sensores de flujo - coeficientes regresion lineal
 // Sensor de flujo Inspiratorio
@@ -699,9 +699,9 @@ void task_Adc(void* arg) {
 					CalPout = SPoutADC;
 
 					//- Conversion ADC-Presion de fabrica
-					SPinFACTORY = AMP1 * float(SPinADC) + OFFS1;
-					SPoutFACTORY = AMP2 * float(SPoutADC) + OFFS2;
-					SPpacFACTORY = AMP3 * float(SPpacADC) + OFFS3;// Presion de la via aerea
+					SPinFACTORY = AMP_CAM_1 * float(SPinADC) + OFFS_CAM_1;
+					SPoutFACTORY = AMP_BAG_2 * float(SPoutADC) + OFFS_BAG_2;
+					SPpacFACTORY = AMP_PAC_3 * float(SPpacADC) + OFFS_PAC_3;// Presion de la via aerea
 
 					// Conversion ADC Flujo Inspiratorio de fabrica, ajuste por tramos para linealizacion
 					if (SFinADC <= LIM_FI_1) {
@@ -728,9 +728,9 @@ void task_Adc(void* arg) {
 					// *********************************************************
 					// Conversion de valores de fabrica a valores de sitio 
 					//- Conversion ADC-Presion de fabrica
-					SPin = AMP1_SITE * float(SPinFACTORY) + OFFS1_SITE;
-					SPout = AMP2_SITE * float(SPoutFACTORY) + OFFS2_SITE;
-					SPpac = AMP3_SITE * float(SPpacFACTORY) + OFFS3_SITE;// Presion de la via aerea
+					SPin = AMP_CAM_1_SITE * float(SPinFACTORY) + OFFS_CAM_1_SITE;
+					SPout = AMP_BAG_2_SITE * float(SPoutFACTORY) + OFFS_BAG_2_SITE;
+					SPpac = AMP_PAC_3_SITE * float(SPpacFACTORY) + OFFS_PAC_3_SITE;// Presion de la via aerea
 
 					// Conversion ADC Flujo Inspiratorio de fabrica, ajuste por tramos para linealizacion
 					if (SFinADC <= LIM_FI_1_SITE) {

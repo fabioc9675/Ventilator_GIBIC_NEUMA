@@ -18,6 +18,8 @@
 #define SERIAL_DEVICE "1NEUMA0001"
 #define SERIAL_LENGTH 10
 
+String SerialID;
+
 /* **********************************************************************
  * **** VARIABLES DE CALIBRACION ****************************************
  * **********************************************************************/
@@ -151,8 +153,11 @@ enum eeprom_values
 
 };
 
+String dataCoeficients;
+
 // bandera de activacion de timer
 uint8_t flagTimerInterrupt = false;
+uint8_t flagService = false;
 
 //creo el manejador para el semaforo como variable global
 SemaphoreHandle_t xSemaphoreTimer = NULL;
@@ -175,37 +180,124 @@ void IRAM_ATTR onTimer(void); // funcion de interrupcion
 void init_Memory(void)
 {
     EEPROM.begin(512);
+
+    // Carga del Serial del equipo
+    SerialID = readString(eeprom_values::SERIAL_ADDR);
+    // Calibracion de los sensores de presion - coeficientes regresion lineal
+    AMP_CAM_1 = readFloat(eeprom_values::AMP_CAM_1_ADDR);
+    AMP_BAG_2 = readFloat(eeprom_values::AMP_BAG_2_ADDR);
+    AMP_PAC_3 = readFloat(eeprom_values::AMP_PAC_3_ADDR);
+    OFFS_CAM_1 = readFloat(eeprom_values::OFFS_CAM_1_ADDR);
+    OFFS_BAG_2 = readFloat(eeprom_values::OFFS_BAG_2_ADDR);
+    OFFS_PAC_3 = readFloat(eeprom_values::OFFS_PAC_3_ADDR);
+    // Calibracion de los sensores de flujo - coeficientes regresion lineal
+    // Sensor de flujo Inspiratorio
+    AMP_FI_1 = readFloat(eeprom_values::AMP_FI_1_ADDR);
+    AMP_FI_2 = readFloat(eeprom_values::AMP_FI_2_ADDR);
+    AMP_FI_3 = readFloat(eeprom_values::AMP_FI_3_ADDR);
+    OFFS_FI_1 = readFloat(eeprom_values::OFFS_FI_1_ADDR);
+    OFFS_FI_2 = readFloat(eeprom_values::OFFS_FI_2_ADDR);
+    OFFS_FI_3 = readFloat(eeprom_values::OFFS_FI_3_ADDR);
+    LIM_FI_1 = readFloat(eeprom_values::LIM_FI_1_ADDR);
+    LIM_FI_2 = readFloat(eeprom_values::LIM_FI_2_ADDR);
+    // Sensor de flujo Espiratorio
+    AMP_FE_1 = readFloat(eeprom_values::AMP_FE_1_ADDR);
+    AMP_FE_2 = readFloat(eeprom_values::AMP_FE_2_ADDR);
+    AMP_FE_3 = readFloat(eeprom_values::AMP_FE_3_ADDR);
+    OFFS_FE_1 = readFloat(eeprom_values::OFFS_FE_1_ADDR);
+    OFFS_FE_2 = readFloat(eeprom_values::OFFS_FE_2_ADDR);
+    OFFS_FE_3 = readFloat(eeprom_values::OFFS_FE_3_ADDR);
+    LIM_FE_1 = readFloat(eeprom_values::LIM_FE_1_ADDR);
+    LIM_FE_2 = readFloat(eeprom_values::LIM_FE_2_ADDR);
+    // variable para ajustar el nivel cero de flujo y calcular el volumen
+    VOL_SCALE = readFloat(eeprom_values::VOL_SCALE_ADDR); // Factor de escala para ajustar el volumen
+
+    // Calibracion sensores Sitio
+    AMP_CAM_1_SITE = readFloat(eeprom_values::AMP_CAM_1_SITE_ADDR);
+    AMP_BAG_2_SITE = readFloat(eeprom_values::AMP_BAG_2_SITE_ADDR);
+    AMP_PAC_3_SITE = readFloat(eeprom_values::AMP_PAC_3_SITE_ADDR);
+    OFFS_CAM_1_SITE = readFloat(eeprom_values::OFFS_CAM_1_SITE_ADDR);
+    OFFS_BAG_2_SITE = readFloat(eeprom_values::OFFS_BAG_2_SITE_ADDR);
+    OFFS_PAC_3_SITE = readFloat(eeprom_values::OFFS_PAC_3_SITE_ADDR);
+    // Calibracion de los sensores de flujo - coeficientes regresion lineal
+    // Sensor de flujo Inspiratorio
+    AMP_FI_1_SITE = readFloat(eeprom_values::AMP_FI_1_SITE_ADDR);
+    AMP_FI_2_SITE = readFloat(eeprom_values::AMP_FI_2_SITE_ADDR);
+    AMP_FI_3_SITE = readFloat(eeprom_values::AMP_FI_3_SITE_ADDR);
+    OFFS_FI_1_SITE = readFloat(eeprom_values::OFFS_FI_1_SITE_ADDR);
+    OFFS_FI_2_SITE = readFloat(eeprom_values::OFFS_FI_2_SITE_ADDR);
+    OFFS_FI_3_SITE = readFloat(eeprom_values::OFFS_FI_3_SITE_ADDR);
+    LIM_FI_1_SITE = readFloat(eeprom_values::LIM_FI_1_SITE_ADDR);
+    LIM_FI_2_SITE = readFloat(eeprom_values::LIM_FI_2_SITE_ADDR);
+    // Sensor de flujo Espiratorio
+    AMP_FE_1_SITE = readFloat(eeprom_values::AMP_FE_1_SITE_ADDR);
+    AMP_FE_2_SITE = readFloat(eeprom_values::AMP_FE_2_SITE_ADDR);
+    AMP_FE_3_SITE = readFloat(eeprom_values::AMP_FE_3_SITE_ADDR);
+    OFFS_FE_1_SITE = readFloat(eeprom_values::OFFS_FE_1_SITE_ADDR);
+    OFFS_FE_2_SITE = readFloat(eeprom_values::OFFS_FE_2_SITE_ADDR);
+    OFFS_FE_3_SITE = readFloat(eeprom_values::OFFS_FE_3_SITE_ADDR);
+    LIM_FE_1_SITE = readFloat(eeprom_values::LIM_FE_1_SITE_ADDR);
+    LIM_FE_2_SITE = readFloat(eeprom_values::LIM_FE_2_SITE_ADDR);
 }
 
-
 // funcion para escribir Strings en la memoria EEPROM
-void writeString(char add, String data)
+void writeString(eeprom_values eeAddress, String dataStr)
 {
-    int _size = data.length();
+    int _size = dataStr.length();
     for (int i = 0; i < _size; i++)
     {
-        EEPROM.write(add + i, data[i]);
+        EEPROM.write(eeAddress + i, dataStr[i]);
     }
-    EEPROM.write(add + _size, '\0'); // add termination NULL
+    EEPROM.write(eeAddress + _size, '\0'); // add termination NULL
     EEPROM.commit();
 }
 
 // funcion para leer Strings en la memoria EEPROM
-String readString(char add)
+String readString(eeprom_values eeAddress)
 {
     int i = 0;
-    char data[100];
+    char dataStr[100];
     int len = 0;
     unsigned char k;
-    k = EEPROM.read(add);
+    k = EEPROM.read(eeAddress);
     while (k != '\0' && len < 500)
     {
-        k = EEPROM.read(add + len);
-        data[len] = k;
+        k = EEPROM.read(eeAddress + len);
+        dataStr[len] = k;
         len++;
     }
-    data[len] = '\0';
-    return String(data);
+    dataStr[len] = '\0';
+    return String(dataStr);
+}
+
+// funcion para obtener valores flotantes de la EEPROM
+float readFloat(eeprom_values eeAddress)
+{
+    float varValue = 0;
+    EEPROM.get(eeAddress, varValue);
+    return varValue;
+}
+
+// funcion para escribir valores flotantes de la EEPROM
+float writeFloat(eeprom_values eeAddress, float varValue)
+{
+    float recoverValue = 0;
+    EEPROM.put(eeAddress, varValue);
+    EEPROM.commit();
+    EEPROM.get(eeAddress, recoverValue);
+    return recoverValue;
+}
+
+/* ***************************************************************************
+ * **** CONFIGURACION TIMER **************************************************
+ * ***************************************************************************/
+// Interrupcion por timer
+void IRAM_ATTR onTimer(void)
+{
+    portENTER_CRITICAL_ISR(&timerMux);
+    flagTimerInterrupt = true;                    // asignacion de banderas para atencion de interrupcion
+    xSemaphoreGiveFromISR(xSemaphoreTimer, NULL); // asignacion y liberacion de semaforos
+    portEXIT_CRITICAL_ISR(&timerMux);
 }
 
 void init_TIMER()
@@ -215,18 +307,6 @@ void init_TIMER()
     timerAttachInterrupt(timer, &onTimer, true); // Attach onTimer function to our timer
     timerAlarmWrite(timer, 1000, true);          // Interrupcion cada 1000 conteos del timer, es decir 100 Hz
     timerAlarmEnable(timer);                     // Habilita interrupcion por timer
-}
-
-/* *********************************************************************
- * **** FUNCIONES DE ATENCION A INTERRUPCION ***************************
- * *********************************************************************/
-// Interrupcion por timer
-void IRAM_ATTR onTimer(void)
-{
-    portENTER_CRITICAL_ISR(&timerMux);
-    flagTimerInterrupt = true;                    // asignacion de banderas para atencion de interrupcion
-    xSemaphoreGiveFromISR(xSemaphoreTimer, NULL); // asignacion y liberacion de semaforos
-    portEXIT_CRITICAL_ISR(&timerMux);
 }
 
 /************************************************************
@@ -255,7 +335,25 @@ void task_Timer(void *arg)
                 if (counterMs == 1000)
                 {
                     counterMs = 0;
-                    Serial.println("Segundo");
+
+                    digitalWrite(2,!digitalRead(2));
+                    
+                    dataCoeficients = SerialID + ',' + String(AMP_CAM_1, 5) + ',' + String(OFFS_CAM_1, 5) + ',' + String(AMP_BAG_2, 5) +
+                                      ',' + String(OFFS_BAG_2, 5) + ',' + String(AMP_PAC_3, 5) + ',' + String(OFFS_PAC_3, 5) + ',' + String(AMP_FI_1, 5) +
+                                      ',' + String(OFFS_FI_1, 5) + ',' + String(LIM_FI_1, 5) + ',' + String(AMP_FI_2, 5) + ',' + String(OFFS_FI_2, 5) +
+                                      ',' + String(LIM_FI_2, 5) + ',' + String(AMP_FI_3, 5) + ',' + String(OFFS_FI_3, 5) + ',' + String(AMP_FE_1, 5) +
+                                      ',' + String(OFFS_FE_1, 5) + ',' + String(LIM_FE_1, 5) + ',' + String(AMP_FE_2, 5) + ',' + String(OFFS_FE_2, 5) +
+                                      ',' + String(LIM_FE_2, 5) + ',' + String(AMP_FE_3, 5) + ',' + String(OFFS_FE_3, 5) + ',' + String(VOL_SCALE, 5) +
+                                      ',' + String(AMP_CAM_1_SITE, 5) + ',' + String(OFFS_CAM_1_SITE, 5) + ',' + String(AMP_BAG_2_SITE, 5) +
+                                      ',' + String(OFFS_BAG_2_SITE, 5) + ',' + String(AMP_PAC_3_SITE, 5) + ',' + String(OFFS_PAC_3_SITE, 5) +
+                                      ',' + String(AMP_FI_1_SITE, 5) + ',' + String(OFFS_FI_1_SITE, 5) + ',' + String(LIM_FI_1_SITE, 5) +
+                                      ',' + String(AMP_FI_2_SITE, 5) + ',' + String(OFFS_FI_2_SITE, 5) + ',' + String(LIM_FI_2_SITE, 5) +
+                                      ',' + String(AMP_FI_3_SITE, 5) + ',' + String(OFFS_FI_3_SITE, 5) + ',' + String(AMP_FE_1_SITE, 5) +
+                                      ',' + String(OFFS_FE_1_SITE, 5) + ',' + String(LIM_FE_1_SITE, 5) + ',' + String(AMP_FE_2_SITE, 5) +
+                                      ',' + String(OFFS_FE_2_SITE, 5) + ',' + String(LIM_FE_2_SITE, 5) + ',' + String(AMP_FE_3_SITE, 5) +
+                                      ',' + String(OFFS_FE_3_SITE, 5);
+
+                    Serial.println(dataCoeficients);
                 }
             }
         }
@@ -263,7 +361,26 @@ void task_Timer(void *arg)
     vTaskDelete(NULL);
 }
 
-/* ***************************************************************************
+
+/* **************************************************************************
+ * **** TAREA PARA LA CALIBRACION Y MENU DE USUARIO *************************
+ * **************************************************************************/
+void task_Service(void* arg) {
+
+    while(1) {
+
+        if (flagService == true){
+            Serial.println("Estoy en servicio");
+        }
+
+        vTaskDelay(250/portTICK_PERIOD_MS);
+    }
+    vTaskDelete(NULL);
+}
+
+
+/* *********************
+******************************************************
  * **** CONFIGURACION ********************************************************
  * ***************************************************************************/
 void setup()
@@ -271,28 +388,23 @@ void setup()
     init_Memory();
     init_TIMER();
 
+    pinMode(2,OUTPUT); // para prueba de retardos en la ejecucion de tareas
+
+
     // se crea el semaforo binario
-	xSemaphoreTimer = xSemaphoreCreateBinary();
+    xSemaphoreTimer = xSemaphoreCreateBinary();
 
     Serial.begin(115200);
 
-    String receiveData;
 
-    Serial.print("Data to write = ");
-    Serial.println(SERIAL_DEVICE);
-    // writeString(10, SERIAL_DEVICE);
-    delay(500);
-    receiveData = readString(10);
-    Serial.print("Data read = ");
-    Serial.println(receiveData);
+    flagService = true;
 
-    
+
     // nvs_flash_init();
-
-    
 
     // creo la tarea task_pulsador
     xTaskCreatePinnedToCore(task_Timer, "task_Timer", 2048, NULL, 4, NULL, taskCoreOne);
+    xTaskCreatePinnedToCore(task_Service, "task_Service", 2048, NULL, 1, NULL, taskCoreOne);
     // xTaskCreatePinnedToCore(task_Encoder_B, "task_Encoder_B", 10000, NULL, 1, NULL, taskCoreZero);
 
     // Clean Serial buffers

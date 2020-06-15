@@ -3,6 +3,9 @@
         {
             "name": "Win32",
             "includePath": [
+                "C:\\Users\\ASUS\\Documents\\Arduino\\hardware\\espressif\\esp32\\**",
+                "C:\\Users\\ASUS\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\**",
+                "C:\\Users\\ASUS\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.7.1\\**",
                 "C:\\Users\\ASUS\\AppData\\Local\\Arduino15\\packages\\esp32\\tools\\**",
                 "C:\\Users\\ASUS\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\1.0.4\\**"
             ],

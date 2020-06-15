@@ -543,6 +543,7 @@ void init_MEMORY() {
 	lVoluSup = String("");
 	lVoluInf = String("");
 
+	RaspberryChain.reserve(512);
 	RaspberryChain = String("");
 
 }

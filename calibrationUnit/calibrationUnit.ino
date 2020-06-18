@@ -20,14 +20,15 @@
 
 // definiciones para menu principal de servicio
 #define SERV_NULL_MENU 0
-#define SERV_MAIN_MENU 1 // estado de menu de inicio
-#define SERV_WAIT_MAIN 2 // estado de espera de seleccion de opcion
-#define SERV_FACT_CALI 4 // estado de menu de calibracion de fabrica
-#define SERV_WAIT_FACT 5 // estado de espera en el menu de seleccion
-#define SERV_FAIN_CALI 6 // estado de menu de calibracion de fabrica por variables
-#define SERV_WAIT_FAIN 7 // estado de espera en el menu de seleccion por variables
-#define SERV_ACQI_DATA 8 // estado de adquisicion de datos
-#define SERV_SERIAL_CH 9 // estado de cambio de serial
+#define SERV_MAIN_MENU 1  // estado de menu de inicio
+#define SERV_WAIT_MAIN 2  // estado de espera de seleccion de opcion
+#define SERV_FACT_CALI 4  // estado de menu de calibracion de fabrica
+#define SERV_WAIT_FACT 5  // estado de espera en el menu de seleccion
+#define SERV_FAIN_CALI 6  // estado de menu de calibracion de fabrica por variables
+#define SERV_WAIT_FAIN 7  // estado de espera en el menu de seleccion por variables
+#define SERV_ACQI_DATA 8  // estado de adquisicion de datos
+#define SERV_SERIAL_CH 9  // estado de cambio de serial
+#define SERV_FLOW_PRIN 10 // estado de impresion de datos de flujo
 
 #define MAX_MAIN_MENU 5  // cantidad de opciones en menu principal
 #define MAX_FACT_MENU 10 // cantidad de opciones en menu de calibracion de fabrica
@@ -186,9 +187,11 @@ String dataCoeficients;
 // bandera de activacion de timer
 uint8_t flagTimerInterrupt = false;
 uint8_t flagService = false;
+uint8_t flagFlowPrintCalibration = false;
 
 //creo el manejador para el semaforo como variable global
 SemaphoreHandle_t xSemaphoreTimer = NULL;
+SemaphoreHandle_t xSemaphoreRaspberry = NULL;
 
 // definicion de los core para ejecucion
 static uint8_t taskCoreZero = 0;
@@ -366,31 +369,16 @@ void task_Timer(void *arg)
 				 * **** SECUENCIA DE FUNCIONAMIENTO, ESTADOS DEL VENTILADOR ****
 				 * *************************************************************/
                 counterMs++;
+                if (counterMs % 50 == 0)
+                {
+                    xSemaphoreGive(xSemaphoreRaspberry); // asignacion y liberacion de semaforos
+                }
+
                 if (counterMs == 1000)
                 {
                     counterMs = 0;
 
                     digitalWrite(2, !digitalRead(2));
-
-                    dataCoeficients = SerialID + ',' + String(AMP_CAM_1, 5) + ',' + String(OFFS_CAM_1, 5) + ',' + String(AMP_BAG_2, 5) +
-                                      ',' + String(OFFS_BAG_2, 5) + ',' + String(AMP_PAC_3, 5) + ',' + String(OFFS_PAC_3, 5) + ',' + String(AMP_FI_1, 5) +
-                                      ',' + String(OFFS_FI_1, 5) + ',' + String(LIM_FI_1, 5) + ',' + String(AMP_FI_2, 5) + ',' + String(OFFS_FI_2, 5) +
-                                      ',' + String(LIM_FI_2, 5) + ',' + String(AMP_FI_3, 5) + ',' + String(OFFS_FI_3, 5) + ',' + String(AMP_FE_1, 5) +
-                                      ',' + String(OFFS_FE_1, 5) + ',' + String(LIM_FE_1, 5) + ',' + String(AMP_FE_2, 5) + ',' + String(OFFS_FE_2, 5) +
-                                      ',' + String(LIM_FE_2, 5) + ',' + String(AMP_FE_3, 5) + ',' + String(OFFS_FE_3, 5) + ',' + String(VOL_SCALE, 5) +
-                                      ',' + String(AMP_CAM_1_SITE, 5) + ',' + String(OFFS_CAM_1_SITE, 5) + ',' + String(AMP_BAG_2_SITE, 5) +
-                                      ',' + String(OFFS_BAG_2_SITE, 5) + ',' + String(AMP_PAC_3_SITE, 5) + ',' + String(OFFS_PAC_3_SITE, 5) +
-                                      ',' + String(AMP_FI_1_SITE, 5) + ',' + String(OFFS_FI_1_SITE, 5) + ',' + String(LIM_FI_1_SITE, 5) +
-                                      ',' + String(AMP_FI_2_SITE, 5) + ',' + String(OFFS_FI_2_SITE, 5) + ',' + String(LIM_FI_2_SITE, 5) +
-                                      ',' + String(AMP_FI_3_SITE, 5) + ',' + String(OFFS_FI_3_SITE, 5) + ',' + String(AMP_FE_1_SITE, 5) +
-                                      ',' + String(OFFS_FE_1_SITE, 5) + ',' + String(LIM_FE_1_SITE, 5) + ',' + String(AMP_FE_2_SITE, 5) +
-                                      ',' + String(OFFS_FE_2_SITE, 5) + ',' + String(LIM_FE_2_SITE, 5) + ',' + String(AMP_FE_3_SITE, 5) +
-                                      ',' + String(OFFS_FE_3_SITE, 5);
-
-                    if (flagService == false)
-                    {
-                        Serial.println(dataCoeficients);
-                    }
                 }
             }
         }
@@ -463,7 +451,7 @@ void printInternalFactoryMenu(int mode)
     if (mode == FLUJO_INSPIRATORIO)
     {
         menuString = "\n\n************ FLUJO INSPIRATORIO ************\n"
-                     "1. Imprimir datos 20 Hz.\n"
+                     "1. Imprimir datos 20 Hz. (q+ENTER para salir)\n"
                      "*Curva de ajuste  N 1 \n2. Amplitud.\n3. Offset.\n4. Limite.\n"
                      "*Curva de ajuste  N 2 \n5. Amplitud.\n6. Offset.\n7. Limite.\n"
                      "*Curva de ajuste  N 3 \n8. Amplitud.\n9. Offset.\n"
@@ -474,7 +462,7 @@ void printInternalFactoryMenu(int mode)
     if (mode == FLUJO_ESPIRATORIO)
     {
         menuString = "\n\n************ FLUJO ESPIRATORIO ************\n"
-                     "1. Imprimir datos 20 Hz.\n"
+                     "1. Imprimir datos 20 Hz. (q+ENTER para salir)\n"
                      "*Curva de ajuste  N 1 \n2. Amplitud.\n3. Offset.\n4. Limite.\n"
                      "*Curva de ajuste  N 2 \n5. Amplitud.\n6. Offset.\n7. Limite.\n"
                      "*Curva de ajuste  N 3 \n8. Amplitud.\n9. Offset.\n"
@@ -602,6 +590,12 @@ void factoryInternalMenuOptionChange(int selMenu)
         switch (selMenu)
         {
         case 1: // seleccion del menu 1
+            if ((modeCalibration == FLUJO_INSPIRATORIO) || (modeCalibration == FLUJO_ESPIRATORIO))
+            {
+                flagFlowPrintCalibration = true;
+                servMenuStateNew = SERV_FLOW_PRIN;
+                servMenuStateCurrent = servMenuStateNew;
+            }
             /* code */
             break;
         case 2: // seleccion del menu 2
@@ -746,6 +740,18 @@ void task_Receive(void *pvParameters)
                     Serial.println(selMenu);
                     factoryInternalMenuOptionChange(selMenu);
                     break;
+                case SERV_FLOW_PRIN:
+                    if (menuEntrance[0] == 'q')
+                    {
+                        if ((modeCalibration == FLUJO_INSPIRATORIO) || (modeCalibration == FLUJO_ESPIRATORIO))
+                        {
+                            flagFlowPrintCalibration = false;
+                            servMenuStateNew = SERV_FAIN_CALI;
+                            servMenuStateCurrent = servMenuStateNew;
+                            printInternalFactoryMenu(modeCalibration);
+                        }
+                    }
+                    break;
                 case SERV_ACQI_DATA:
                     if (flagFirstPrint == false)
                     {
@@ -834,6 +840,61 @@ void changeMenu(uint8_t coeftype, uint8_t modeCalibration, float newCoeficient)
     Serial.print(confirm);
 }
 
+/************************************************************
+ ***** ENVÍO DE TRAMA DE DATOS HACIA LA RASPBERRY ***********
+ ************************************************************/
+void task_Raspberry(void *arg)
+{
+    float CalFin;
+    float CalFout;
+
+    while (1)
+    {
+        // Se atiende solicitud de envio a traves de serial 1 para raspberry
+        if (xSemaphoreTake(xSemaphoreRaspberry, portMAX_DELAY) == pdTRUE)
+        {
+
+            dataCoeficients = SerialID + ',' + String(AMP_CAM_1, 5) + ',' + String(OFFS_CAM_1, 5) + ',' + String(AMP_BAG_2, 5) +
+                              ',' + String(OFFS_BAG_2, 5) + ',' + String(AMP_PAC_3, 5) + ',' + String(OFFS_PAC_3, 5) + ',' + String(AMP_FI_1, 5) +
+                              ',' + String(OFFS_FI_1, 5) + ',' + String(LIM_FI_1, 5) + ',' + String(AMP_FI_2, 5) + ',' + String(OFFS_FI_2, 5) +
+                              ',' + String(LIM_FI_2, 5) + ',' + String(AMP_FI_3, 5) + ',' + String(OFFS_FI_3, 5) + ',' + String(AMP_FE_1, 5) +
+                              ',' + String(OFFS_FE_1, 5) + ',' + String(LIM_FE_1, 5) + ',' + String(AMP_FE_2, 5) + ',' + String(OFFS_FE_2, 5) +
+                              ',' + String(LIM_FE_2, 5) + ',' + String(AMP_FE_3, 5) + ',' + String(OFFS_FE_3, 5) + ',' + String(VOL_SCALE, 5) +
+                              ',' + String(AMP_CAM_1_SITE, 5) + ',' + String(OFFS_CAM_1_SITE, 5) + ',' + String(AMP_BAG_2_SITE, 5) +
+                              ',' + String(OFFS_BAG_2_SITE, 5) + ',' + String(AMP_PAC_3_SITE, 5) + ',' + String(OFFS_PAC_3_SITE, 5) +
+                              ',' + String(AMP_FI_1_SITE, 5) + ',' + String(OFFS_FI_1_SITE, 5) + ',' + String(LIM_FI_1_SITE, 5) +
+                              ',' + String(AMP_FI_2_SITE, 5) + ',' + String(OFFS_FI_2_SITE, 5) + ',' + String(LIM_FI_2_SITE, 5) +
+                              ',' + String(AMP_FI_3_SITE, 5) + ',' + String(OFFS_FI_3_SITE, 5) + ',' + String(AMP_FE_1_SITE, 5) +
+                              ',' + String(OFFS_FE_1_SITE, 5) + ',' + String(LIM_FE_1_SITE, 5) + ',' + String(AMP_FE_2_SITE, 5) +
+                              ',' + String(OFFS_FE_2_SITE, 5) + ',' + String(LIM_FE_2_SITE, 5) + ',' + String(AMP_FE_3_SITE, 5) +
+                              ',' + String(OFFS_FE_3_SITE, 5);
+
+            if (flagService == false)
+            {
+                Serial.println(dataCoeficients);
+            }
+
+            /* ********************************************************************
+			  * **** ENVIO DE VARIABLES PARA CALIBRACION ***************************
+			  * ********************************************************************/
+            if (flagFlowPrintCalibration == true)
+            {
+                CalFin = CalFin + 0.1;
+                CalFout = CalFout + 0.1;
+
+                Serial.print(CalFin);
+                Serial.print(",");
+                Serial.println(CalFout); // informacion para calibracion de flujo
+            }
+            //  Serial.println(CalPpac);
+            //  Serial.println(CalPin);
+            //  Serial.println(CalPout); // informacion para calibracion de presion
+        }
+        vTaskDelay(20 / portTICK_PERIOD_MS);
+    }
+    vTaskDelete(NULL);
+}
+
 /* *********************
 ******************************************************
  * **** CONFIGURACION ********************************************************
@@ -847,6 +908,7 @@ void setup()
 
     // se crea el semaforo binario
     xSemaphoreTimer = xSemaphoreCreateBinary();
+    xSemaphoreRaspberry = xSemaphoreCreateBinary();
 
     Serial.begin(115200);
 
@@ -877,6 +939,7 @@ void setup()
     xTaskCreatePinnedToCore(task_Timer, "task_Timer", 2048, NULL, 7, NULL, taskCoreOne);
     xTaskCreatePinnedToCore(task_Service, "task_Service", 4096, NULL, 1, NULL, taskCoreOne);
     xTaskCreatePinnedToCore(task_Receive, "task_Receive", 4096, NULL, 1, NULL, taskCoreOne);
+    xTaskCreatePinnedToCore(task_Raspberry, "task_Raspberry", 4096, NULL, 4, NULL, taskCoreOne);
     // xTaskCreatePinnedToCore(task_Encoder_B, "task_Encoder_B", 10000, NULL, 1, NULL, taskCoreZero);
 
     // Clean Serial buffers

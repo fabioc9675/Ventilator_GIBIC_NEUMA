@@ -37,8 +37,20 @@
 #define MODE_NULL 0
 #define FLUJO_INSPIRATORIO 1
 #define FLUJO_ESPIRATORIO 2
+#define PRESION_CAMARA 3
+#define PRESION_BOLSA 4
+#define PRESION_PACIENTE 5
+#define VOLUMEN_PACIENTE 6
 
 #define AMPL_1 1
+#define OFFS_1 2
+#define LIMS_1 3
+#define AMPL_2 4
+#define OFFS_2 5
+#define LIMS_2 6
+#define AMPL_3 7
+#define OFFS_3 8
+#define LIMS_3 9
 
 uint8_t servMenuStateCurrent = SERV_NULL_MENU;
 uint8_t servMenuStateNew = SERV_NULL_MENU;
@@ -470,6 +482,41 @@ void printInternalFactoryMenu(int mode)
                      "11. Menu anterior. \n"
                      "12. Salir.\n\nSeleccione una opcion: ";
     }
+    if (mode == PRESION_CAMARA)
+    {
+        menuString = "\n\n************ PRESION CAMARA ************\n"
+                     "1. Imprimir datos 20 Hz. (q+ENTER para salir)\n"
+                     "*Curva de ajuste  N 1 \n2. Amplitud.\n3. Offset.\n"
+                     "4. Ver constantes \n"
+                     "5. Menu anterior. \n"
+                     "6. Salir.\n\nSeleccione una opcion: ";
+    }
+    if (mode == PRESION_BOLSA)
+    {
+        menuString = "\n\n************ PRESION BOLSA ************\n"
+                     "1. Imprimir datos 20 Hz. (q+ENTER para salir)\n"
+                     "*Curva de ajuste  N 1 \n2. Amplitud.\n3. Offset.\n"
+                     "4. Ver constantes \n"
+                     "5. Menu anterior. \n"
+                     "6. Salir.\n\nSeleccione una opcion: ";
+    }
+    if (mode == PRESION_PACIENTE)
+    {
+        menuString = "\n\n************ PRESION PACIENTE ************\n"
+                     "1. Imprimir datos 20 Hz. (q+ENTER para salir)\n"
+                     "*Curva de ajuste  N 1 \n2. Amplitud.\n3. Offset.\n"
+                     "4. Ver constantes \n"
+                     "5. Menu anterior. \n"
+                     "6. Salir.\n\nSeleccione una opcion: ";
+    }
+    if (mode == VOLUMEN_PACIENTE)
+    {
+        menuString = "\n\n************ VOLUMEN PACIENTE ************\n"
+                     "*Curva de ajuste  N 1 \n1. Escala de ajuste.\n"
+                     "2. Ver constantes \n"
+                     "3. Menu anterior. \n"
+                     "4. Salir.\n\nSeleccione una opcion: ";
+    }
 
     Serial.print(menuString);
     servMenuStateNew = SERV_WAIT_FAIN;
@@ -546,16 +593,28 @@ void factoryMenuOptionChange(int selMenu)
             printInternalFactoryMenu(modeCalibration);
             break;
         case 4: // seleccion del menu 3, calibracion de fabrica
-            /* code */
+            modeCalibration = PRESION_CAMARA;
+            servMenuStateNew = SERV_FAIN_CALI;
+            servMenuStateCurrent = servMenuStateNew;
+            printInternalFactoryMenu(modeCalibration);
             break;
         case 5: // seleccion del menu 4
-            /* code */
+            modeCalibration = PRESION_BOLSA;
+            servMenuStateNew = SERV_FAIN_CALI;
+            servMenuStateCurrent = servMenuStateNew;
+            printInternalFactoryMenu(modeCalibration);
             break;
         case 6: // seleccion del menu 5, Salir
-            /* code */
+            modeCalibration = PRESION_PACIENTE;
+            servMenuStateNew = SERV_FAIN_CALI;
+            servMenuStateCurrent = servMenuStateNew;
+            printInternalFactoryMenu(modeCalibration);
             break;
         case 7: // seleccion del menu 5, Salir
-            /* code */
+            modeCalibration = VOLUMEN_PACIENTE;
+            servMenuStateNew = SERV_FAIN_CALI;
+            servMenuStateCurrent = servMenuStateNew;
+            printInternalFactoryMenu(modeCalibration);
             break;
         case 8: // seleccion del menu 5, Salir
             Serial.print("Salida Calibracion \n");
@@ -578,6 +637,15 @@ void factoryInternalMenuOptionChange(int selMenu)
 {
     float currentValue = 0;
     String dataPrint;
+
+    float amp1 = 0;
+    float amp2 = 0;
+    float amp3 = 0;
+    float off1 = 0;
+    float off2 = 0;
+    float off3 = 0;
+    float lim1 = 0;
+    float lim2 = 0;
 
     if ((selMenu > MAX_FAIN_MENU) || (selMenu == 0))
     {
@@ -604,7 +672,7 @@ void factoryInternalMenuOptionChange(int selMenu)
             {
                 coeftype = AMPL_1;
                 currentValue = readFloat(eeprom_values::AMP_FI_1_ADDR);
-                dataPrint = "Curva 1, Offset actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                dataPrint = "Curva 1, Amplitud actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
                 Serial.print(dataPrint);
                 servMenuStateNew = SERV_ACQI_DATA;
                 servMenuStateCurrent = servMenuStateNew;
@@ -613,31 +681,372 @@ void factoryInternalMenuOptionChange(int selMenu)
             {
                 coeftype = AMPL_1;
                 currentValue = readFloat(eeprom_values::AMP_FE_1_ADDR);
+                dataPrint = "Curva 1, Amplitud actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            if (modeCalibration == PRESION_CAMARA)
+            {
+                coeftype = AMPL_1;
+                currentValue = readFloat(eeprom_values::AMP_CAM_1_ADDR);
+                dataPrint = "Curva 1, Amplitud actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            if (modeCalibration == PRESION_BOLSA)
+            {
+                coeftype = AMPL_1;
+                currentValue = readFloat(eeprom_values::AMP_BAG_2_ADDR);
+                dataPrint = "Curva 1, Amplitud actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            if (modeCalibration == PRESION_PACIENTE)
+            {
+                coeftype = AMPL_1;
+                currentValue = readFloat(eeprom_values::AMP_PAC_3_ADDR);
+                dataPrint = "Curva 1, Amplitud actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            if (modeCalibration == VOLUMEN_PACIENTE)
+            {
+                coeftype = AMPL_1;
+                currentValue = readFloat(eeprom_values::VOL_SCALE_ADDR);
+                dataPrint = "Curva 1, Escala actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            break;
+        case 3: // seleccion del menu 3, calibracion de fabrica
+            /* code */
+            if (modeCalibration == FLUJO_INSPIRATORIO)
+            {
+                coeftype = OFFS_1;
+                currentValue = readFloat(eeprom_values::OFFS_FI_1_ADDR);
                 dataPrint = "Curva 1, Offset actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            if (modeCalibration == FLUJO_ESPIRATORIO)
+            {
+                coeftype = OFFS_1;
+                currentValue = readFloat(eeprom_values::OFFS_FE_1_ADDR);
+                dataPrint = "Curva 1, Offset actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            if (modeCalibration == PRESION_CAMARA)
+            {
+                coeftype = OFFS_1;
+                currentValue = readFloat(eeprom_values::OFFS_CAM_1_ADDR);
+                dataPrint = "Curva 1, Offset actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            if (modeCalibration == PRESION_BOLSA)
+            {
+                coeftype = OFFS_1;
+                currentValue = readFloat(eeprom_values::OFFS_BAG_2_ADDR);
+                dataPrint = "Curva 1, Offset actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            if (modeCalibration == PRESION_PACIENTE)
+            {
+                coeftype = OFFS_1;
+                currentValue = readFloat(eeprom_values::OFFS_PAC_3_ADDR);
+                dataPrint = "Curva 1, Offset actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            if (modeCalibration == VOLUMEN_PACIENTE)
+            {
+                Serial.print("Salida Calibracion \n");
+                servMenuStateNew = SERV_MAIN_MENU;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+
+            break;
+        case 4: // seleccion del menu 4
+            /* code */
+
+            if (modeCalibration == FLUJO_INSPIRATORIO)
+            {
+                coeftype = LIMS_1;
+                currentValue = readFloat(eeprom_values::LIM_FI_1_ADDR);
+                dataPrint = "Curva 1, Limite actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            if (modeCalibration == FLUJO_ESPIRATORIO)
+            {
+                coeftype = LIMS_1;
+                currentValue = readFloat(eeprom_values::LIM_FE_1_ADDR);
+                dataPrint = "Curva 1, Limite actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            if (modeCalibration == PRESION_CAMARA)
+            {
+
+                amp1 = readFloat(eeprom_values::AMP_CAM_1_ADDR);
+                off1 = readFloat(eeprom_values::OFFS_CAM_1_ADDR);
+
+                dataPrint = "Coeficientes presion camara \n\n"
+                            "AMP_CAM = " +
+                            String(amp1, 5) +
+                            "\nOFF_CAM = " + String(off1, 5) + "\n\n";
+
+                Serial.print(dataPrint);
+
+                servMenuStateNew = SERV_FAIN_CALI;
+                servMenuStateCurrent = servMenuStateNew;
+                printInternalFactoryMenu(modeCalibration);
+            }
+            if (modeCalibration == PRESION_BOLSA)
+            {
+                amp1 = readFloat(eeprom_values::AMP_BAG_2_ADDR);
+                off1 = readFloat(eeprom_values::OFFS_BAG_2_ADDR);
+
+                dataPrint = "Coeficientes presion bolsa \n\n"
+                            "AMP_BAG = " +
+                            String(amp1, 5) +
+                            "\nOFF_BAG = " + String(off1, 5) + "\n\n";
+                Serial.print(dataPrint);
+
+                servMenuStateNew = SERV_FAIN_CALI;
+                servMenuStateCurrent = servMenuStateNew;
+                printInternalFactoryMenu(modeCalibration);
+            }
+            if (modeCalibration == PRESION_PACIENTE)
+            {
+                amp1 = readFloat(eeprom_values::AMP_PAC_3_ADDR);
+                off1 = readFloat(eeprom_values::OFFS_PAC_3_ADDR);
+
+                dataPrint = "Coeficientes presion paciente \n\n"
+                            "AMP_PAC = " +
+                            String(amp1, 5) +
+                            "\nOFF_PAC = " + String(off1, 5) + "\n\n";
+                Serial.print(dataPrint);
+
+                servMenuStateNew = SERV_FAIN_CALI;
+                servMenuStateCurrent = servMenuStateNew;
+                printInternalFactoryMenu(modeCalibration);
+            }
+
+            break;
+        case 5: // seleccion del menu 5, Salir
+
+            if (modeCalibration == FLUJO_INSPIRATORIO)
+            {
+                coeftype = AMPL_2;
+                currentValue = readFloat(eeprom_values::AMP_FI_2_ADDR);
+                dataPrint = "Curva 2, Amplitud actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            if (modeCalibration == FLUJO_ESPIRATORIO)
+            {
+                coeftype = AMPL_2;
+                currentValue = readFloat(eeprom_values::AMP_FE_2_ADDR);
+                dataPrint = "Curva 2, Amplitud actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+
+            if ((modeCalibration == PRESION_CAMARA) || (modeCalibration == PRESION_BOLSA) || (modeCalibration == PRESION_PACIENTE))
+            {
+                Serial.print("Salida Calibracion \n");
+                servMenuStateNew = SERV_MAIN_MENU;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+
+            break;
+        case 6: // seleccion del menu 5, Salir
+
+            if (modeCalibration == FLUJO_INSPIRATORIO)
+            {
+                coeftype = OFFS_2;
+                currentValue = readFloat(eeprom_values::OFFS_FI_2_ADDR);
+                dataPrint = "Curva 2, Offset actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            if (modeCalibration == FLUJO_ESPIRATORIO)
+            {
+                coeftype = OFFS_2;
+                currentValue = readFloat(eeprom_values::OFFS_FE_2_ADDR);
+                dataPrint = "Curva 2, Offset actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+
+            if ((modeCalibration == PRESION_CAMARA) || (modeCalibration == PRESION_BOLSA) || (modeCalibration == PRESION_PACIENTE))
+            {
+                Serial.print("Salida segura \n");
+                servMenuStateNew = SERV_NULL_MENU;
+                servMenuStateCurrent = servMenuStateNew;
+                flagService = false;
+            }
+
+            break;
+
+        case 7:
+            if (modeCalibration == FLUJO_INSPIRATORIO)
+            {
+                coeftype = LIMS_2;
+                currentValue = readFloat(eeprom_values::LIM_FI_2_ADDR);
+                dataPrint = "Curva 2, Limite actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            if (modeCalibration == FLUJO_ESPIRATORIO)
+            {
+                coeftype = LIMS_2;
+                currentValue = readFloat(eeprom_values::LIM_FE_2_ADDR);
+                dataPrint = "Curva 2, Limite actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            break;
+
+        case 8:
+
+            if (modeCalibration == FLUJO_INSPIRATORIO)
+            {
+                coeftype = AMPL_3;
+                currentValue = readFloat(eeprom_values::AMP_FI_3_ADDR);
+                dataPrint = "Curva 3, Amplitud actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            if (modeCalibration == FLUJO_ESPIRATORIO)
+            {
+                coeftype = AMPL_3;
+                currentValue = readFloat(eeprom_values::AMP_FE_3_ADDR);
+                dataPrint = "Curva 3, Amplitud actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
                 Serial.print(dataPrint);
                 servMenuStateNew = SERV_ACQI_DATA;
                 servMenuStateCurrent = servMenuStateNew;
             }
 
             break;
-        case 3: // seleccion del menu 3, calibracion de fabrica
-            /* code */
+
+        case 9:
+            if (modeCalibration == FLUJO_INSPIRATORIO)
+            {
+                coeftype = OFFS_3;
+                currentValue = readFloat(eeprom_values::OFFS_FI_3_ADDR);
+                dataPrint = "Curva 3, Offset actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            if (modeCalibration == FLUJO_ESPIRATORIO)
+            {
+                coeftype = OFFS_3;
+                currentValue = readFloat(eeprom_values::OFFS_FE_3_ADDR);
+                dataPrint = "Curva 3, Offset actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
+                servMenuStateCurrent = servMenuStateNew;
+            }
             break;
-        case 4: // seleccion del menu 4
-            /* code */
+
+        case 10:
+            if (modeCalibration == FLUJO_INSPIRATORIO)
+            {
+                amp1 = readFloat(eeprom_values::AMP_FI_1_ADDR);
+                off1 = readFloat(eeprom_values::OFFS_FI_1_ADDR);
+                lim1 = readFloat(eeprom_values::LIM_FI_1_ADDR);
+                amp2 = readFloat(eeprom_values::AMP_FI_2_ADDR);
+                off2 = readFloat(eeprom_values::OFFS_FI_2_ADDR);
+                lim2 = readFloat(eeprom_values::LIM_FI_2_ADDR);
+                amp3 = readFloat(eeprom_values::AMP_FI_3_ADDR);
+                off3 = readFloat(eeprom_values::OFFS_FI_3_ADDR);
+
+                dataPrint = "Coeficientes flujo inspiratorio \n\n"
+                            "AMP_FI_1 = " +
+                            String(amp1, 5) +
+                            "\nOFF_FI_1 = " + String(off1, 5) +
+                            "\nLIM_FI_1 = " + String(lim1, 5) +
+                            "\nAMP_FI_2 = " + String(amp2, 5) +
+                            "\nOFF_FI_2 = " + String(off2, 5) +
+                            "\nLIM_FI_2 = " + String(lim2, 5) +
+                            "\nAMP_FI_3 = " + String(amp3, 5) +
+                            "\nOFF_FI_3 = " + String(off3, 5) + "\n\n";
+                Serial.print(dataPrint);
+
+                servMenuStateNew = SERV_FAIN_CALI;
+                servMenuStateCurrent = servMenuStateNew;
+                printInternalFactoryMenu(modeCalibration);
+            }
+            if (modeCalibration == FLUJO_ESPIRATORIO)
+            {
+                amp1 = readFloat(eeprom_values::AMP_FE_1_ADDR);
+                off1 = readFloat(eeprom_values::OFFS_FE_1_ADDR);
+                lim1 = readFloat(eeprom_values::LIM_FE_1_ADDR);
+                amp2 = readFloat(eeprom_values::AMP_FE_2_ADDR);
+                off2 = readFloat(eeprom_values::OFFS_FE_2_ADDR);
+                lim2 = readFloat(eeprom_values::LIM_FE_2_ADDR);
+                amp3 = readFloat(eeprom_values::AMP_FE_3_ADDR);
+                off3 = readFloat(eeprom_values::OFFS_FE_3_ADDR);
+
+                dataPrint = "Coeficientes flujo inspiratorio \n\n"
+                            "AMP_FI_1 = " +
+                            String(amp1, 5) +
+                            "\nOFF_FI_1 = " + String(off1, 5) +
+                            "\nLIM_FI_1 = " + String(lim1, 5) +
+                            "\nAMP_FI_2 = " + String(amp2, 5) +
+                            "\nOFF_FI_2 = " + String(off2, 5) +
+                            "\nLIM_FI_2 = " + String(lim2, 5) +
+                            "\nAMP_FI_3 = " + String(amp3, 5) +
+                            "\nOFF_FI_3 = " + String(off3, 5) + "\n\n";
+                Serial.print(dataPrint);
+
+                servMenuStateNew = SERV_FAIN_CALI;
+                servMenuStateCurrent = servMenuStateNew;
+                printInternalFactoryMenu(modeCalibration);
+            }
+
             break;
-        case 5: // seleccion del menu 5, Salir
-        /* code */
+
         case 11: // seleccion del menu 5, Salir
-            Serial.print("Salida Calibracion \n");
-            servMenuStateNew = SERV_MAIN_MENU;
-            servMenuStateCurrent = servMenuStateNew;
+            if ((modeCalibration == FLUJO_INSPIRATORIO) || (modeCalibration == FLUJO_ESPIRATORIO))
+            {
+                Serial.print("Salida Calibracion \n");
+                servMenuStateNew = SERV_MAIN_MENU;
+                servMenuStateCurrent = servMenuStateNew;
+            }
             break;
         case 12: // seleccion del menu 7, Salir
-            Serial.print("Salida segura \n");
-            servMenuStateNew = SERV_NULL_MENU;
-            servMenuStateCurrent = servMenuStateNew;
-            flagService = false;
+            if ((modeCalibration == FLUJO_INSPIRATORIO) || (modeCalibration == FLUJO_ESPIRATORIO))
+            {
+                Serial.print("Salida segura \n");
+                servMenuStateNew = SERV_NULL_MENU;
+                servMenuStateCurrent = servMenuStateNew;
+                flagService = false;
+            }
             break;
         default:
             break;
@@ -833,6 +1242,111 @@ void changeMenu(uint8_t coeftype, uint8_t modeCalibration, float newCoeficient)
         if (modeCalibration == FLUJO_ESPIRATORIO)
         {
             writeData = writeFloat(eeprom_values::AMP_FE_1_ADDR, newCoeficient);
+        }
+        if (modeCalibration == PRESION_CAMARA)
+        {
+            writeData = writeFloat(eeprom_values::AMP_CAM_1_ADDR, newCoeficient);
+        }
+        if (modeCalibration == PRESION_BOLSA)
+        {
+            writeData = writeFloat(eeprom_values::AMP_BAG_2_ADDR, newCoeficient);
+        }
+        if (modeCalibration == PRESION_PACIENTE)
+        {
+            writeData = writeFloat(eeprom_values::AMP_PAC_3_ADDR, newCoeficient);
+        }
+        if (modeCalibration == VOLUMEN_PACIENTE)
+        {
+            writeData = writeFloat(eeprom_values::VOL_SCALE_ADDR, newCoeficient);
+        }
+    }
+    else if (coeftype == OFFS_1)
+    {
+        if (modeCalibration == FLUJO_INSPIRATORIO)
+        {
+            writeData = writeFloat(eeprom_values::OFFS_FI_1_ADDR, newCoeficient);
+        }
+        if (modeCalibration == FLUJO_ESPIRATORIO)
+        {
+            writeData = writeFloat(eeprom_values::OFFS_FE_1_ADDR, newCoeficient);
+        }
+        if (modeCalibration == PRESION_CAMARA)
+        {
+            writeData = writeFloat(eeprom_values::OFFS_CAM_1_ADDR, newCoeficient);
+        }
+        if (modeCalibration == PRESION_BOLSA)
+        {
+            writeData = writeFloat(eeprom_values::OFFS_BAG_2_ADDR, newCoeficient);
+        }
+        if (modeCalibration == PRESION_PACIENTE)
+        {
+            writeData = writeFloat(eeprom_values::OFFS_PAC_3_ADDR, newCoeficient);
+        }
+    }
+    else if (coeftype == LIMS_1)
+    {
+        if (modeCalibration == FLUJO_INSPIRATORIO)
+        {
+            writeData = writeFloat(eeprom_values::LIM_FI_1_ADDR, newCoeficient);
+        }
+        if (modeCalibration == FLUJO_ESPIRATORIO)
+        {
+            writeData = writeFloat(eeprom_values::LIM_FE_1_ADDR, newCoeficient);
+        }
+    }
+    else if (coeftype == AMPL_2)
+    {
+        if (modeCalibration == FLUJO_INSPIRATORIO)
+        {
+            writeData = writeFloat(eeprom_values::AMP_FI_2_ADDR, newCoeficient);
+        }
+        if (modeCalibration == FLUJO_ESPIRATORIO)
+        {
+            writeData = writeFloat(eeprom_values::AMP_FE_2_ADDR, newCoeficient);
+        }
+    }
+    else if (coeftype == OFFS_2)
+    {
+        if (modeCalibration == FLUJO_INSPIRATORIO)
+        {
+            writeData = writeFloat(eeprom_values::OFFS_FI_2_ADDR, newCoeficient);
+        }
+        if (modeCalibration == FLUJO_ESPIRATORIO)
+        {
+            writeData = writeFloat(eeprom_values::OFFS_FE_2_ADDR, newCoeficient);
+        }
+    }
+    else if (coeftype == LIMS_2)
+    {
+        if (modeCalibration == FLUJO_INSPIRATORIO)
+        {
+            writeData = writeFloat(eeprom_values::LIM_FI_2_ADDR, newCoeficient);
+        }
+        if (modeCalibration == FLUJO_ESPIRATORIO)
+        {
+            writeData = writeFloat(eeprom_values::LIM_FE_2_ADDR, newCoeficient);
+        }
+    }
+    else if (coeftype == AMPL_3)
+    {
+        if (modeCalibration == FLUJO_INSPIRATORIO)
+        {
+            writeData = writeFloat(eeprom_values::AMP_FI_3_ADDR, newCoeficient);
+        }
+        if (modeCalibration == FLUJO_ESPIRATORIO)
+        {
+            writeData = writeFloat(eeprom_values::AMP_FE_3_ADDR, newCoeficient);
+        }
+    }
+    else if (coeftype == OFFS_2)
+    {
+        if (modeCalibration == FLUJO_INSPIRATORIO)
+        {
+            writeData = writeFloat(eeprom_values::OFFS_FI_2_ADDR, newCoeficient);
+        }
+        if (modeCalibration == FLUJO_ESPIRATORIO)
+        {
+            writeData = writeFloat(eeprom_values::OFFS_FE_2_ADDR, newCoeficient);
         }
     }
 

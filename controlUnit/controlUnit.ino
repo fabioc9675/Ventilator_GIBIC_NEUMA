@@ -1114,7 +1114,7 @@ void task_Raspberry(void* arg) {
 			contSendData++;
 			if (contSendData == 1) {
 				contSendData = 0;
-				 Serial.println(RaspberryChain);
+				Serial.println(RaspberryChain);
 			}
 
 			// Serial.print(dPpac);
@@ -1258,6 +1258,7 @@ void cycling() {
 				}
 			}
 
+
 			//Ajuste del valor de volumen
 			VtidalV = 0;
 			VtidalC = 0;
@@ -1308,7 +1309,7 @@ void cycling() {
 				flagInicio = false;
 			}
 
-			currentVE = (int)((VT * frecRespiratoriaCalculada) / 1000.0);  // calculo de la ventilacion minuto
+			currentVE = (int)((VT * frecRespiratoriaCalculada) / 100.0);  // calculo de la ventilacion minuto
 
 			if (newStateMachine != currentStateMachine) {
 				currentStateMachine = newStateMachine;
@@ -1402,7 +1403,7 @@ void cycling() {
 				flagInicio = false;
 			}
 
-			currentVE = (int)((VT * frecRespiratoriaCalculada) / 1000.0);  // calculo de la ventilacion minuto
+			currentVE = (int)((VT * frecRespiratoriaCalculada) / 100.0);  // calculo de la ventilacion minuto
 
 			alarmsDetection();  // se ejecuta la rutina de deteccion de alarmas
 			flagAlarmPpico = false;
@@ -1499,6 +1500,12 @@ void cpapRoutine() {
 		  * *** Aqui se debe verificar cual es el valor de Peep a utlizar *****
 		  * *******************************************************************/
 		Peep = PeepProximal;// Peep como la presion en la via aerea al final de la espiracion
+		if (Peep < newPeepMax) {
+			alerPeep = 1;
+		}
+		else {
+			alerPeep = 0;
+		}
 
 		//Ajuste del valor de volumen
 		VtidalV = 0;
@@ -1757,7 +1764,7 @@ void alarmsDetection() {
 			alerFR_Alta = 0;
 		}
 
-		if (currentVE > maxVE) {
+		if (currentVE > maxVE*10) {
 			flagAlarmVE_Alto = true;
 			alerVE_Alto = 1;
 		}

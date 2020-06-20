@@ -56,7 +56,7 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);
 #define MAX_PEEP			15
 #define MIN_PEEP			1
 #define MAX_RIE             40
-#define MIN_RIE				20
+#define MIN_RIE				10  // se cambio de 20 a 10 para evitar relaciones negativas
 #define MAX_PRESION         40
 #define MAX_MAX_FR			60
 #define MIN_MAX_FR			5
@@ -145,6 +145,7 @@ byte apneaTime = 20;
 
 bool flagAlerta = false;
 bool flagBatteryAlert = false;
+bool flagChange2AC = false;
 unsigned int contAlertas = 0;
 
 // Global al ser usada en loop e ISR (encoder)
@@ -216,7 +217,7 @@ byte stateMachine = STANDBY_STATE;
 #define batteryAlarm5min    3
 byte batteryAlert = BATTERY_NO_ALARM;
 
-//creo el manejador para el sem�foro como variable global
+//creo el manejador para el semaforo como variable global
 SemaphoreHandle_t xSemaphoreEncoder = NULL;
 SemaphoreHandle_t xSemaphoreTimer = NULL;
 //xQueueHandle timer_queue = NULL;
@@ -653,7 +654,7 @@ void encoderRoutine() {
 		}
 		fl_StateEncoder = 0;
 		break;
-		// Decremento
+	// Decremento
 	case ENCOD_DECREASE:
 		if (insideMenuFlag == false) {
 			menu--;
@@ -910,7 +911,6 @@ void silenceInterruptAttention() {
 void standbyInterruptAttention() {
 	if (flagStandbyInterrupt) {
 		contStandby++;
-		// Serial.println(digitalRead(STANDBY));
 		if (stateMachine == STANDBY_STATE && contStandby > 500 && digitalRead(STANDBY) == 0) {
 			portENTER_CRITICAL(&mux);
 			attachInterrupt(digitalPinToInterrupt(STANDBY), standbyButtonInterrupt, FALLING);
@@ -957,7 +957,6 @@ void standbyInterruptAttention() {
 		} else if (stateMachine != STANDBY_STATE){
 			// Serial.println(digitalRead(STANDBY));
 			if (contStandby < 3000 && digitalRead(STANDBY) == 1) {
-				// Serial.println("Standby Interrupt");
 				contStandby = 0;
 				portENTER_CRITICAL_ISR(&mux);
 				attachInterrupt(digitalPinToInterrupt(STANDBY), standbyButtonInterrupt, FALLING);
@@ -1028,7 +1027,7 @@ void lcd_show_comp() {
 		else {
 			lcd.print("I:E       VE        ");
 			lcd.setCursor(15, 2);
-			lcd.print(String(int(currentVE)));
+			lcd.print(String(currentVE/10.0, 1));
 		}
 		lcd.setCursor(4, 2);
 		lcd.print(calculatedRelacion_IE + " ");
@@ -1071,7 +1070,7 @@ void lcd_show_comp() {
 			lcd.setCursor(13, 2);
 			lcd.print(int(Peep));
 			lcd.setCursor(0, 3);
-			lcd.print("  PEEP MAX:         ");
+			lcd.print("  CPAP MIN:         ");
 			lcd.setCursor(13, 3);
 			lcd.print(PeepMax);
 		}
@@ -1215,8 +1214,7 @@ void lcd_show_part() {
 			frecRespiratoriaAnte = frecRespiratoriaCalculada;
 			// Serial.println("Changed freq");
 		}
-	
-		
+
 		if (Ppico != PpicoAnte) {
 			lcd.setCursor(15, 1);
 			lcd.print(String(int(Ppico)));
@@ -1249,8 +1247,8 @@ void lcd_show_part() {
 		else {
 			if (newVE != currentVE) {
 				lcd.setCursor(15, 2);
-				lcd.print(String(int(newVE)));
-				if (newVE < 10) {
+				lcd.print(String(newVE/10.0, 1));
+				if (newVE < 100) {
 					lcd.print(" ");
 				}
 				currentVE = newVE;
@@ -1316,14 +1314,14 @@ void lcd_show_part() {
 				lcd.setCursor(12, 3);
 				if (flagFrecuencia == true) {
 					lcd.write(60);
-					if (newFrecRespiratoria != currentFrecRespiratoria) {
+					//if (newFrecRespiratoria != currentFrecRespiratoria) {
 						lcd.setCursor(9, 3);
 						lcd.print(newFrecRespiratoria);
 						if (newFrecRespiratoria < 10) {
 							lcd.print(" ");
 						}
 						frecRespiratoriaAnte = newFrecRespiratoria;
-					}
+					//}
 				}
 				else {
 					lcd.print(' ');
@@ -1338,12 +1336,12 @@ void lcd_show_part() {
 				lcd.setCursor(19, 3);
 				if (flagIE == true) {
 					lcd.write(60);
-					if (newRelacionIE != currentRelacionIE) {
+					//if (newRelacionIE != currentRelacionIE) {
 						lcd.setCursor(14, 3);
 						lcd.print(newRelacion_IE);
 						IAnte = I;
 						EAnte = E;
-					}
+					//}
 				}
 				else {
 					lcd.print(' ');
@@ -1383,14 +1381,14 @@ void lcd_show_part() {
 				lcd.setCursor(8, 3);
 				if (flagFrecuencia == true) {
 					lcd.write(60);
-					if (newFrecRespiratoria != currentFrecRespiratoria) {
+					//if (newFrecRespiratoria != currentFrecRespiratoria) {
 						lcd.setCursor(5, 3);
 						lcd.print(newFrecRespiratoria);
 						if (newFrecRespiratoria < 10) {
 							lcd.print(" ");
 						}
 						frecRespiratoriaAnte = newFrecRespiratoria;
-					}
+					//}
 				}
 				else {
 					lcd.print(' ');
@@ -1405,12 +1403,12 @@ void lcd_show_part() {
 				lcd.setCursor(18, 3);
 				if (flagIE == true) {
 					lcd.write(60);
-					if (newRelacionIE != currentRelacionIE) {
+					//if (newRelacionIE != currentRelacionIE) {
 						lcd.setCursor(12, 3);
 						lcd.print(newRelacion_IE);
 						IAnte = I;
 						EAnte = E;
-					}
+					//}
 				}
 				else {
 					lcd.print(' ');
@@ -1694,7 +1692,6 @@ void task_Receive(void* pvParameters) {
 			newVE = dataIn2[12].toInt();
 			Serial2.flush();
 			//Serial.flush();  // solo para pruebas
-			//Serial.println(VT);
 		}
 		vTaskDelay(10 / portTICK_PERIOD_MS);
 	}
@@ -1991,14 +1988,23 @@ void alarmMonitoring(void) {
 		}
 		else if((alerFR_Alta == 2)){
 			menuAlerta[6] = ALE_APNEA;
-			if (stateMachine != STANDBY_STATE) {
+			if (stateMachine != STANDBY_STATE && flagChange2AC == false) {
+				flagChange2AC = true;
 				stateMachine = AC_STATE;
+				insideMenuFlag = false;
+				flagPeepMax = false;
+				optionConfigMenu = 0;
+				menu = VENT_MENU;
+				menuImprimir = menu;
+				lineaAlerta = menu;
+				flagAlreadyPrint = false;
 			}
 			currentVentilationMode = 1;
 			flagAlerta = true;
 		}
 		else {
 			menuAlerta[6] = 0;
+			flagChange2AC = false;
 		}
 
 		// activacion alerta general
@@ -2025,7 +2031,6 @@ void alarmMonitoring(void) {
 		}
 		else {
 			menuAlerta[3] = 0;
-
 		}
 		// activacion alerta desconexion
 		if (alerDesconexion == 1) {

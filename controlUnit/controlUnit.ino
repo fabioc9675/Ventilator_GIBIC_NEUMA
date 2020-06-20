@@ -66,32 +66,34 @@
 
 // Calibracion de los sensores de flujo - coeficientes regresion lineal
 // Sensor de flujo Inspiratorio
-#define AMP_FI_1      0.122000         
-#define OFFS_FI_1     -213.161300         
-#define LIM_FI_1      1614         
-#define AMP_FI_2      0.617100         
-#define OFFS_FI_2     -1012.194500         
-#define LIM_FI_2      1666         
-#define AMP_FI_3      0.122000         
-#define OFFS_FI_3     -187.168500         
+#define AMP_FI_1      0.141500         
+#define OFFS_FI_1     -244.049400         
+#define LIM_FI_1      1619         
+#define AMP_FI_2      0.622700         
+#define OFFS_FI_2     -1023.119600         
+#define LIM_FI_2      1667         
+#define AMP_FI_3      0.141500         
+#define OFFS_FI_3     -220.865500         
 
 // Sensor de flujo Espiratorio
-#define AMP_FE_1      0.101500         
-#define OFFS_FE_1     -196.702000         
-#define LIM_FE_1      1779         
-#define AMP_FE_2      1.060900         
-#define OFFS_FE_2     -1903.187000         
-#define LIM_FE_2      1809         
-#define AMP_FE_3      0.101500         
-#define OFFS_FE_3     -167.401300      
+#define AMP_FE_1      0.117800         
+#define OFFS_FE_1     -214.996900         
+#define LIM_FE_1      1698         
+#define AMP_FE_2      0.858600         
+#define OFFS_FE_2     -1473.279900         
+#define LIM_FE_2      1733         
+#define AMP_FE_3      0.117800         
+#define OFFS_FE_3     -189.111300     
 
 
 // variable para ajustar el nivel cero de flujo y calcular el volumen
 #define FLOWUP_LIM        3
 #define FLOWLO_LIM        -3
 #define FLOW_CONV         16.666666    // conversion de L/min a mL/second
-#define DELTA_T           0.05         // delta de tiempo para realizar la integra
-#define VOL_SCALE         0.90         // Factor de escala para ajustar el volumen
+#define DELTA_T           0.003 // 0.05         // delta de tiempo para realizar la integra
+#define VOL_SCALE         1.00         // Factor de escala para ajustar el volumen
+
+
 #define ADC_FAST          3  // muestreo cada 3 ms
 #define ADC_SLOW          50  // muestreo cada 50 ms
 
@@ -317,6 +319,9 @@ float FinADC[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 float FoutADC[40] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 float VTidProm[3] = { 0, 0, 0 };
 float FreqProm[3] = { 0, 0, 0 };
+float FPacProm[40];
+
+#define L_F_PROM      40
 
 // Variables de ventilacion umbrales
 int currentFrecRespiratoria = 12;
@@ -372,6 +377,7 @@ float PeepDistal = 0;   // medicion realizada con sensor distal a paciente
 float PpicoDistal = 0;  // medicion realizada con sensor distal a paciente
 float VtidalV = 0;
 float VtidalC = 0;
+float SFpacV = 0;       // senal de flujo para visualizacion
 float VT = 0;
 float SUMVin_Ins = 0;
 float SUMVout_Ins = 0;
@@ -763,6 +769,61 @@ void task_Adc(void* arg) {
 					else {
 						SFout = AMP_FE_3_SITE * float(SFoutFACTORY) + OFFS_FE_3_SITE;
 					}
+
+					SFpac = SFin - SFout;  // flujo del paciente
+
+					// filtro moving average para la senal de flujo
+					FPacProm[L_F_PROM-1] = SFpac;
+                    //- Corrimiento inicial
+					for (int i = L_F_PROM-1; i >= 1; i--) {
+						FPacProm[L_F_PROM-1 - i] = FPacProm[L_F_PROM-1 - i + 1];						
+					}
+					//- Inicializacion
+					SFpacV = 0;
+					//- Actualizacion
+					for (int i = 0; i <= L_F_PROM-1; i++) {
+						SFpacV = SFpacV + FPacProm[i];
+					}
+					//- Calculo promedio
+					SFpacV = SFpacV / L_F_PROM;
+
+
+					// Calculo de volumen circulante
+					flowTotalV = SFpacV - flowZero;
+					flowTotalC = SFpac;
+					SFant = SFpac;
+
+					// Calculo de volumen
+					if (alerGeneral == 0) {
+						if ((flowTotalC <= FLOWLO_LIM) || (flowTotalC >= FLOWUP_LIM)) {
+							VtidalC = VtidalC + (flowTotalC * DELTA_T * FLOW_CONV * VOL_SCALE);
+
+							if (VtidalC < 0) {
+								VtidalC = 0;
+							}
+
+							if (VtidalC > 3000) {
+								VtidalC = 3000;
+							}
+
+						}
+						if ((flowTotalV <= FLOWLO_LIM) || (flowTotalV >= FLOWUP_LIM)) {
+							VtidalV = VtidalV + (flowTotalV * DELTA_T * FLOW_CONV * VOL_SCALE);
+
+							if (VtidalV < 0) {
+								VtidalV = 0;
+							}
+
+							if (VtidalV > 3000) {
+								VtidalV = 3000;
+							}
+						}
+					}
+					else {
+						VtidalC = 0;
+						VtidalV = 0;
+					}
+
 				}
 
 				// muestreo lento de ADC
@@ -829,40 +890,40 @@ void task_Adc(void* arg) {
 						relE = (float)(currentE);
 					}
 
-					// Calculo de volumen circulante
-					flowTotalV = SFin - SFout - flowZero;
-					flowTotalC = SFin - SFout;
-					SFant = SFpac;
-					SFpac = SFin - SFout;  // flujo del paciente
-					if (alerGeneral == 0) {
-						if ((flowTotalC <= FLOWLO_LIM) || (flowTotalC >= FLOWUP_LIM)) {
-							VtidalC = VtidalC + (flowTotalC * DELTA_T * FLOW_CONV * VOL_SCALE);
+					// // Calculo de volumen circulante
+					// flowTotalV = SFin - SFout - flowZero;
+					// flowTotalC = SFin - SFout;
+					// SFant = SFpac;
+					// SFpac = SFin - SFout;  // flujo del paciente
+					// if (alerGeneral == 0) {
+					// 	if ((flowTotalC <= FLOWLO_LIM) || (flowTotalC >= FLOWUP_LIM)) {
+					// 		VtidalC = VtidalC + (flowTotalC * DELTA_T * FLOW_CONV * VOL_SCALE);
 
-							if (VtidalC < 0) {
-								VtidalC = 0;
-							}
+					// 		if (VtidalC < 0) {
+					// 			VtidalC = 0;
+					// 		}
 
-							if (VtidalC > 3000) {
-								VtidalC = 3000;
-							}
+					// 		if (VtidalC > 3000) {
+					// 			VtidalC = 3000;
+					// 		}
 
-						}
-						if ((flowTotalV <= FLOWLO_LIM) || (flowTotalV >= FLOWUP_LIM)) {
-							VtidalV = VtidalV + (flowTotalV * DELTA_T * FLOW_CONV * VOL_SCALE);
+					// 	}
+					// 	if ((flowTotalV <= FLOWLO_LIM) || (flowTotalV >= FLOWUP_LIM)) {
+					// 		VtidalV = VtidalV + (flowTotalV * DELTA_T * FLOW_CONV * VOL_SCALE);
 
-							if (VtidalV < 0) {
-								VtidalV = 0;
-							}
+					// 		if (VtidalV < 0) {
+					// 			VtidalV = 0;
+					// 		}
 
-							if (VtidalV > 3000) {
-								VtidalV = 3000;
-							}
-						}
-					}
-					else {
-						VtidalC = 0;
-						VtidalV = 0;
-					}
+					// 		if (VtidalV > 3000) {
+					// 			VtidalV = 3000;
+					// 		}
+					// 	}
+					// }
+					// else {
+					// 	VtidalC = 0;
+					// 	VtidalV = 0;
+					// }
 
 					// Calculo Presiones maximas y minimas en la via aerea
 					if (UmbralPpmin > SPpac) {
@@ -954,7 +1015,7 @@ void task_Raspberry(void* arg) {
 			// Almacenamiento de los datos para envio a la raspberry
 			patientPress = String(SPpac, 1);
 			//}
-			patientFlow = String(SFpac, 1);
+			patientFlow = String(SFpacV, 1);
 			patientVolume = String(VtidalV, 1);
 			pressPIP = String(int(Ppico));
 			pressPEEP = String(int(Peep));
@@ -1217,7 +1278,8 @@ void cycling() {
 			VT = SVtidal / 3;
 
 			//Mediciones de flujo cero
-			flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
+			// flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
+			flowZero = SFpacV;
 			//Rutina de ciclado
 			BandInsp = 0; // Desactiva la bandera, indicando que empezo la espiracion
 			digitalWrite(EV_INSPIRA, HIGH);//Piloto conectado a presion de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
@@ -1262,7 +1324,8 @@ void cycling() {
 			//Ajuste del valor de volumen
 			VtidalV = 0;
 			VtidalC = 0;
-			flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
+			// flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
+			flowZero = SFpacV;
 
 			//Calculos de volumenes
 			//- Asignacion
@@ -1356,7 +1419,8 @@ void cycling() {
 			//Ajuste del valor de volumen
 			VtidalV = 0;
 			VtidalC = 0;
-			flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
+			// flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
+			flowZero = SFpacV;
 
 			//Calculos de volumenes
 			//- Asignacion

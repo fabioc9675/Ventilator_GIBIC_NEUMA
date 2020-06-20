@@ -56,7 +56,7 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);
 #define MAX_PEEP			15
 #define MIN_PEEP			1
 #define MAX_RIE             40
-#define MIN_RIE				20
+#define MIN_RIE				10  // se cambio de 20 a 10 para evitar relaciones negativas
 #define MAX_PRESION         40
 #define MAX_MAX_FR			60
 #define MIN_MAX_FR			5
@@ -116,7 +116,7 @@ unsigned int contStability = 0;
 unsigned int contBattery5min = 0;
 unsigned int fl_StateEncoder = 0;
 
-bool flagStandbyInterrupt = false;
+bool flagStandbyInterrupt = true;
 unsigned int contStandby = 0;
 
 // variables de menu

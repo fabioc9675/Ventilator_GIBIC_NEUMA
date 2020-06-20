@@ -19,6 +19,8 @@
 #define VERSION_1_0       TRUE
 
 // #define SERIAL_DEVICE     "9GF100007LJD00004"
+// #define SERIAL_DEVICE     "9GF100007LJD00005"
+
 #define SERIAL_DEVICE     "1NEUMA0005"
 
 //********COMPILACION CONDICIONAL*******
@@ -143,14 +145,19 @@
 #define EXPIRATION_CYCLING    3
 
 // Definiciones para ciclado en mode CPAP
-#define COMP_FLOW_MAX_CPAP             3  // variable para comparacion de flujo y entrar en modo Inspiratorio en CPAP
-#define COMP_FLOW_MIN_CPAP            -3  // variable para comparacion de flujo y entrar en modo Inspiratorio en CPAP
-#define COMP_DEL_F_MAX_CPAP            2  // variable para comparacion de flujo y entrar en modo Inspiratorio en CPAP
-#define COMP_DEL_F_MIN_CPAP           -2  // variable para comparacion de flujo y entrar en modo Inspiratorio en CPAP
+#define COMP_FLOW_MAX_CPAP             2.5  // cambiado desde 3, variable para comparacion de flujo y entrar en modo Inspiratorio en CPAP
+#define COMP_FLOW_MIN_CPAP            -2.5  // cambiado desde 3, variable para comparacion de flujo y entrar en modo Inspiratorio en CPAP
+#define COMP_DEL_F_MAX_CPAP            1.5  // cambiado desde 2, variable para comparacion de flujo y entrar en modo Inspiratorio en CPAP
+#define COMP_DEL_F_MIN_CPAP           -1.5  // cambiado desde 2, variable para comparacion de flujo y entrar en modo Inspiratorio en CPAP
 #define CPAP_NONE                      0  // Estado de inicializacion
 #define CPAP_INIT                      1  // Estado de inicio de CPAP
 #define CPAP_INSPIRATION               2  // Entra en modo inspiratorio
 #define CPAP_ESPIRATION                3  // Entra en modo espiratorio
+
+#define DERIVATE_UP_THRESHOLD          0.2   // umbral para definir el valor maximo en estabilidad
+#define DERIVATE_DO_THRESHOLD          -0.2  // umbral para definir el valor minimo en estabilidad
+#define DERIVATE_LO_THRESHOLD          -0.3    // nivel para deteccion de cambio rapido
+
 
 
 //creo el manejador para el semaforo como variable global
@@ -281,6 +288,9 @@ float SFout = 0;	//Senal de flujo espiratorio
 float SPpac = 0;	// Senal de presion en la via aerea del paciente
 float SPpac0 = 0;
 float SPpac1 = 0;
+float SPpac2 = 0;
+float SPpac3 = 0;
+float SPpac4 = 0;
 float dPpac = 0;	// Derivada de SPpac
 float SFpac = 0;	// Senal de flujo del paciente
 float SPin = 0;		// Senal filtrada de presion en la camara
@@ -760,8 +770,11 @@ void task_Adc(void* arg) {
 					contADC = 0;
 					// Derivada SPpac
 					SPpac0 = SPpac1;
-					SPpac1 = SPpac;
-					dPpac = SPpac1 - SPpac0;
+					SPpac1 = SPpac2;
+					SPpac2 = SPpac3;
+					SPpac3 = SPpac4;
+					SPpac4 = SPpac;
+					dPpac = SPpac4 - SPpac0;
 					//Serial.println(String(SPpac) + ';' + String(10*dPpac));
 					if (currentStateMachineCycling == INSPIRATION_CYCLING) {
 						if (SPpac > maxPresion && flagAlarmPpico == false) {
@@ -775,25 +788,25 @@ void task_Adc(void* arg) {
 						switch (AC_stateMachine) {
 						case 0:
 							//Serial.println("Estado 0 AC");
-							if (dPpac > -0.2 && dPpac < 0.2) {	// dP/dt
+							if (dPpac > DERIVATE_DO_THRESHOLD && dPpac < DERIVATE_UP_THRESHOLD) {	// dP/dt
 								AC_stateMachine = 1;
 							}
 							break;
 						case 1:
 							//Calculo de Peep
-							if (dPpac > -0.2 && dPpac < 0.2) {	// dP/dt
+							if (dPpac > DERIVATE_DO_THRESHOLD && dPpac < DERIVATE_UP_THRESHOLD) {	// dP/dt
 								Peep_AC = SPpac1;
 								if (Peep_AC < 0) {	// Si el valor de Peep es negativo
 									Peep_AC = 0;	// Lo limita a 0
 								}
 							}
-							if (dPpac < -1) {
+							if (dPpac < DERIVATE_LO_THRESHOLD) {
 								AC_stateMachine = 2;
 							}
 							break;
 						case 2:
 							//Serial.println("Estado 2 AC");
-							if (SPpac1 < Peep_AC - newTrigger) {
+							if (SPpac4 < Peep_AC - newTrigger) {
 								flagAC = true;
 								AC_stateMachine = 0;
 							}
@@ -968,10 +981,10 @@ void task_Raspberry(void* arg) {
 				rInspir = String(relI, 1);
 			}
 			if (currentE == 1) {
-				rEspir = String(int(relE));
+				rEspir = String(int(calculatedE/10.0));
 			}
 			else {
-				rEspir = String(relE, 1);
+				rEspir = String(calculatedE/10.0, 1);
 			}
 			volumeT = String(int(VT));
 			alertPip = String(alerPresionPIP);
@@ -1101,8 +1114,16 @@ void task_Raspberry(void* arg) {
 			contSendData++;
 			if (contSendData == 1) {
 				contSendData = 0;
-				Serial.println(RaspberryChain);
+				 Serial.println(RaspberryChain);
 			}
+
+			// Serial.print(dPpac);
+			// Serial.print(',');
+			// Serial.print(SPpac);
+			// Serial.print(',');
+			// Serial.print(Peep_AC);
+			// Serial.print(',');
+			// Serial.println(Peep);
 
 			/* ********************************************************************
 			  * **** ENVIO DE VARIABLES PARA CALIBRACION ***************************

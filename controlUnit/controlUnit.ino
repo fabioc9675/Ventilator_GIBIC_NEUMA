@@ -1530,6 +1530,7 @@ void cpapRoutine() {
 		currentStateMachine = newStateMachine;
 		PeepEstable = 0;
 		stateFrecCPAP = CPAP_INIT;
+		alerFR_Alta = 0;
 	}
 	contCycling = 0;
 	digitalWrite(EV_INSPIRA, LOW);  //Piloto conectado a presion de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
@@ -1892,5 +1893,3 @@ void loop() {
 /* ***************************************************************************
  * **** FIN DEL PROGRAMA *****************************************************
  * ***************************************************************************/
-
-

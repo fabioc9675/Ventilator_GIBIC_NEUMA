@@ -390,6 +390,7 @@ float Vout_Esp = 0;
 
 // variables para calculo de frecuencia y relacion IE en CPAP
 float SFant = 0;
+float dFlow = 0;
 int stateFrecCPAP = 0;
 int contFrecCPAP = 0;
 int contEspCPAP = 0;
@@ -791,7 +792,7 @@ void task_Adc(void* arg) {
 					// Calculo de volumen circulante
 					flowTotalV = SFpacV - flowZero;
 					flowTotalC = SFpac;
-					SFant = SFpac;
+					//SFant = SFpac;
 
 					// Calculo de volumen
 					if (alerGeneral == 0) {
@@ -893,7 +894,8 @@ void task_Adc(void* arg) {
 					// // Calculo de volumen circulante
 					// flowTotalV = SFin - SFout - flowZero;
 					// flowTotalC = SFin - SFout;
-					// SFant = SFpac;
+					dFlow = SFpac - SFant;
+					SFant = SFpac;
 					// SFpac = SFin - SFout;  // flujo del paciente
 					// if (alerGeneral == 0) {
 					// 	if ((flowTotalC <= FLOWLO_LIM) || (flowTotalC >= FLOWUP_LIM)) {
@@ -1534,8 +1536,9 @@ void cpapRoutine() {
 	digitalWrite(EV_ESC_CAM, LOW);  //Piloto conectado a PEEP -> Limita la presion de la via aerea a la PEEP configurada
 	digitalWrite(EV_ESPIRA, LOW);   //Piloto conectado a ambiente -> Despresuriza la camara y permite el llenado de la bolsa
 
-	if ((SFpac > COMP_FLOW_MAX_CPAP) && ((SFpac - SFant) > COMP_DEL_F_MAX_CPAP) && (stateFrecCPAP != CPAP_INSPIRATION)) { // inicio de la inspiracion
-	  // Inicializa Maquina de estados para que inicie en CPAP
+	if ((SFpac > COMP_FLOW_MAX_CPAP) && ((dFlow) > COMP_DEL_F_MAX_CPAP) && (stateFrecCPAP != CPAP_INSPIRATION))
+	{	// inicio de la inspiracion
+		// Inicializa Maquina de estados para que inicie en CPAP
 		stateFrecCPAP = CPAP_INSPIRATION;
 
 		// Calculo de la frecuecnia respiratoria en CPAP
@@ -1593,9 +1596,9 @@ void cpapRoutine() {
 		UmbralFmax = -100;  //Reinicia el umbral maximo de flujo del paciente
 		UmbralVmin = 100;  //Reinicia el umbral minimo de volumen del paciente
 		UmbralVmax = -100;  //Reinicia el umbral maximo de volumen del paciente
-
 	}
-	if ((SFpac < COMP_FLOW_MIN_CPAP) && ((SFpac - SFant) < COMP_DEL_F_MIN_CPAP) && (stateFrecCPAP != CPAP_ESPIRATION)) {  // si inicia la espiracion
+	if ((SFpac < COMP_FLOW_MIN_CPAP) && ((dFlow) < COMP_DEL_F_MIN_CPAP) && (stateFrecCPAP != CPAP_ESPIRATION))
+	{ // si inicia la espiracion
 		stateFrecCPAP = CPAP_ESPIRATION;
 
 		//Calculo de PIP

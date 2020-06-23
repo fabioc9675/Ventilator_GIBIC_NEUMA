@@ -33,5 +33,5 @@
 #define FLOWUP_LIM        3
 #define FLOWLO_LIM        -3
 #define FLOW_CONV         16.666666    // conversion de L/min a mL/second
-#define DELTA_T           0.05         // delta de tiempo para realizar la integra
+#define DELTA_T           0.003 // 0.05         // delta de tiempo para realizar la integra
 #define VOL_SCALE         0.90         // Factor de escala para ajustar el volumen

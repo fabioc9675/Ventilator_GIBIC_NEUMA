@@ -1599,6 +1599,22 @@ void cpapRoutine() {
 		UmbralFmax = -100;  //Reinicia el umbral maximo de flujo del paciente
 		UmbralVmin = 100;  //Reinicia el umbral minimo de volumen del paciente
 		UmbralVmax = -100;  //Reinicia el umbral maximo de volumen del paciente
+
+		if (frecRespiratoriaCalculada > maxFR)
+		{
+			flagAlarmFR_Alta = true;
+			alerFR_Alta = 1;
+		}
+		else if (frecRespiratoriaCalculada < minFR)
+		{
+			flagAlarmFR_Alta = true;
+			alerFR_Alta = 2;
+		}
+		else
+		{
+			flagAlarmFR_Alta = false;
+			alerFR_Alta = 0;
+		}
 	}
 	if ((SFpac < COMP_FLOW_MIN_CPAP) && ((dFlow) < COMP_DEL_F_MIN_CPAP) && (stateFrecCPAP != CPAP_ESPIRATION))
 	{ // si inicia la espiracion

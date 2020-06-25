@@ -580,7 +580,7 @@ void encoderRoutine() {
 					if (newRelacionIE >= MAX_RIE) {
 						newRelacionIE = MAX_RIE;
 					}
-					if (newRelacionIE > -10 && newRelacionIE < 0) {
+					if (newRelacionIE >= 10 && newRelacionIE < 0) {
 						newRelacionIE = 10;
 					}
 				}
@@ -676,7 +676,7 @@ void encoderRoutine() {
 						newRelacionIE = -MIN_RIE;
 					}
 					if (newRelacionIE < 10 && newRelacionIE > 0) {
-						newRelacionIE = -10;
+						newRelacionIE = 10;
 					}
 				}
 				else if (flagTrigger == true) {

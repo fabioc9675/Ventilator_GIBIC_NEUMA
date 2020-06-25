@@ -1804,7 +1804,7 @@ void alarmsDetection() {
 			alerPresionPIP = 0;
 		}*/
 		// Fallo general
-		if ((Pin_max) < 6) {
+		if ((Pin_max) < 0) {
 			flagAlarmGeneral = true;
 			alerGeneral = 1;
 			newStateMachine = 1;

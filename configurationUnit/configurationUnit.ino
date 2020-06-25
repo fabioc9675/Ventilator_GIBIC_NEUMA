@@ -1588,7 +1588,7 @@ void lcdPrintFirstLine() {
 		lcd.print("      Alarmas       ");
 		break;
 	case VENT_MENU:
-		lcd.print(" Modo Ventilatorio ");
+		lcd.print(" Modo Ventilatorio  ");
 		if (insideMenuFlag == true && optionVentMenu == 0) {
 			lcd.setCursor(0, 0);
 			lcd.write(126);

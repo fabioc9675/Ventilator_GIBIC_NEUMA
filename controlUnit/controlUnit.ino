@@ -16,12 +16,11 @@
 #define FALSE         0
 
 //********DEFINICION DE VERSION*********
-#define VERSION_1_0       TRUE
+#define VERSION_1_1       TRUE
 
-// #define SERIAL_DEVICE     "9GF100007LJD00004"
-// #define SERIAL_DEVICE     "9GF100007LJD00005"
+// #define SERIAL_DEVICE     "9GF100007LJD00006"
 
-#define SERIAL_DEVICE     "1NEUMA0005"
+#define SERIAL_DEVICE     "1NEUMA0006"
 
 //********COMPILACION CONDICIONAL*******
 #ifdef VERSION_1_0
@@ -48,41 +47,42 @@
 #define EV_ESC_CAM      18   // out 1 // Valvula 3/2 de activaci�n de la camara (pin 6 del shield, velocidad motor 4)
 
 // Definiciones para el manejo del ADC
-#define ADC_PRESS_1     33  // ADC 6 // Sensor de presion xx (pin ADC para presion 1)
-#define ADC_PRESS_2     32  // ADC 5 // Sensor de presion xx (pin ADC para presion 2)
+#define ADC_PRESS_1     36  // ADC 6 // Sensor de presion xx (pin ADC para presion 1)
+#define ADC_PRESS_2     39  // ADC 5 // Sensor de presion xx (pin ADC para presion 2)
 #define ADC_PRESS_3     34  // ADC 4 // Sensor de presion via aerea del paciente (pin ADC para presion 3)
-#define ADC_FLOW_1      36  // ADC 1 // Sensor de flujo linea xx (pin ADC para presion 2)
-#define ADC_FLOW_2      39  // ADC 2 // Sensor de flujo linea xx (pin ADC para presion 3)
+#define ADC_FLOW_1      32  // ADC 1 // Sensor de flujo linea xx (pin ADC para presion 2)
+#define ADC_FLOW_2      33  // ADC 2 // Sensor de flujo linea xx (pin ADC para presion 3)  27, 35, 32
 
 #endif
 // Calibracion de los sensores de presion - coeficientes regresion lineal
-#define AMP_CAM_1          0.027692
-#define OFFS_CAM_1         -22.4863
-#define AMP_BAG_2          0.027692
-#define OFFS_BAG_2         -22.4863
-#define AMP_PAC_3          0.027961
-#define OFFS_PAC_3         -20.4197
+#define AMP_CAM_1          0.073182
+#define OFFS_CAM_1         -12.1276
+#define AMP_BAG_2          0.028673
+#define OFFS_BAG_2         -19.3990
+#define AMP_PAC_3          0.028673
+#define OFFS_PAC_3         -19.3990
+
 
 // Calibracion de los sensores de flujo - coeficientes regresion lineal
 // Sensor de flujo Inspiratorio
-#define AMP_FI_1      0.141500         
-#define OFFS_FI_1     -244.049400         
-#define LIM_FI_1      1619         
-#define AMP_FI_2      0.622700         
-#define OFFS_FI_2     -1023.119600         
-#define LIM_FI_2      1667         
-#define AMP_FI_3      0.141500         
-#define OFFS_FI_3     -220.865500         
+#define AMP_FI_1      0.139500         
+#define OFFS_FI_1     -264.343600         
+#define LIM_FI_1      1786         
+#define AMP_FI_2      0.640000         
+#define OFFS_FI_2     -1158.259200         
+#define LIM_FI_2      1834         
+#define AMP_FI_3      0.139500         
+#define OFFS_FI_3     -240.569600         
 
 // Sensor de flujo Espiratorio
-#define AMP_FE_1      0.117800         
-#define OFFS_FE_1     -214.996900         
-#define LIM_FE_1      1698         
-#define AMP_FE_2      0.858600         
-#define OFFS_FE_2     -1473.279900         
+#define AMP_FE_1      0.132000         
+#define OFFS_FE_1     -238.563900         
+#define LIM_FE_1      1692         
+#define AMP_FE_2      0.748000         
+#define OFFS_FE_2     -1280.839400         
 #define LIM_FE_2      1733         
-#define AMP_FE_3      0.117800         
-#define OFFS_FE_3     -189.111300     
+#define AMP_FE_3      0.132000         
+#define OFFS_FE_3     -213.529000  
 
 
 // variable para ajustar el nivel cero de flujo y calcular el volumen
@@ -389,6 +389,7 @@ float Vout_Esp = 0;
 
 // variables para calculo de frecuencia y relacion IE en CPAP
 float SFant = 0;
+float dFlow = 0;
 int stateFrecCPAP = 0;
 int contFrecCPAP = 0;
 int contEspCPAP = 0;
@@ -791,7 +792,7 @@ void task_Adc(void* arg) {
 					// Calculo de volumen circulante
 					flowTotalV = SFpacV - flowZero;
 					flowTotalC = SFpac;
-					SFant = SFpac;
+					//SFant = SFpac;
 
 					// Calculo de volumen
 					if (alerGeneral == 0) {
@@ -893,7 +894,8 @@ void task_Adc(void* arg) {
 					// // Calculo de volumen circulante
 					// flowTotalV = SFin - SFout - flowZero;
 					// flowTotalC = SFin - SFout;
-					// SFant = SFpac;
+					dFlow = SFpac - SFant;
+					SFant = SFpac;
 					// SFpac = SFin - SFout;  // flujo del paciente
 					// if (alerGeneral == 0) {
 					// 	if ((flowTotalC <= FLOWLO_LIM) || (flowTotalC >= FLOWUP_LIM)) {
@@ -1195,6 +1197,9 @@ void task_Raspberry(void* arg) {
 			  //  Serial.println(CalPpac);
 			  //  Serial.println(CalPin);
 			  //  Serial.println(CalPout); // informacion para calibracion de presion
+
+				
+
 		}
 		vTaskDelay(20 / portTICK_PERIOD_MS);
 	}
@@ -1528,14 +1533,16 @@ void cpapRoutine() {
 		currentStateMachine = newStateMachine;
 		PeepEstable = 0;
 		stateFrecCPAP = CPAP_INIT;
+		alerFR_Alta = 0;
 	}
 	contCycling = 0;
 	digitalWrite(EV_INSPIRA, LOW);  //Piloto conectado a presion de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
 	digitalWrite(EV_ESC_CAM, LOW);  //Piloto conectado a PEEP -> Limita la presion de la via aerea a la PEEP configurada
 	digitalWrite(EV_ESPIRA, LOW);   //Piloto conectado a ambiente -> Despresuriza la camara y permite el llenado de la bolsa
 
-	if ((SFpac > COMP_FLOW_MAX_CPAP) && ((SFpac - SFant) > COMP_DEL_F_MAX_CPAP) && (stateFrecCPAP != CPAP_INSPIRATION)) { // inicio de la inspiracion
-	  // Inicializa Maquina de estados para que inicie en CPAP
+	if ((SFpac > COMP_FLOW_MAX_CPAP) && ((dFlow) > COMP_DEL_F_MAX_CPAP) && (stateFrecCPAP != CPAP_INSPIRATION))
+	{	// inicio de la inspiracion
+		// Inicializa Maquina de estados para que inicie en CPAP
 		stateFrecCPAP = CPAP_INSPIRATION;
 
 		// Calculo de la frecuecnia respiratoria en CPAP
@@ -1593,9 +1600,9 @@ void cpapRoutine() {
 		UmbralFmax = -100;  //Reinicia el umbral maximo de flujo del paciente
 		UmbralVmin = 100;  //Reinicia el umbral minimo de volumen del paciente
 		UmbralVmax = -100;  //Reinicia el umbral maximo de volumen del paciente
-
 	}
-	if ((SFpac < COMP_FLOW_MIN_CPAP) && ((SFpac - SFant) < COMP_DEL_F_MIN_CPAP) && (stateFrecCPAP != CPAP_ESPIRATION)) {  // si inicia la espiracion
+	if ((SFpac < COMP_FLOW_MIN_CPAP) && ((dFlow) < COMP_DEL_F_MIN_CPAP) && (stateFrecCPAP != CPAP_ESPIRATION))
+	{ // si inicia la espiracion
 		stateFrecCPAP = CPAP_ESPIRATION;
 
 		//Calculo de PIP
@@ -1889,5 +1896,3 @@ void loop() {
 /* ***************************************************************************
  * **** FIN DEL PROGRAMA *****************************************************
  * ***************************************************************************/
-
-

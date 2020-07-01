@@ -30,6 +30,9 @@
 #define SERV_SERIAL_CH 9  // estado de cambio de serial
 #define SERV_FLOW_PRIN 10 // estado de impresion de datos de flujo
 
+#define SERV_SITE_CALI 11 // estado de menu de calibracion de sitio
+#define SERV_WAIT_SITE 12 // estado de espera en el menu de seleccion
+
 #define MAX_MAIN_MENU 5  // cantidad de opciones en menu principal
 #define MAX_FACT_MENU 10 // cantidad de opciones en menu de calibracion de fabrica
 #define MAX_FAIN_MENU 12 // cantidad de opciones en menu de calibracion de fabrica por variables
@@ -51,6 +54,10 @@
 #define AMPL_3 7
 #define OFFS_3 8
 #define LIMS_3 9
+
+
+xTaskHandle  serviceTaskHandle;
+
 
 uint8_t servMenuStateCurrent = SERV_NULL_MENU;
 uint8_t servMenuStateNew = SERV_NULL_MENU;
@@ -199,6 +206,7 @@ String dataCoeficients;
 // bandera de activacion de timer
 uint8_t flagTimerInterrupt = false;
 uint8_t flagService = false;
+uint8_t flagRestartTask = false;
 uint8_t flagFlowPrintCalibration = false;
 
 //creo el manejador para el semaforo como variable global
@@ -403,6 +411,7 @@ void task_Timer(void *arg)
  * **************************************************************************/
 void task_Service(void *arg)
 {
+    //Serial.println("Task_Create");
     while (1)
     {
         if (flagService == true)
@@ -416,8 +425,21 @@ void task_Service(void *arg)
             case SERV_FACT_CALI:
                 printFactoryMenu();
                 break;
+            case SERV_SITE_CALI:
+                printSiteMenu();
+                break;
             default:
                 break;
+            }
+            // Serial.println("In execution");
+        } else {
+            /* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+             + ++++ ESTADO PARTA DESTRUIR LA TAREA DE CALIBRACION +++++
+             + +++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+            if (servMenuStateCurrent == SERV_NULL_MENU){
+                // Serial.println("Task deleted");
+                flagRestartTask = true;  // flag to habilitate the restart of task
+                vTaskDelete(serviceTaskHandle); // delete the task Service
             }
         }
         vTaskDelay(250 / portTICK_PERIOD_MS);
@@ -455,6 +477,24 @@ void printFactoryMenu()
 
     Serial.print(menuString);
     servMenuStateNew = SERV_WAIT_FACT;
+    servMenuStateCurrent = servMenuStateNew;
+}
+
+
+void printSiteMenu()
+{
+    menuString = "\n\n*** Calibracion coeficientes de sitio ***\n"
+                            "1. Flujo inspiratorio sitio.\n"
+                            "2. Flujo expiratorio sitio.\n"
+                            "3. Presion Camara sitio.\n"
+                            "4. Presion Bolsa sitio.\n"
+                            "5. Presion Paciente sitio.\n"
+                            "6. Escala de volumen sitio.\n"
+                            "7. Menu anterior. \n"
+                            "8. Salir.\n\nSeleccione una opcion: ";
+
+    Serial.print(menuString);
+    servMenuStateNew = SERV_WAIT_SITE;
     servMenuStateCurrent = servMenuStateNew;
 }
 
@@ -545,8 +585,9 @@ void mainMenuOptionChange(int selMenu)
             servMenuStateNew = SERV_FACT_CALI;
             servMenuStateCurrent = servMenuStateNew;
             break;
-        case 4: // seleccion del menu 4
-            /* code */
+        case 4: // seleccion del menu 4, calibracion de sitio
+            servMenuStateNew = SERV_SITE_CALI;
+            servMenuStateCurrent = servMenuStateNew;
             break;
         case 5: // seleccion del menu 5, Salir
             Serial.print("Salida segura \n");
@@ -1388,6 +1429,20 @@ void task_Raspberry(void *arg)
                 Serial.println(dataCoeficients);
             }
 
+            /* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+             + ++++ ESTADO PARTA REINICIAR LA TAREA DE CALIBRACION ++++
+             + +++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+            if (flagRestartTask == true){
+                flagService = true;
+                servMenuStateNew = SERV_MAIN_MENU;
+                servMenuStateCurrent = servMenuStateNew;
+                flagRestartTask = false;
+
+                xTaskCreatePinnedToCore(task_Service, "task_Service", 4096, NULL, 1, &serviceTaskHandle, taskCoreOne);
+                
+                
+            }
+
             /* ********************************************************************
 			  * **** ENVIO DE VARIABLES PARA CALIBRACION ***************************
 			  * ********************************************************************/
@@ -1451,10 +1506,13 @@ void setup()
 
     // creo la tarea task_pulsador
     xTaskCreatePinnedToCore(task_Timer, "task_Timer", 2048, NULL, 7, NULL, taskCoreOne);
-    xTaskCreatePinnedToCore(task_Service, "task_Service", 4096, NULL, 1, NULL, taskCoreOne);
+    xTaskCreatePinnedToCore(task_Service, "task_Service", 4096, NULL, 1, &serviceTaskHandle, taskCoreOne);
     xTaskCreatePinnedToCore(task_Receive, "task_Receive", 4096, NULL, 1, NULL, taskCoreOne);
     xTaskCreatePinnedToCore(task_Raspberry, "task_Raspberry", 4096, NULL, 4, NULL, taskCoreOne);
     // xTaskCreatePinnedToCore(task_Encoder_B, "task_Encoder_B", 10000, NULL, 1, NULL, taskCoreZero);
+
+
+
 
     // Clean Serial buffers
     vTaskDelay(1000 / portTICK_PERIOD_MS);

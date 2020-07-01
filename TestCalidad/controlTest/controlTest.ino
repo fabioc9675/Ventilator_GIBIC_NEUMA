@@ -79,7 +79,8 @@
 #define OFFS_FE_3_W     -213.529000
 
 // variable para ajustar el nivel cero de flujo y calcular el volumen
-#define VOL_SCALE_W     1.00 // Factor de escala para ajustar el volumen
+#define VOL_SCALE_W          1.00 // Factor de escala para ajustar el volumen
+#define VOL_SCALE_SITE_W     1.00 // Factor de escala para ajustar el volumen en sitio
 
 // **********************************************************
 // Calibracion sensores Sitio
@@ -146,6 +147,7 @@ volatile float OFFS_FE_3 = 0;
 
 // variable para ajustar el nivel cero de flujo y calcular el volumen
 volatile float VOL_SCALE = 0; // Factor de escala para ajustar el volumen
+volatile float VOL_SCALE_SITE = 0; // Factor de escala para ajustar el volumen
 
 // **********************************************************
 // Calibracion sensores Sitio
@@ -241,7 +243,8 @@ enum eeprom_values
   AMP_PAC_3_SITE_ADDR = 190,
   OFFS_PAC_3_SITE_ADDR = 194,
   // Volumen ajuste
-  VOL_SCALE_ADDR = 198
+  VOL_SCALE_ADDR = 198, 
+  VOL_SCALE_SITE_ADDR = 202
 
 };
 
@@ -380,6 +383,7 @@ void init_Memory(void)
     LIM_FE_2 = writeFloat(eeprom_values::LIM_FE_2_ADDR, LIM_FE_2_W);
     // variable para ajustar el nivel cero de flujo y calcular el volumen
     VOL_SCALE = writeFloat(eeprom_values::VOL_SCALE_ADDR, VOL_SCALE_W); // Factor de escala para ajustar el volumen
+    VOL_SCALE_SITE = writeFloat(eeprom_values::VOL_SCALE_SITE_ADDR, VOL_SCALE_SITE_W); // Factor de escala para ajustar el volumen
 
     // Calibracion sensores Sitio
     AMP_CAM_1_SITE = writeFloat(eeprom_values::AMP_CAM_1_SITE_ADDR, AMP_CAM_1_SITE_W);
@@ -440,6 +444,7 @@ void init_Memory(void)
   LIM_FE_2 = readFloat(eeprom_values::LIM_FE_2_ADDR);
   // variable para ajustar el nivel cero de flujo y calcular el volumen
   VOL_SCALE = readFloat(eeprom_values::VOL_SCALE_ADDR); // Factor de escala para ajustar el volumen
+  VOL_SCALE_SITE = readFloat(eeprom_values::VOL_SCALE_SITE_ADDR); // Factor de escala para ajustar el volumen
 
   // Calibracion sensores Sitio
   AMP_CAM_1_SITE = readFloat(eeprom_values::AMP_CAM_1_SITE_ADDR);
@@ -499,7 +504,7 @@ void setup()
                     ',' + String(OFFS_FI_1, 5) + ',' + String(LIM_FI_1, 5) + ',' + String(AMP_FI_2, 5) + ',' + String(OFFS_FI_2, 5) +
                     ',' + String(LIM_FI_2, 5) + ',' + String(AMP_FI_3, 5) + ',' + String(OFFS_FI_3, 5) + ',' + String(AMP_FE_1, 5) +
                     ',' + String(OFFS_FE_1, 5) + ',' + String(LIM_FE_1, 5) + ',' + String(AMP_FE_2, 5) + ',' + String(OFFS_FE_2, 5) +
-                    ',' + String(LIM_FE_2, 5) + ',' + String(AMP_FE_3, 5) + ',' + String(OFFS_FE_3, 5) + ',' + String(VOL_SCALE, 5) +
+                    ',' + String(LIM_FE_2, 5) + ',' + String(AMP_FE_3, 5) + ',' + String(OFFS_FE_3, 5) + ',' + String(VOL_SCALE, 5) + ',' + String(VOL_SCALE_SITE, 5) +
                     ',' + String(AMP_CAM_1_SITE, 5) + ',' + String(OFFS_CAM_1_SITE, 5) + ',' + String(AMP_BAG_2_SITE, 5) +
                     ',' + String(OFFS_BAG_2_SITE, 5) + ',' + String(AMP_PAC_3_SITE, 5) + ',' + String(OFFS_PAC_3_SITE, 5) +
                     ',' + String(AMP_FI_1_SITE, 5) + ',' + String(OFFS_FI_1_SITE, 5) + ',' + String(LIM_FI_1_SITE, 5) +

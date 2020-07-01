@@ -125,7 +125,9 @@
 #define OFFS_FE_2_SITE     0.00         
 #define LIM_FE_2_SITE      1749         
 #define AMP_FE_3_SITE      1.00        
-#define OFFS_FE_3_SITE     0.00    
+#define OFFS_FE_3_SITE     0.00   
+
+#define VOL_SCALE_SITE     1.00         // Factor de escala para ajustar el volumen en sitio
 
 // Variables de control del protocolo
 #define RXD2 16
@@ -797,7 +799,7 @@ void task_Adc(void* arg) {
 					// Calculo de volumen
 					if (alerGeneral == 0) {
 						if ((flowTotalC <= FLOWLO_LIM) || (flowTotalC >= FLOWUP_LIM)) {
-							VtidalC = VtidalC + (flowTotalC * DELTA_T * FLOW_CONV * VOL_SCALE);
+							VtidalC = VtidalC + (flowTotalC * DELTA_T * FLOW_CONV * VOL_SCALE * VOL_SCALE_SITE);
 
 							if (VtidalC < 0) {
 								VtidalC = 0;
@@ -809,7 +811,7 @@ void task_Adc(void* arg) {
 
 						}
 						if ((flowTotalV <= FLOWLO_LIM) || (flowTotalV >= FLOWUP_LIM)) {
-							VtidalV = VtidalV + (flowTotalV * DELTA_T * FLOW_CONV * VOL_SCALE);
+							VtidalV = VtidalV + (flowTotalV * DELTA_T * FLOW_CONV * VOL_SCALE * VOL_SCALE_SITE);
 
 							if (VtidalV < 0) {
 								VtidalV = 0;
@@ -899,7 +901,7 @@ void task_Adc(void* arg) {
 					// SFpac = SFin - SFout;  // flujo del paciente
 					// if (alerGeneral == 0) {
 					// 	if ((flowTotalC <= FLOWLO_LIM) || (flowTotalC >= FLOWUP_LIM)) {
-					// 		VtidalC = VtidalC + (flowTotalC * DELTA_T * FLOW_CONV * VOL_SCALE);
+					// 		VtidalC = VtidalC + (flowTotalC * DELTA_T * FLOW_CONV * VOL_SCALE * VOL_SCALE_SITE);
 
 					// 		if (VtidalC < 0) {
 					// 			VtidalC = 0;
@@ -911,7 +913,7 @@ void task_Adc(void* arg) {
 
 					// 	}
 					// 	if ((flowTotalV <= FLOWLO_LIM) || (flowTotalV >= FLOWUP_LIM)) {
-					// 		VtidalV = VtidalV + (flowTotalV * DELTA_T * FLOW_CONV * VOL_SCALE);
+					// 		VtidalV = VtidalV + (flowTotalV * DELTA_T * FLOW_CONV * VOL_SCALE * VOL_SCALE_SITE);
 
 					// 		if (VtidalV < 0) {
 					// 			VtidalV = 0;

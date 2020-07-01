@@ -32,9 +32,13 @@
 
 #define SERV_SITE_CALI 11 // estado de menu de calibracion de sitio
 #define SERV_WAIT_SITE 12 // estado de espera en el menu de seleccion
+#define SERV_SIIN_CALI 13 // estado de menu de calibracion de sitio por variables
+#define SERV_WAIT_SIIN 14 // estado de espera en el menu de seleccion por variables
+
 
 #define MAX_MAIN_MENU 5  // cantidad de opciones en menu principal
 #define MAX_FACT_MENU 10 // cantidad de opciones en menu de calibracion de fabrica
+#define MAX_SITE_MENU 9  // cantidad de opciones en menu de calibracion de sitio
 #define MAX_FAIN_MENU 12 // cantidad de opciones en menu de calibracion de fabrica por variables
 
 #define MODE_NULL 0
@@ -55,6 +59,9 @@
 #define OFFS_3 8
 #define LIMS_3 9
 
+#define FACTORY   1
+#define SITE      2
+
 
 xTaskHandle  serviceTaskHandle;
 
@@ -63,6 +70,7 @@ uint8_t servMenuStateCurrent = SERV_NULL_MENU;
 uint8_t servMenuStateNew = SERV_NULL_MENU;
 uint8_t modeCalibration = MODE_NULL;
 uint8_t coeftype = MODE_NULL;
+uint8_t placeCalibration = MODE_NULL;  // variable para especificar si es calibracion de fabrica o de sitio
 
 String menuString;
 
@@ -102,6 +110,7 @@ volatile float OFFS_FE_3 = 0;
 
 // variable para ajustar el nivel cero de flujo y calcular el volumen
 volatile float VOL_SCALE = 0; // Factor de escala para ajustar el volumen
+volatile float VOL_SCALE_SITE = 0; // Factor de escala para ajustar el volumen
 
 // **********************************************************
 // Calibracion sensores Sitio
@@ -197,7 +206,8 @@ enum eeprom_values
     AMP_PAC_3_SITE_ADDR = 190,
     OFFS_PAC_3_SITE_ADDR = 194,
     // Volumen ajuste
-    VOL_SCALE_ADDR = 198
+    VOL_SCALE_ADDR = 198, 
+    VOL_SCALE_SITE_ADDR = 202
 
 };
 
@@ -264,6 +274,7 @@ void init_Memory(void)
     LIM_FE_2 = readFloat(eeprom_values::LIM_FE_2_ADDR);
     // variable para ajustar el nivel cero de flujo y calcular el volumen
     VOL_SCALE = readFloat(eeprom_values::VOL_SCALE_ADDR); // Factor de escala para ajustar el volumen
+    VOL_SCALE_SITE = readFloat(eeprom_values::VOL_SCALE_SITE_ADDR); // Factor de escala para ajustar el volumen
 
     // Calibracion sensores Sitio
     AMP_CAM_1_SITE = readFloat(eeprom_values::AMP_CAM_1_SITE_ADDR);
@@ -559,7 +570,11 @@ void printInternalFactoryMenu(int mode)
     }
 
     Serial.print(menuString);
-    servMenuStateNew = SERV_WAIT_FAIN;
+    if (placeCalibration == FACTORY) {
+        servMenuStateNew = SERV_WAIT_FAIN;
+    } else if(placeCalibration == SITE){
+        servMenuStateNew = SERV_WAIT_SIIN;
+    }
     servMenuStateCurrent = servMenuStateNew;
 }
 
@@ -582,10 +597,12 @@ void mainMenuOptionChange(int selMenu)
             /* code */
             break;
         case 3: // seleccion del menu 3, calibracion de fabrica
+            placeCalibration = FACTORY;
             servMenuStateNew = SERV_FACT_CALI;
             servMenuStateCurrent = servMenuStateNew;
             break;
         case 4: // seleccion del menu 4, calibracion de sitio
+            placeCalibration = SITE;
             servMenuStateNew = SERV_SITE_CALI;
             servMenuStateCurrent = servMenuStateNew;
             break;
@@ -674,6 +691,89 @@ void factoryMenuOptionChange(int selMenu)
     }
 }
 
+
+
+
+
+
+
+
+
+
+
+void siteMenuOptionChange(int selMenu)
+{
+    if ((selMenu > MAX_SITE_MENU) || (selMenu == 0))
+    {
+        Serial.print("Opcion no valida \n");
+        servMenuStateNew = SERV_SITE_CALI;
+        servMenuStateCurrent = servMenuStateNew;
+    }
+    else
+    {
+        switch (selMenu)
+        {
+        case 1: // seleccion del menu 1
+            modeCalibration = FLUJO_INSPIRATORIO;
+            servMenuStateNew = SERV_SIIN_CALI;
+            servMenuStateCurrent = servMenuStateNew;
+            printInternalFactoryMenu(modeCalibration);
+            break;
+        case 2: // seleccion del menu 2
+            modeCalibration = FLUJO_ESPIRATORIO;
+            servMenuStateNew = SERV_SIIN_CALI;
+            servMenuStateCurrent = servMenuStateNew;
+            printInternalFactoryMenu(modeCalibration);
+            break;
+        case 3: // seleccion del menu 3, calibracion de fabrica
+            modeCalibration = PRESION_CAMARA;
+            servMenuStateNew = SERV_SIIN_CALI;
+            servMenuStateCurrent = servMenuStateNew;
+            printInternalFactoryMenu(modeCalibration);
+            break;
+        case 4: // seleccion del menu 4
+            modeCalibration = PRESION_BOLSA;
+            servMenuStateNew = SERV_SIIN_CALI;
+            servMenuStateCurrent = servMenuStateNew;
+            printInternalFactoryMenu(modeCalibration);
+            break;
+        case 5: // seleccion del menu 5, Salir
+            modeCalibration = PRESION_PACIENTE;
+            servMenuStateNew = SERV_SIIN_CALI;
+            servMenuStateCurrent = servMenuStateNew;
+            printInternalFactoryMenu(modeCalibration);
+            break;
+        case 6: // seleccion del menu 5, Salir
+            modeCalibration = VOLUMEN_PACIENTE;
+            servMenuStateNew = SERV_SIIN_CALI;
+            servMenuStateCurrent = servMenuStateNew;
+            printInternalFactoryMenu(modeCalibration);
+            break;
+        case 7: // seleccion del menu 5, Salir
+            Serial.print("Salida Calibracion \n");
+            servMenuStateNew = SERV_MAIN_MENU;
+            servMenuStateCurrent = servMenuStateNew;
+            break;
+        case 8: // seleccion del menu 7, Salir
+            Serial.print("Salida segura \n");
+            servMenuStateNew = SERV_NULL_MENU;
+            servMenuStateCurrent = servMenuStateNew;
+            flagService = false;
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
 void factoryInternalMenuOptionChange(int selMenu)
 {
     float currentValue = 0;
@@ -703,6 +803,15 @@ void factoryInternalMenuOptionChange(int selMenu)
             {
                 flagFlowPrintCalibration = true;
                 servMenuStateNew = SERV_FLOW_PRIN;
+                servMenuStateCurrent = servMenuStateNew;
+            }
+            if (modeCalibration == VOLUMEN_PACIENTE)
+            {
+                coeftype = AMPL_1;
+                currentValue = readFloat(eeprom_values::VOL_SCALE_ADDR);
+                dataPrint = "Curva 1, Escala actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                Serial.print(dataPrint);
+                servMenuStateNew = SERV_ACQI_DATA;
                 servMenuStateCurrent = servMenuStateNew;
             }
             /* code */
@@ -756,13 +865,18 @@ void factoryInternalMenuOptionChange(int selMenu)
             }
             if (modeCalibration == VOLUMEN_PACIENTE)
             {
-                coeftype = AMPL_1;
-                currentValue = readFloat(eeprom_values::VOL_SCALE_ADDR);
-                dataPrint = "Curva 1, Escala actual: " + String(currentValue, 5) + "\nIngrese nuevo valor: ";
+                amp1 = readFloat(eeprom_values::VOL_SCALE_ADDR);
+
+                dataPrint = "Coeficientes escala volumen \n\n"
+                            "VOL_SCALE = " +
+                            String(amp1, 5) + "\n\n";
                 Serial.print(dataPrint);
-                servMenuStateNew = SERV_ACQI_DATA;
+
+                servMenuStateNew = SERV_FAIN_CALI;
                 servMenuStateCurrent = servMenuStateNew;
+                printInternalFactoryMenu(modeCalibration);
             }
+
             break;
         case 3: // seleccion del menu 3, calibracion de fabrica
             /* code */
@@ -886,6 +1000,13 @@ void factoryInternalMenuOptionChange(int selMenu)
                 servMenuStateNew = SERV_FAIN_CALI;
                 servMenuStateCurrent = servMenuStateNew;
                 printInternalFactoryMenu(modeCalibration);
+            }
+            if (modeCalibration == VOLUMEN_PACIENTE)
+            {
+                Serial.print("Salida segura \n");
+                servMenuStateNew = SERV_NULL_MENU;
+                servMenuStateCurrent = servMenuStateNew;
+                flagService = false;
             }
 
             break;
@@ -1185,6 +1306,11 @@ void task_Receive(void *pvParameters)
                     Serial.println(selMenu);
                     factoryMenuOptionChange(selMenu);
                     break;
+                case SERV_WAIT_SITE:
+                    selMenu = menuEntrance.toInt();
+                    Serial.println(selMenu);
+                    siteMenuOptionChange(selMenu);
+                    break;
                 case SERV_WAIT_FAIN:
                     selMenu = menuEntrance.toInt();
                     Serial.println(selMenu);
@@ -1414,7 +1540,7 @@ void task_Raspberry(void *arg)
                               ',' + String(OFFS_FI_1, 5) + ',' + String(LIM_FI_1, 5) + ',' + String(AMP_FI_2, 5) + ',' + String(OFFS_FI_2, 5) +
                               ',' + String(LIM_FI_2, 5) + ',' + String(AMP_FI_3, 5) + ',' + String(OFFS_FI_3, 5) + ',' + String(AMP_FE_1, 5) +
                               ',' + String(OFFS_FE_1, 5) + ',' + String(LIM_FE_1, 5) + ',' + String(AMP_FE_2, 5) + ',' + String(OFFS_FE_2, 5) +
-                              ',' + String(LIM_FE_2, 5) + ',' + String(AMP_FE_3, 5) + ',' + String(OFFS_FE_3, 5) + ',' + String(VOL_SCALE, 5) +
+                              ',' + String(LIM_FE_2, 5) + ',' + String(AMP_FE_3, 5) + ',' + String(OFFS_FE_3, 5) + ',' + String(VOL_SCALE, 5) + ',' + String(VOL_SCALE_SITE, 5) + 
                               ',' + String(AMP_CAM_1_SITE, 5) + ',' + String(OFFS_CAM_1_SITE, 5) + ',' + String(AMP_BAG_2_SITE, 5) +
                               ',' + String(OFFS_BAG_2_SITE, 5) + ',' + String(AMP_PAC_3_SITE, 5) + ',' + String(OFFS_PAC_3_SITE, 5) +
                               ',' + String(AMP_FI_1_SITE, 5) + ',' + String(OFFS_FI_1_SITE, 5) + ',' + String(LIM_FI_1_SITE, 5) +
@@ -1490,7 +1616,7 @@ void setup()
                       ',' + String(OFFS_FI_1, 5) + ',' + String(LIM_FI_1, 5) + ',' + String(AMP_FI_2, 5) + ',' + String(OFFS_FI_2, 5) +
                       ',' + String(LIM_FI_2, 5) + ',' + String(AMP_FI_3, 5) + ',' + String(OFFS_FI_3, 5) + ',' + String(AMP_FE_1, 5) +
                       ',' + String(OFFS_FE_1, 5) + ',' + String(LIM_FE_1, 5) + ',' + String(AMP_FE_2, 5) + ',' + String(OFFS_FE_2, 5) +
-                      ',' + String(LIM_FE_2, 5) + ',' + String(AMP_FE_3, 5) + ',' + String(OFFS_FE_3, 5) + ',' + String(VOL_SCALE, 5) +
+                      ',' + String(LIM_FE_2, 5) + ',' + String(AMP_FE_3, 5) + ',' + String(OFFS_FE_3, 5) + ',' + String(VOL_SCALE, 5) + ',' + String(VOL_SCALE_SITE, 5) + 
                       ',' + String(AMP_CAM_1_SITE, 5) + ',' + String(OFFS_CAM_1_SITE, 5) + ',' + String(AMP_BAG_2_SITE, 5) +
                       ',' + String(OFFS_BAG_2_SITE, 5) + ',' + String(AMP_PAC_3_SITE, 5) + ',' + String(OFFS_PAC_3_SITE, 5) +
                       ',' + String(AMP_FI_1_SITE, 5) + ',' + String(OFFS_FI_1_SITE, 5) + ',' + String(LIM_FI_1_SITE, 5) +

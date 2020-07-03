@@ -16,11 +16,11 @@
 #define FALSE         0
 
 //********DEFINICION DE VERSION*********
-#define VERSION_1_1       TRUE
+#define VERSION_1_2       TRUE
 
 // #define SERIAL_DEVICE     "9GF100007LJD00006"
 
-#define SERIAL_DEVICE     "1NEUMA0006"
+#define SERIAL_DEVICE     "1NEUMA0007"
 
 //********COMPILACION CONDICIONAL*******
 #ifdef VERSION_1_0
@@ -53,10 +53,25 @@
 #define ADC_FLOW_1      32  // ADC 1 // Sensor de flujo linea xx (pin ADC para presion 2)
 #define ADC_FLOW_2      33  // ADC 2 // Sensor de flujo linea xx (pin ADC para presion 3)  27, 35, 32
 
+#elif VERSION_1_2
+
+// Definiciones para controlar el shiel DFRobot quad motor driver
+// Definiciones para controlar el shiel DFRobot quad motor driver
+#define EV_INSPIRA      5   // out 3 // Valvula 3/2 de control de la via inspiratoria (pin 3 del shield, velocidad motor 1)
+#define EV_ESPIRA       4  // out 2 // Valvula 3/2 de control de presiones PCON y PEEP (pin 11 del shield, velocidad motor 2)
+#define EV_ESC_CAM      18   // out 1 // Valvula 3/2 de activaci�n de la camara (pin 6 del shield, velocidad motor 4)
+
+// Definiciones para el manejo del ADC
+#define ADC_PRESS_1     27  // ADC 6 // Sensor de presion xx (pin ADC para presion 1)
+#define ADC_PRESS_2     39  // ADC 5 // Sensor de presion xx (pin ADC para presion 2)
+#define ADC_PRESS_3     35  // ADC 4 // Sensor de presion via aerea del paciente (pin ADC para presion 3)
+#define ADC_FLOW_1      36  // ADC 1 // Sensor de flujo linea xx (pin ADC para presion 2)
+#define ADC_FLOW_2      34  // ADC 2 // Sensor de flujo linea xx (pin ADC para presion 3)  27, 35, 32
+
 #endif
 // Calibracion de los sensores de presion - coeficientes regresion lineal
-#define AMP_CAM_1          0.073182
-#define OFFS_CAM_1         -12.1276
+#define AMP_CAM_1          0.028673
+#define OFFS_CAM_1         -19.3990
 #define AMP_BAG_2          0.028673
 #define OFFS_BAG_2         -19.3990
 #define AMP_PAC_3          0.028673

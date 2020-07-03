@@ -1,7 +1,7 @@
 /*
   Name:		configurationUnit.ino
   Created:	4/3/2020 11:40:24
-  Author:	Helber Carvajal
+  Author:	GIBIC UdeA
 */
 
 #include <nvs_flash.h>
@@ -15,6 +15,12 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);
 //********DEFINICIONES CONDICIONES******
 #define TRUE          1
 #define FALSE         0
+
+//************ DEFINICION DE VERSION *********************
+#define VERSION_1_2         TRUE
+
+//************COMPILACION CONDICIONAL***********
+#ifdef VERSION_1_0
 
 //********DEFINICION DE PINES***********
 #define A           18     //variable A a pin digital 2 (DT en modulo)
@@ -48,6 +54,43 @@ LiquidCrystal_I2C lcd(0x3F, 20, 4);
 #define ENCOD_INCREASE          1  // movimiento a la derecha, aumento
 #define ENCOD_DECREASE          2  // movimiento a la derecha, aumento
 #define ENCOD_COUNT             3  // cantidad de interrupciones antes de reconocer el conteo 
+
+#elif VERSION_1_2
+
+//********DEFINICION DE PINES***********
+#define A           19     //variable A a pin digital 2 (DT en modulo)
+#define B           18     //variable B a pin digital 4 (CLK en modulo)
+#define SW          5      //sw a pin digital 3 (SW en modulo)  
+
+#define BUZZER_BTN          12
+#define SILENCE_BTN         26  // Silenciar alarma cambiar
+#define SILENCE_LED      27  // Led Boton silencio
+#define STABILITY_BTN       34
+#define STABILITY_LED   25
+#define STANDBY       32  // Stabdby button
+#define STANDBY_LED     33  // Stabdby button
+
+#define LUMING      13  // Alarma luminosa
+#define LUMINR      14
+#define LUMINB      15
+#define BATTALARM   4
+
+#define LED         2
+
+#define ESP_INTR_FLAG_DEFAULT 0
+
+#define DEBOUNCE_ENC            50  // tiempo para realizar antirrebote
+#define DEBOUNCE_ENC_2          400  // tiempo para realizar antirrebote
+#define DEBOUNCE_ENC_OUT        300  // tiempo para realizar antirrebote
+#define DEBOUNCE_ENC_OUT_2      800  // tiempo para realizar antirrebote
+#define DEBOUNCE_ENC_SW         400  // tiempo para realizar antirrebote
+#define LOW_ATT_INT             50  // Interrupcion cada 10 ms
+
+#define ENCOD_INCREASE          1  // movimiento a la derecha, aumento
+#define ENCOD_DECREASE          2  // movimiento a la derecha, aumento
+#define ENCOD_COUNT             1  // cantidad de interrupciones antes de reconocer el conteo 
+
+#endif
 
 //**********VALORES MAXIMOS**********
 #define MENU_QUANTITY       4
@@ -116,7 +159,7 @@ unsigned int contStability = 0;
 unsigned int contBattery5min = 0;
 unsigned int fl_StateEncoder = 0;
 
-bool flagStandbyInterrupt = true;
+bool flagStandbyInterrupt = true;   // inicia en modo standby
 unsigned int contStandby = 0;
 
 // variables de menu
@@ -955,7 +998,7 @@ void standbyInterruptAttention() {
 			sendSerialData();
 
 		} else if (stateMachine != STANDBY_STATE){
-			Serial.println(digitalRead(STANDBY));
+			// Serial.println(digitalRead(STANDBY));
 			if (contStandby < 3000 && digitalRead(STANDBY) == 1) {
 				contStandby = 0;
 				portENTER_CRITICAL_ISR(&mux);

@@ -14,16 +14,16 @@
 #define FALSE 0
 
 //********DEFINICION DISPOSITIVO********
-#define SERIAL_DEVICE "1NEUMA0000"
+#define SERIAL_DEVICE "1NEUMA0007"
 #define SERIAL_LENGTH 10
 
 // Definiciones para el manejo del ADC
-#define ADC_PRESS_1 32
-#define ADC_PRESS_2 35
-#define ADC_PRESS_3 34
-#define ADC_PRESS_4 30
-#define ADC_PRESS_5 36
-#define ADC_PRESS_6 27
+#define ADC_PRESS_1 27
+#define ADC_PRESS_2 39
+#define ADC_PRESS_3 35
+#define ADC_PRESS_4 36
+#define ADC_PRESS_5 34
+#define ADC_PRESS_6 33
 
 // Definiciones para el manejo del EV
 #define EV_OUTPUT_1 18
@@ -50,8 +50,8 @@
  * **** VARIABLES DE CALIBRACION A GUARDAR ***********************
  * ***************************************************************/
 // Calibracion de los sensores de presion - coeficientes regresion lineal
-#define AMP_CAM_1_W     0.073182
-#define OFFS_CAM_1_W    -12.1276
+#define AMP_CAM_1_W     0.028673
+#define OFFS_CAM_1_W    -19.3990
 #define AMP_BAG_2_W     0.028673
 #define OFFS_BAG_2_W    -19.3990
 #define AMP_PAC_3_W     0.028673
@@ -530,7 +530,7 @@ void loop()
 
     counterTimer++;
 
-    if (counterTimer % 100 == 0)
+    if (counterTimer % 500 == 0)
     {
 
       if (stateMosfet == 10)
@@ -589,12 +589,11 @@ void loop()
     if (counterTimer % 50 == 0)
     {
 
-      dataSend = "Hola, soy CONTROL," + String(analogRead(ADC_PRESS_1)) +
-                 ',' + String(analogRead(ADC_PRESS_2)) +
-                 ',' + String(analogRead(ADC_PRESS_3)) +
-                 ',' + String(analogRead(ADC_PRESS_4)) +
-                 ',' + String(analogRead(ADC_PRESS_5)) +
-                 ',' + String(analogRead(ADC_PRESS_6));
+      dataSend = "Hola, soy CONTROL," + String(AMP_CAM_1*analogRead(ADC_PRESS_1)+OFFS_CAM_1) +
+                 ',' + String(AMP_BAG_2*analogRead(ADC_PRESS_2)+OFFS_BAG_2) +
+                 ',' + String(AMP_PAC_3*analogRead(ADC_PRESS_3)+OFFS_PAC_3) +
+                 ',' + String(AMP_FI_1*analogRead(ADC_PRESS_4)+OFFS_FI_1) +
+                 ',' + String(AMP_FE_1*analogRead(ADC_PRESS_5)+OFFS_FE_1);
 
       Serial.println(dataSend);
     }

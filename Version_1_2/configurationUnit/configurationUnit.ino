@@ -144,6 +144,7 @@ volatile bool flagDetachInterrupt_A_B = false;
 volatile bool flagDetachInterrupt_B_A = false;
 volatile bool flagDetachInterrupt_S = false;
 volatile bool flagDetach = false;
+volatile bool flagService = false;
 unsigned int contDetachA = 0;
 unsigned int contDetachB = 0;
 unsigned int contDetachS = 0;
@@ -1869,13 +1870,15 @@ void task_Display(void* pvParameters) {
 		/* ****************************************************************
 		 * **** Actualizacion de valores en pantalla LCD ******************
 		 * ***************************************************************/
-		if ((menuAnterior != menuImprimir) && (flagAlreadyPrint == false)) {
-			lcd.clear();
-			lineaAnterior = MODE_CHANGE;
-			lcd_show_comp();
-		}
-		else {
-			lcd_show_part();
+		if(flagService == false){
+			if ((menuAnterior != menuImprimir) && (flagAlreadyPrint == false)) {
+				lcd.clear();
+				lineaAnterior = MODE_CHANGE;
+				lcd_show_comp();
+			}
+			else {
+				lcd_show_part();
+			}
 		}
 		// delay de 100 ms en la escritura del LCD
 		vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -1886,6 +1889,15 @@ void task_Display(void* pvParameters) {
 void lcd_setup() {
 	lcd.begin(21, 22);
 	lcd.backlight();
+
+	if (flagService == true){
+		lcd.setCursor(0, 0);
+		lcd.print("   MODO SERVICIO    ");
+		lcd.setCursor(0, 2);
+		lcd.print("AL FINALIZAR INICIE ");
+		lcd.setCursor(0, 3);
+		lcd.print("EL EQUIPO DE NUEVO  ");
+	}
 }
 
 /* ***************************************************************************
@@ -1897,13 +1909,33 @@ void setup()
 	Serial2.begin(115200);
 	Serial2.setTimeout(10);
 	init_GPIO();
-	init_TIMER();
+	
 
 	// nvs_flash_init();
 
 	// se crea el semaforo binario
 	xSemaphoreEncoder = xSemaphoreCreateBinary();
 	xSemaphoreTimer = xSemaphoreCreateBinary();
+
+	// modo servicio de fabrica
+	if ((digitalRead(SILENCE_BTN) == LOW) && (digitalRead(STABILITY_BTN) == LOW)){
+		while(digitalRead(SILENCE_BTN) == LOW)
+		{
+			flagService = true;
+			Serial2.print('M');
+			vTaskDelay(50 / portTICK_PERIOD_MS);
+		} 
+	} else if (digitalRead(SILENCE_BTN) == LOW){ // Modo servicio de fabrica
+		while(digitalRead(SILENCE_BTN) == LOW)
+		{
+			flagService = true;
+			Serial2.print('S');
+			vTaskDelay(50 / portTICK_PERIOD_MS);
+		} 
+	}
+
+	init_TIMER();
+
 
 	// creo la tarea task_pulsador
 	xTaskCreatePinnedToCore(task_Encoder, "task_Encoder", 2048, NULL, 4, NULL, taskCoreOne);

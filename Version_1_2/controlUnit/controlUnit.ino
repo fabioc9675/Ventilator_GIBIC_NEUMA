@@ -326,6 +326,8 @@ String lVoluInf;
 // Cadena de impresion en raspberry
 String RaspberryChain = "";
 
+char initial = 'R';
+
 /* ***************************************************************************
  * **** CONFIGURACION ********************************************************
  * ***************************************************************************/
@@ -333,13 +335,39 @@ void setup()
 {
     init_Memory();
     init_GPIO();
-    init_Timer();
+
     init_TextPayload();
     Serial.begin(115200);
     Serial2.begin(115200, SERIAL_8N1, RXD2, TXD2);
-    Serial2.setTimeout(10);
 
-    pinMode(2, OUTPUT); // para prueba de retardos en la ejecucion de tareas
+    Serial2.setTimeout(100);
+
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    if (Serial2.available() > 0)
+    {
+        initial = Serial2.read();
+    }
+
+    if (initial == 'S') // Modo servicio de sitio
+    {
+        flagService = true;
+        servMenuStateNew = SERV_MAIN_MENU;
+        servMenuStateCurrent = servMenuStateNew;
+    }
+    else if (initial == 'M') // modo servicio de fabrica
+    {
+        flagService = true;
+        servMenuStateNew = SERV_MAIN_MENU;
+        servMenuStateCurrent = servMenuStateNew;
+    }
+    else
+    {
+        flagService = false;
+        // servMenuStateNew = SERV_MAIN_MENU;
+        servMenuStateNew = SERV_NULL_MENU;
+        servMenuStateCurrent = servMenuStateNew;
+    }
 
     // nvs_flash_init();
 
@@ -347,12 +375,9 @@ void setup()
     xSemaphoreTimer = xSemaphoreCreateBinary();
     xSemaphoreAdc = xSemaphoreCreateBinary();
     xSemaphoreRaspberry = xSemaphoreCreateBinary();
+    init_Timer();
 
-    flagService = false;
-    // servMenuStateNew = SERV_MAIN_MENU;
-    servMenuStateNew = SERV_NULL_MENU;
-    servMenuStateCurrent = servMenuStateNew;
-
+    pinMode(2, OUTPUT); // para prueba de retardos en la ejecucion de tareas
 
     // nvs_flash_init();
 

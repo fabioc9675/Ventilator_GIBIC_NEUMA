@@ -1,12 +1,12 @@
 /*
- * File:   timer.h
+ * File:   acquisition.h
  * Author: GIBIC UdeA
  *
  * Created on July 4, 2020, 13:41 PM
  */
 
-#ifndef TIMER_H
-#define TIMER_H
+#ifndef ACQUISITION_H
+#define ACQUISITION_H
 
 #ifdef __cplusplus
 extern "C"
@@ -24,12 +24,18 @@ extern "C"
 #include <Esp.h>
 #include <nvs_flash.h>
 
+#include "initializer.h"
+#include "timer.h"
 #include "cyclingFunctions.h"
-#include "memoryManager.h"
 
    /** ****************************************************************************
  ** ************ DEFINES *******************************************************
  ** ****************************************************************************/
+#define L_F_PROM 40 // numero de datos en el filtro moving average de la señal de visualizacion de flujo
+
+#define DERIVATE_UP_THRESHOLD 0.2  // umbral para definir el valor maximo en estabilidad
+#define DERIVATE_DO_THRESHOLD -0.2 // umbral para definir el valor minimo en estabilidad
+#define DERIVATE_LO_THRESHOLD -0.3 // nivel para deteccion de cambio rapido
 
    /** ****************************************************************************
  ** ************ VARIABLES *****************************************************
@@ -38,13 +44,14 @@ extern "C"
    /** ****************************************************************************
  ** ************ FUNCTIONS *****************************************************
  ** ****************************************************************************/
-   void init_Timer(void);
-   void IRAM_ATTR onTimer(void); // funcion de interrupcion por timer
-
-   /* **************************************************************************
- * **** TAREA PARA EL MANEJO DE LA INTERRUPCION DEL TIMER *******************
- * **************************************************************************/
-   void task_Timer(void *arg);
+   /************************************************************
+ ***** FUNCIONES DE ATENCION A INTERRUPCION TAREA ADC *******
+ ************************************************************/
+   void task_Adc(void *arg);
+   /************************************************************
+ ***** ENVÍO DE TRAMA DE DATOS HACIA LA RASPBERRY ***********
+ ************************************************************/
+   void task_Raspberry(void *arg);
 
    /* *****************************************************************************
  * *****************************************************************************
@@ -62,4 +69,4 @@ extern "C"
 }
 #endif
 
-#endif /* TIMER_H */
+#endif /* ACQUISITION_H */

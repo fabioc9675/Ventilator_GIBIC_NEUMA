@@ -18,8 +18,25 @@
  ** ************ EXTERN VARIABLES **********************************************
  ** ****************************************************************************/
 // **********************************************************
+// manejadores de las tareas
+extern xTaskHandle serviceTaskHandle;
+
 extern String menuString;
 extern String SerialID;
+
+// bandera de modo calibracion
+extern uint8_t flagService;
+extern uint8_t flagFlowPrintCalibration;
+extern uint8_t flagPcamPrintCalibration;
+extern uint8_t flagPbagPrintCalibration;
+extern uint8_t flagPpacPrintCalibration;
+extern uint8_t flagFlowSitePrintCalibration;
+extern uint8_t flagPcamSitePrintCalibration;
+extern uint8_t flagPbagSitePrintCalibration;
+extern uint8_t flagPpacSitePrintCalibration;
+
+extern uint8_t flagService;
+extern uint8_t flagRestartTask;
 
 /** ****************************************************************************
  ** ************ VARIABLES *****************************************************
@@ -159,6 +176,281 @@ void printInternalFactoryMenu(int mode)
     }
     servMenuStateCurrent = servMenuStateNew;
 }
+
+
+
+/* **************************************************************************
+ * **** TAREA PARA LA RECEPCION DE DATOS SERIAL EN CALIBRACION **************
+ * **************************************************************************/
+void task_ReceiveService(void *pvParameters)
+{
+
+    String menuEntrance;
+    menuEntrance.reserve(50);
+    int selMenu = 0;
+    float newCoeficient = 0;
+    String newSerial;
+
+    char bufferR = 0;
+
+    uint8_t dataReady = false;
+
+    uint8_t flagFirstPrint = false;
+
+    // Clean Serial buffers
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    Serial.flush();
+    Serial2.flush();
+
+    while (1)
+    {
+        if (flagService == true)
+        { // se encuentra en modo servicio
+            if (Serial.available())
+            {
+                bufferR = Serial.read();
+                if (bufferR == '\n')
+                {
+                    dataReady = true;
+                }
+                else
+                {
+                    menuEntrance = menuEntrance + bufferR;
+                }
+                Serial.print(bufferR);
+            }
+
+            if (dataReady == true)
+            {
+                dataReady = false;
+                //menuEntrance = Serial.readStringUntil('\n');
+                switch (servMenuStateCurrent)
+                {
+                case SERV_WAIT_MAIN:
+                    selMenu = menuEntrance.toInt();
+                    Serial.println(selMenu);
+                    Serial.print("\n\n\n");
+                    mainMenuOptionChange(selMenu);
+                    break;
+                case SERV_WAIT_FACT:
+                    selMenu = menuEntrance.toInt();
+                    Serial.println(selMenu);
+                    Serial.print("\n\n\n");
+                    factoryMenuOptionChange(selMenu);
+                    break;
+                case SERV_WAIT_SITE:
+                    selMenu = menuEntrance.toInt();
+                    Serial.println(selMenu);
+                    Serial.print("\n\n\n");
+                    siteMenuOptionChange(selMenu);
+                    break;
+                case SERV_WAIT_FAIN:
+                    selMenu = menuEntrance.toInt();
+                    Serial.println(selMenu);
+                    Serial.print("\n\n\n");
+                    factoryInternalMenuOptionChange(selMenu);
+                    break;
+                case SERV_WAIT_SIIN:
+                    selMenu = menuEntrance.toInt();
+                    Serial.println(selMenu);
+                    Serial.print("\n\n\n");
+                    siteInternalMenuOptionChange(selMenu);
+                    break;
+                case SERV_FACT_PRIN:
+                    if (menuEntrance[0] == 'q')
+                    {
+                        if ((modeCalibration == FLUJO_INSPIRATORIO) || (modeCalibration == FLUJO_ESPIRATORIO))
+                        {
+                            flagFlowPrintCalibration = false;
+                            servMenuStateNew = SERV_FAIN_CALI;
+                            servMenuStateCurrent = servMenuStateNew;
+                            printInternalFactoryMenu(modeCalibration);
+                        }
+                        if (modeCalibration == PRESION_CAMARA)
+                        {
+                            flagPcamPrintCalibration = false;
+                            servMenuStateNew = SERV_FAIN_CALI;
+                            servMenuStateCurrent = servMenuStateNew;
+                            printInternalFactoryMenu(modeCalibration);
+                        }
+                        if (modeCalibration == PRESION_BOLSA)
+                        {
+                            flagPbagPrintCalibration = false;
+                            servMenuStateNew = SERV_FAIN_CALI;
+                            servMenuStateCurrent = servMenuStateNew;
+                            printInternalFactoryMenu(modeCalibration);
+                        }
+                        if (modeCalibration == PRESION_PACIENTE)
+                        {
+                            flagPpacPrintCalibration = false;
+                            servMenuStateNew = SERV_FAIN_CALI;
+                            servMenuStateCurrent = servMenuStateNew;
+                            printInternalFactoryMenu(modeCalibration);
+                        }
+                    }
+                    break;
+                case SERV_SITE_PRIN:
+                    if (menuEntrance[0] == 'q')
+                    {
+                        if ((modeCalibration == FLUJO_INSPIRATORIO) || (modeCalibration == FLUJO_ESPIRATORIO))
+                        {
+                            flagFlowSitePrintCalibration = false;
+                            servMenuStateNew = SERV_SIIN_CALI;
+                            servMenuStateCurrent = servMenuStateNew;
+                            printInternalFactoryMenu(modeCalibration);
+                        }
+                        if (modeCalibration == PRESION_CAMARA)
+                        {
+                            flagPcamSitePrintCalibration = false;
+                            servMenuStateNew = SERV_SIIN_CALI;
+                            servMenuStateCurrent = servMenuStateNew;
+                            printInternalFactoryMenu(modeCalibration);
+                        }
+                        if (modeCalibration == PRESION_BOLSA)
+                        {
+                            flagPbagSitePrintCalibration = false;
+                            servMenuStateNew = SERV_SIIN_CALI;
+                            servMenuStateCurrent = servMenuStateNew;
+                            printInternalFactoryMenu(modeCalibration);
+                        }
+                        if (modeCalibration == PRESION_PACIENTE)
+                        {
+                            flagPpacSitePrintCalibration = false;
+                            servMenuStateNew = SERV_SIIN_CALI;
+                            servMenuStateCurrent = servMenuStateNew;
+                            printInternalFactoryMenu(modeCalibration);
+                        }
+                    }
+                    break;
+                case SERV_ACQI_DATA:
+                    if (flagFirstPrint == false)
+                    {
+                        flagFirstPrint = true;
+                        newCoeficient = menuEntrance.toFloat();
+                        Serial.println(String(newCoeficient, 5));
+                        Serial.print("\nDesea confirmar el cambio? y/n: ");
+                    }
+                    else
+                    {
+                        if (menuEntrance[0] == 'y')
+                        {
+                            changeMenu(coeftype, modeCalibration, newCoeficient, placeCalibration);
+                            newCoeficient = 0;
+                            modeCalibration = MODE_NULL;
+                            if (placeCalibration == FACTORY)
+                            {
+                                servMenuStateNew = SERV_FACT_CALI;
+                            }
+                            else if (placeCalibration == SITE)
+                            {
+                                servMenuStateNew = SERV_SITE_CALI;
+                            }
+                            servMenuStateCurrent = servMenuStateNew;
+                            flagFirstPrint = false;
+                        }
+                        else
+                        {
+                            newCoeficient = 0;
+                            modeCalibration = MODE_NULL;
+                            if (placeCalibration == FACTORY)
+                            {
+                                servMenuStateNew = SERV_FACT_CALI;
+                            }
+                            else if (placeCalibration == SITE)
+                            {
+                                servMenuStateNew = SERV_SITE_CALI;
+                            }
+                            servMenuStateCurrent = servMenuStateNew;
+                            flagFirstPrint = false;
+                            Serial.println("\n No se actualizo el valor\n");
+                        }
+                    }
+                    break;
+                case SERV_SERIAL_CH:
+                    if (flagFirstPrint == false)
+                    {
+                        flagFirstPrint = true;
+                        newSerial = menuEntrance;
+                        Serial.println(newSerial);
+                        Serial.print("\nDesea confirmar el cambio? y/n: ");
+                    }
+                    else
+                    {
+                        if (menuEntrance[0] == 'y')
+                        {
+                            writeString(eeprom_values::SERIAL_ADDR, newSerial);
+                            SerialID = readString(eeprom_values::SERIAL_ADDR);
+                            Serial.println("\n Serial actualizado con exito\n");
+                            servMenuStateNew = SERV_FACT_CALI;
+                            servMenuStateCurrent = servMenuStateNew;
+                            flagFirstPrint = false;
+                        }
+                        else
+                        {
+                            servMenuStateNew = SERV_FACT_CALI;
+                            servMenuStateCurrent = servMenuStateNew;
+                            flagFirstPrint = false;
+                            Serial.println("\n No se actualizo el Serial\n");
+                        }
+                    }
+                    break;
+                default:
+                    break;
+                }
+                menuEntrance = "";
+            }
+        }
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+    vTaskDelete(NULL);
+}
+
+
+
+/* **************************************************************************
+ * **** TAREA PARA LA CALIBRACION Y MENU DE USUARIO *************************
+ * **************************************************************************/
+void task_Service(void *arg)
+{
+    //Serial.println("Task_Create");
+    while (1)
+    {
+        if (flagService == true)
+        {
+            // Serial.println("Estoy en servicio");
+            switch (servMenuStateCurrent)
+            {
+            case SERV_MAIN_MENU:
+                printMainMenu();
+                break;
+            case SERV_FACT_CALI:
+                printFactoryMenu();
+                break;
+            case SERV_SITE_CALI:
+                printSiteMenu();
+                break;
+            default:
+                break;
+            }
+            // Serial.println("In execution");
+        }
+        else
+        {
+            /* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+             + ++++ ESTADO PARTA DESTRUIR LA TAREA DE CALIBRACION +++++
+             + +++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+            if (servMenuStateCurrent == SERV_NULL_MENU)
+            {
+                // Serial.println("Task deleted");
+                // flagRestartTask = true;         // flag to habilitate the restart of task
+                vTaskDelete(serviceTaskHandle); // delete the task Service
+            }
+        }
+        vTaskDelay(250 / portTICK_PERIOD_MS);
+    }
+    vTaskDelete(NULL);
+}
+
 
 /** ****************************************************************************
  ** ************ END OF THE CODE ***********************************************

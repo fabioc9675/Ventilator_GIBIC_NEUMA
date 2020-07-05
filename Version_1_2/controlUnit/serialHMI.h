@@ -1,12 +1,12 @@
 /*
- * File:   timer.h
+ * File:   serialHMI.h
  * Author: GIBIC UdeA
  *
  * Created on July 4, 2020, 13:41 PM
  */
 
-#ifndef TIMER_H
-#define TIMER_H
+#ifndef SERIALHMI_H
+#define SERIALHMI_H
 
 #ifdef __cplusplus
 extern "C"
@@ -20,6 +20,12 @@ extern "C"
     /** ****************************************************************************
  ** ************ INCLUDES ******************************************************
  ** ****************************************************************************/
+#include <Arduino.h>
+#include <Esp.h>
+#include <nvs_flash.h>
+
+#include "initializer.h"
+#include "cyclingFunctions.h"
 
     /** ****************************************************************************
  ** ************ DEFINES *******************************************************
@@ -32,8 +38,11 @@ extern "C"
     /** ****************************************************************************
  ** ************ FUNCTIONS *****************************************************
  ** ****************************************************************************/
-    void init_TIMER(void);
-    void IRAM_ATTR onTimer(void); // funcion de interrupcion por timer
+    /* ***************************************************************************
+ * **** Ejecucion de la rutina de comunicacion por serial ********************
+ * ***************************************************************************/
+    void task_Receive(void *pvParameters); // Function to receive data from serial communication
+    void task_sendSerialData(void *arg);   // Function to rupdate LCD each 200 ms
 
     /* *****************************************************************************
  * *****************************************************************************
@@ -51,4 +60,4 @@ extern "C"
 }
 #endif
 
-#endif /* TIMER_H */
+#endif /* SERIALHMI_H */

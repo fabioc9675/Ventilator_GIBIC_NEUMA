@@ -1,6 +1,7 @@
 {
-    "sketch": "calibrationUnit.ino",
-    "board": "esp32:esp32:esp32",
+    "sketch": "controlUnit.ino",
+    "board": "espressif:esp32:esp32",
     "configuration": "PSRAM=disabled,PartitionScheme=default,CPUFreq=240,FlashMode=qio,FlashFreq=80,FlashSize=4M,UploadSpeed=921600,DebugLevel=none",
-    "port": "COM3"
+    "port": "COM33",
+    "output": "C:/Users/ASUS/Downloads/controlUnitBuild"
 }

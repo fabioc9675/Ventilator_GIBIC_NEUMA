@@ -5,8 +5,8 @@
  * Created on July 4, 2020, 13:41 PM
  */
 
-#ifndef CALIBRATIONMENU_H
-#define CALIBRATIONMENU_H
+#ifndef MENUSELECTION_H
+#define MENUSELECTION_H
 
 #ifdef __cplusplus
 extern "C"
@@ -20,6 +20,9 @@ extern "C"
     /** ****************************************************************************
  ** ************ INCLUDES ******************************************************
  ** ****************************************************************************/
+#include <Arduino.h>
+#include <Esp.h>
+#include <nvs_flash.h>
 #include "calibrationMenu.h"
 
     /** ****************************************************************************
@@ -53,4 +56,4 @@ extern "C"
 }
 #endif
 
-#endif /* CALIBRATIONMENU_H */
+#endif /* MENUSELECTION_H */

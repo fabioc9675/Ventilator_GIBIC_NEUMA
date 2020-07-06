@@ -490,14 +490,14 @@ void alarmsDetection(void)
         // Fallo general
         if ((Pin_max) < 0)
         {
-            flagAlarmGeneral = true;
-            alerGeneral = 1;
-            newStateMachine = 1;
+            //flagAlarmGeneral = true;
+            //alerGeneral = 1;
+            //newStateMachine = 1;
         }
         else
         {
-            flagAlarmGeneral = false;
-            alerGeneral = 0;
+            // flagAlarmGeneral = false;
+            /// alerGeneral = 0;
         }
 
         // Alarma por desconexion del paciente

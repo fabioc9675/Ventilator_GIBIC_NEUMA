@@ -152,8 +152,10 @@ void init_Memory(void)
     OFFS_FI_1_SITE = readFloat(eeprom_values::OFFS_FI_1_SITE_ADDR);
     OFFS_FI_2_SITE = readFloat(eeprom_values::OFFS_FI_2_SITE_ADDR);
     OFFS_FI_3_SITE = readFloat(eeprom_values::OFFS_FI_3_SITE_ADDR);
-    LIM_FI_1_SITE = readFloat(eeprom_values::LIM_FI_1_SITE_ADDR);
-    LIM_FI_2_SITE = readFloat(eeprom_values::LIM_FI_2_SITE_ADDR);
+    LIM_FI_1_SITE = readFloat(eeprom_values::LIM_FI_1_ADDR);
+    LIM_FI_2_SITE = readFloat(eeprom_values::LIM_FI_2_ADDR);
+    // LIM_FI_1_SITE = readFloat(eeprom_values::LIM_FI_1_SITE_ADDR);
+    // LIM_FI_2_SITE = readFloat(eeprom_values::LIM_FI_2_SITE_ADDR);
     // Sensor de flujo Espiratorio
     AMP_FE_1_SITE = readFloat(eeprom_values::AMP_FE_1_SITE_ADDR);
     AMP_FE_2_SITE = readFloat(eeprom_values::AMP_FE_2_SITE_ADDR);
@@ -161,8 +163,10 @@ void init_Memory(void)
     OFFS_FE_1_SITE = readFloat(eeprom_values::OFFS_FE_1_SITE_ADDR);
     OFFS_FE_2_SITE = readFloat(eeprom_values::OFFS_FE_2_SITE_ADDR);
     OFFS_FE_3_SITE = readFloat(eeprom_values::OFFS_FE_3_SITE_ADDR);
-    LIM_FE_1_SITE = readFloat(eeprom_values::LIM_FE_1_SITE_ADDR);
-    LIM_FE_2_SITE = readFloat(eeprom_values::LIM_FE_2_SITE_ADDR);
+    LIM_FE_1_SITE = readFloat(eeprom_values::LIM_FE_1_ADDR);
+    LIM_FE_2_SITE = readFloat(eeprom_values::LIM_FE_2_ADDR);
+    // LIM_FE_1_SITE = readFloat(eeprom_values::LIM_FE_1_SITE_ADDR);
+    // LIM_FE_2_SITE = readFloat(eeprom_values::LIM_FE_2_SITE_ADDR);
 
     // inicializacion de variables String
     menuString.reserve(512);

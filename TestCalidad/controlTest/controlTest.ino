@@ -14,7 +14,7 @@
 #define FALSE 0
 
 //********DEFINICION DISPOSITIVO********
-#define SERIAL_DEVICE "1NEUMA0007"
+#define SERIAL_DEVICE "1NEUMA0011"
 #define SERIAL_LENGTH 10
 
 // Definiciones para el manejo del ADC
@@ -50,33 +50,34 @@
  * **** VARIABLES DE CALIBRACION A GUARDAR ***********************
  * ***************************************************************/
 // Calibracion de los sensores de presion - coeficientes regresion lineal
-#define AMP_CAM_1_W     0.028673
-#define OFFS_CAM_1_W    -19.3990
-#define AMP_BAG_2_W     0.028673
-#define OFFS_BAG_2_W    -19.3990
-#define AMP_PAC_3_W     0.028673
-#define OFFS_PAC_3_W    -19.3990
+#define AMP_CAM_1_W     0.027422
+#define OFFS_CAM_1_W    -23.6727
+#define AMP_BAG_2_W     0.028991
+#define OFFS_BAG_2_W    -25.5002
+#define AMP_PAC_3_W     0.029904
+#define OFFS_PAC_3_W    -26.0300
+
 
 // Calibracion de los sensores de flujo - coeficientes regresion lineal
 // Sensor de flujo Inspiratorio
-#define AMP_FI_1_W      0.139500
-#define OFFS_FI_1_W     -264.343600
-#define LIM_FI_1_W      1786
-#define AMP_FI_2_W      0.640000
-#define OFFS_FI_2_W     -1158.259200
-#define LIM_FI_2_W      1834
-#define AMP_FI_3_W      0.139500
-#define OFFS_FI_3_W     -240.569600
+#define AMP_FI_1_W      0.138100         
+#define OFFS_FI_1_W     -253.684200         
+#define LIM_FI_1_W      1732         
+#define AMP_FI_2_W      0.670400         
+#define OFFS_FI_2_W     -1175.418400         
+#define LIM_FI_2_W      1775         
+#define AMP_FI_3_W      0.138100         
+#define OFFS_FI_3_W     -230.659100         
 
 // Sensor de flujo Espiratorio
-#define AMP_FE_1_W      0.132000
-#define OFFS_FE_1_W     -238.563900
-#define LIM_FE_1_W      1692
-#define AMP_FE_2_W      0.748000
-#define OFFS_FE_2_W     -1280.839400
-#define LIM_FE_2_W      1733
-#define AMP_FE_3_W      0.132000
-#define OFFS_FE_3_W     -213.529000
+#define AMP_FE_1_W      0.131500         
+#define OFFS_FE_1_W     -235.505100         
+#define LIM_FE_1_W      1681         
+#define AMP_FE_2_W      0.910200         
+#define OFFS_FE_2_W     -1544.391100         
+#define LIM_FE_2_W      1713         
+#define AMP_FE_3_W      0.131500         
+#define OFFS_FE_3_W     -210.694300 
 
 // variable para ajustar el nivel cero de flujo y calcular el volumen
 #define VOL_SCALE_W          1.00 // Factor de escala para ajustar el volumen

@@ -26,6 +26,7 @@ extern uint8_t coeftype;
 extern uint8_t placeCalibration; // variable para especificar si es calibracion de fabrica o de sitio
 
 extern uint8_t flagService;
+extern uint8_t ServiceMode;
 
 /** ****************************************************************************
  ** ************ VARIABLES *****************************************************
@@ -42,6 +43,45 @@ void mainMenuOptionChange(int selMenu)
     {
         Serial.print("Opcion no valida \n");
         servMenuStateNew = SERV_MAIN_MENU;
+        servMenuStateCurrent = servMenuStateNew;
+    }
+    else
+    {
+        switch (selMenu)
+        {
+        case 1: // seleccion del menu 1
+            /* code */
+            break;
+        case 2: // seleccion del menu 2
+            /* code */
+            break;
+        case 3: // seleccion del menu 4, calibracion de sitio
+            placeCalibration = SITE;
+            servMenuStateNew = SERV_SITE_CALI;
+            servMenuStateCurrent = servMenuStateNew;
+            break;
+        case 4: // seleccion del menu 5, Salir
+            Serial.print("Salida segura \n");
+            servMenuStateNew = SERV_NULL_MENU;
+            servMenuStateCurrent = servMenuStateNew;
+            flagService = false;
+            break;
+        default:
+            break;
+        }
+
+        // agregar las opciones de menu
+        // Serial.println("Menu seleccionado");
+    }
+}
+
+// menu para la seleccion de las opciones del menu principal
+void mainMenuFactoryOptionChange(int selMenu)
+{
+    if ((selMenu > MAX_MAFA_MENU) || (selMenu == 0))
+    {
+        Serial.print("Opcion no valida \n");
+        servMenuStateNew = SERV_MAFA_MENU;
         servMenuStateCurrent = servMenuStateNew;
     }
     else
@@ -135,7 +175,14 @@ void factoryMenuOptionChange(int selMenu)
             break;
         case 8: // seleccion del menu 5, Salir
             Serial.print("Salida Calibracion \n");
-            servMenuStateNew = SERV_MAIN_MENU;
+            if (ServiceMode == FACTORY)
+            {
+                servMenuStateNew = SERV_MAFA_MENU;
+            }
+            else if (ServiceMode == SITE)
+            {
+                servMenuStateNew = SERV_MAIN_MENU;
+            }
             servMenuStateCurrent = servMenuStateNew;
             break;
         case 9: // seleccion del menu 7, Salir
@@ -201,7 +248,14 @@ void siteMenuOptionChange(int selMenu)
             break;
         case 7: // seleccion del menu 5, Salir
             Serial.print("Salida Calibracion \n");
-            servMenuStateNew = SERV_MAIN_MENU;
+            if (ServiceMode == FACTORY)
+            {
+                servMenuStateNew = SERV_MAFA_MENU;
+            }
+            else if (ServiceMode == SITE)
+            {
+                servMenuStateNew = SERV_MAIN_MENU;
+            }
             servMenuStateCurrent = servMenuStateNew;
             break;
         case 8: // seleccion del menu 7, Salir

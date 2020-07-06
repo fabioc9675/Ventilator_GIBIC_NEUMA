@@ -20,6 +20,7 @@
 // **********************************************************
 // manejadores de las tareas
 extern xTaskHandle serviceTaskHandle;
+extern xTaskHandle receiveTaskHandle;
 
 extern String menuString;
 extern String SerialID;
@@ -57,12 +58,26 @@ void printMainMenu(void)
     menuString = "\n\n************ Menu Principal ************\n"
                  "1. Alimentacion. \n"
                  "2. Estado de valvulas. \n"
+                 "3. Coeficientes de sitio. \n"
+                 "4. Salir. \n\nSeleccione una opcion: ";
+
+    Serial.print(menuString);
+    servMenuStateNew = SERV_WAIT_MAIN;
+    servMenuStateCurrent = servMenuStateNew;
+}
+
+// Menu principal de calibracion
+void printMainFactoryMenu(void)
+{
+    menuString = "\n\n************ Menu Principal ************\n"
+                 "1. Alimentacion. \n"
+                 "2. Estado de valvulas. \n"
                  "3. Coeficientes de fabrica. \n"
                  "4. Coeficientes de sitio. \n"
                  "5. Salir. \n\nSeleccione una opcion: ";
 
     Serial.print(menuString);
-    servMenuStateNew = SERV_WAIT_MAIN;
+    servMenuStateNew = SERV_WAFA_MAIN;
     servMenuStateCurrent = servMenuStateNew;
 }
 
@@ -177,8 +192,6 @@ void printInternalFactoryMenu(int mode)
     servMenuStateCurrent = servMenuStateNew;
 }
 
-
-
 /* **************************************************************************
  * **** TAREA PARA LA RECEPCION DE DATOS SERIAL EN CALIBRACION **************
  * **************************************************************************/
@@ -213,7 +226,7 @@ void task_ReceiveService(void *pvParameters)
                 {
                     dataReady = true;
                 }
-                else
+                else if (bufferR != '\r')
                 {
                     menuEntrance = menuEntrance + bufferR;
                 }
@@ -226,11 +239,31 @@ void task_ReceiveService(void *pvParameters)
                 //menuEntrance = Serial.readStringUntil('\n');
                 switch (servMenuStateCurrent)
                 {
+                case USER_ACCE_WAIT:
+                    if (menuEntrance.equals(PASSWORD))
+                    {
+                        Serial.print("\n\nAcceso concedido\n\n\n");
+                        servMenuStateNew = SERV_MAFA_MENU;
+                        servMenuStateCurrent = servMenuStateNew;
+                    }
+                    else
+                    {
+                        Serial.print("\n\nAcceso denegado\n\n\n");
+                        servMenuStateNew = USER_ACCE_MENU;
+                        servMenuStateCurrent = servMenuStateNew;
+                    }
+                    break;
                 case SERV_WAIT_MAIN:
                     selMenu = menuEntrance.toInt();
                     Serial.println(selMenu);
                     Serial.print("\n\n\n");
                     mainMenuOptionChange(selMenu);
+                    break;
+                case SERV_WAFA_MAIN:
+                    selMenu = menuEntrance.toInt();
+                    Serial.println(selMenu);
+                    Serial.print("\n\n\n");
+                    mainMenuFactoryOptionChange(selMenu);
                     break;
                 case SERV_WAIT_FACT:
                     selMenu = menuEntrance.toInt();
@@ -400,12 +433,22 @@ void task_ReceiveService(void *pvParameters)
                 menuEntrance = "";
             }
         }
+        else
+        {
+            /* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+             + ++++ ESTADO PARTA DESTRUIR LA TAREA DE CALIBRACION +++++
+             + +++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+            if (servMenuStateCurrent == SERV_NULL_MENU)
+            {
+                // Serial.println("Task deleted");
+                // flagRestartTask = true;         // flag to habilitate the restart of task
+                vTaskDelete(receiveTaskHandle); // delete the task Service
+            }
+        }
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);
 }
-
-
 
 /* **************************************************************************
  * **** TAREA PARA LA CALIBRACION Y MENU DE USUARIO *************************
@@ -420,6 +463,14 @@ void task_Service(void *arg)
             // Serial.println("Estoy en servicio");
             switch (servMenuStateCurrent)
             {
+            case USER_ACCE_MENU:
+                Serial.print("\nIntroduzca clave de acceso: ");
+                servMenuStateNew = USER_ACCE_WAIT;
+                servMenuStateCurrent = servMenuStateNew;
+                break;
+            case SERV_MAFA_MENU:
+                printMainFactoryMenu();
+                break;
             case SERV_MAIN_MENU:
                 printMainMenu();
                 break;
@@ -450,7 +501,6 @@ void task_Service(void *arg)
     }
     vTaskDelete(NULL);
 }
-
 
 /** ****************************************************************************
  ** ************ END OF THE CODE ***********************************************

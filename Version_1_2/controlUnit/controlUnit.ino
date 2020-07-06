@@ -109,6 +109,7 @@ uint8_t taskCoreOne = 1;
 
 // manejadores de las tareas
 xTaskHandle serviceTaskHandle;
+xTaskHandle receiveTaskHandle;
 
 // manejadores para los semaforos binarios
 SemaphoreHandle_t xSemaphoreTimer = NULL;
@@ -123,6 +124,7 @@ String SerialID;
 volatile uint8_t flagTimerInterrupt = false;
 volatile uint8_t flagAdcInterrupt = false;
 uint8_t flagService = false;
+uint8_t ServiceMode = false;
 uint8_t flagRestartTask = false;
 
 // bandera de modo calibracion
@@ -339,11 +341,13 @@ void setup()
     init_TextPayload();
     Serial.begin(115200);
     Serial2.begin(115200, SERIAL_8N1, RXD2, TXD2);
-
     Serial2.setTimeout(100);
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 
+    /* **************************************************************************
+     * **** Verificacion de acceso a modo servicio ******************************
+     * **************************************************************************/
     if (Serial2.available() > 0)
     {
         initial = Serial2.read();
@@ -352,13 +356,15 @@ void setup()
     if (initial == 'S') // Modo servicio de sitio
     {
         flagService = true;
+        ServiceMode = SITE;
         servMenuStateNew = SERV_MAIN_MENU;
         servMenuStateCurrent = servMenuStateNew;
     }
     else if (initial == 'M') // modo servicio de fabrica
     {
         flagService = true;
-        servMenuStateNew = SERV_MAIN_MENU;
+        ServiceMode = FACTORY;
+        servMenuStateNew = USER_ACCE_MENU;
         servMenuStateCurrent = servMenuStateNew;
     }
     else
@@ -388,11 +394,13 @@ void setup()
     xTaskCreatePinnedToCore(task_sendSerialData, "task_sendSerialData", 4096, NULL, 1, NULL, taskCoreOne);
     xTaskCreatePinnedToCore(task_Raspberry, "task_Raspberry", 4096, NULL, 4, NULL, taskCoreOne);
 
-    // Tareas de operacion de servicio del ventilador
-    xTaskCreatePinnedToCore(task_Service, "task_Service", 4096, NULL, 1, &serviceTaskHandle, taskCoreOne);
-    xTaskCreatePinnedToCore(task_ReceiveService, "task_ReceiveService", 4096, NULL, 1, NULL, taskCoreOne);
-    // xTaskCreatePinnedToCore(task_Encoder_B, "task_Encoder_B", 10000, NULL, 1, NULL, taskCoreZero);
-
+    if (flagService == true)
+    {
+        // Tareas de operacion de servicio del ventilador
+        xTaskCreatePinnedToCore(task_Service, "task_Service", 4096, NULL, 1, &serviceTaskHandle, taskCoreOne);
+        xTaskCreatePinnedToCore(task_ReceiveService, "task_ReceiveService", 4096, NULL, 1, &receiveTaskHandle, taskCoreOne);
+        // xTaskCreatePinnedToCore(task_Encoder_B, "task_Encoder_B", 10000, NULL, 1, NULL, taskCoreZero);
+    }
     // Clean Serial buffers
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 }

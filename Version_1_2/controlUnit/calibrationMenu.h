@@ -13,11 +13,11 @@ extern "C"
 {
 #endif
 
-   // #include <stdio.h>
-   // #include <stdlib.h>
-   // #include <string.h>
+  // #include <stdio.h>
+  // #include <stdlib.h>
+  // #include <string.h>
 
-   /** ****************************************************************************
+  /** ****************************************************************************
  ** ************ INCLUDES ******************************************************
  ** ****************************************************************************/
 #include <Arduino.h>
@@ -28,7 +28,7 @@ extern "C"
 #include "menuChange.h"
 #include "menuSelection.h"
 
-   /** ****************************************************************************
+  /** ****************************************************************************
  ** ************ DEFINES *******************************************************
  ** ****************************************************************************/
 
@@ -50,7 +50,13 @@ extern "C"
 #define SERV_WAIT_SIIN 14 // estado de espera en el menu de seleccion por variables
 #define SERV_SITE_PRIN 15 // estado de impresion de datos de flujo
 
-#define MAX_MAIN_MENU 5  // cantidad de opciones en menu principal
+#define SERV_WAFA_MAIN 16 // estado de espera de seleccion de opcion 
+#define SERV_MAFA_MENU 17 // estado de menu de inicio
+#define USER_ACCE_MENU 18 // estado de solicitud de password
+#define USER_ACCE_WAIT 19 // estado de espera de password
+
+#define MAX_MAFA_MENU 5  // cantidad de opciones en menu principal
+#define MAX_MAIN_MENU 4  // cantidad de opciones en menu principal
 #define MAX_FACT_MENU 10 // cantidad de opciones en menu de calibracion de fabrica
 #define MAX_SITE_MENU 9  // cantidad de opciones en menu de calibracion de sitio
 #define MAX_FAIN_MENU 12 // cantidad de opciones en menu de calibracion de fabrica por variables
@@ -77,34 +83,37 @@ extern "C"
 #define FACTORY 1
 #define SITE 2
 
-   /** ****************************************************************************
+  /** ****************************************************************************
  ** ************ VARIABLES *****************************************************
  ** ****************************************************************************/
 
-   /** ****************************************************************************
+String PASSWORD = "150628";  // Password para superusuario
+
+  /** ****************************************************************************
  ** ************ FUNCTIONS *****************************************************
  ** ****************************************************************************/
 
-   void printMainMenu(void);                // Menu principal de calibracion
-   void printFactoryMenu(void);             // Menu de calibracion de fabrica
-   void printSiteMenu(void);                // Menu de calibracion de sitio
-   void printInternalFactoryMenu(int mode); // menu interno de calibracion de fabrica y de sitio
-   /* **************************************************************************
+  void printMainMenu(void);                // Menu principal de calibracion
+  void printMainFactoryMenu(void);         // Menu principal de fabrica
+  void printFactoryMenu(void);             // Menu de calibracion de fabrica
+  void printSiteMenu(void);                // Menu de calibracion de sitio
+  void printInternalFactoryMenu(int mode); // menu interno de calibracion de fabrica y de sitio
+  /* **************************************************************************
  * **** TAREA PARA LA RECEPCION DE DATOS SERIAL EN CALIBRACION **************
  * **************************************************************************/
-   void task_ReceiveService(void *pvParameters);
-   /* **************************************************************************
+  void task_ReceiveService(void *pvParameters);
+  /* **************************************************************************
  * **** TAREA PARA LA CALIBRACION Y MENU DE USUARIO *************************
  * **************************************************************************/
-   void task_Service(void *arg);
+  void task_Service(void *arg);
 
-   /* *****************************************************************************
+  /* *****************************************************************************
  * *****************************************************************************
  * ******************** USO DE MODULO ADS **************************************
  * *****************************************************************************
  * *****************************************************************************/
 
-   /* *****************************************************************************
+  /* *****************************************************************************
  * *****************************************************************************
  * ***************** PROTOTYPE DEFINITION **************************************
  * *****************************************************************************

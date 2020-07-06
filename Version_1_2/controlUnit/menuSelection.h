@@ -37,6 +37,7 @@ extern "C"
  ** ************ FUNCTIONS *****************************************************
  ** ****************************************************************************/
     void mainMenuOptionChange(int selMenu);    // menu para la seleccion de las opciones del menu principal
+    void mainMenuFactoryOptionChange(int selMenu);
     void factoryMenuOptionChange(int selMenu); // menu para la seleccion de las opciones del menu de calibracion de fabrica
     void siteMenuOptionChange(int selMenu);    // menu para la seleccion de las opciones del menu de calibracion de sitio
 

@@ -10,7 +10,6 @@
  ** ****************************************************************************/
 #include "menuChange.h"
 
-
 /** ****************************************************************************
  ** ************ DEFINES *******************************************************
  ** ****************************************************************************/
@@ -34,7 +33,8 @@ extern uint8_t flagFlowSitePrintCalibration;
 extern uint8_t flagPcamSitePrintCalibration;
 extern uint8_t flagPbagSitePrintCalibration;
 extern uint8_t flagPpacSitePrintCalibration;
-
+extern uint8_t ServiceMode;
+extern uint8_t flagService;
 
 /** ****************************************************************************
  ** ************ VARIABLES *****************************************************
@@ -43,8 +43,6 @@ extern uint8_t flagPpacSitePrintCalibration;
 /** ****************************************************************************
  ** ************ FUNCTIONS *****************************************************
  ** ****************************************************************************/
-
-
 
 // funcion para el cambio de coeficientes de sitio
 void siteInternalMenuOptionChange(int selMenu)
@@ -219,7 +217,14 @@ void siteInternalMenuOptionChange(int selMenu)
             if (modeCalibration == VOLUMEN_PACIENTE)
             {
                 Serial.print("Salida Calibracion \n");
-                servMenuStateNew = SERV_MAIN_MENU;
+                if (ServiceMode == FACTORY)
+                {
+                    servMenuStateNew = SERV_MAFA_MENU;
+                }
+                else if (ServiceMode == SITE)
+                {
+                    servMenuStateNew = SERV_MAIN_MENU;
+                }
                 servMenuStateCurrent = servMenuStateNew;
             }
 
@@ -325,7 +330,14 @@ void siteInternalMenuOptionChange(int selMenu)
             if ((modeCalibration == PRESION_CAMARA) || (modeCalibration == PRESION_BOLSA) || (modeCalibration == PRESION_PACIENTE))
             {
                 Serial.print("Salida Calibracion \n");
-                servMenuStateNew = SERV_MAIN_MENU;
+                if (ServiceMode == FACTORY)
+                {
+                    servMenuStateNew = SERV_MAFA_MENU;
+                }
+                else if (ServiceMode == SITE)
+                {
+                    servMenuStateNew = SERV_MAIN_MENU;
+                }
                 servMenuStateCurrent = servMenuStateNew;
             }
 
@@ -488,7 +500,14 @@ void siteInternalMenuOptionChange(int selMenu)
             if ((modeCalibration == FLUJO_INSPIRATORIO) || (modeCalibration == FLUJO_ESPIRATORIO))
             {
                 Serial.print("Salida Calibracion \n");
-                servMenuStateNew = SERV_MAIN_MENU;
+                if (ServiceMode == FACTORY)
+                {
+                    servMenuStateNew = SERV_MAFA_MENU;
+                }
+                else if (ServiceMode == SITE)
+                {
+                    servMenuStateNew = SERV_MAIN_MENU;
+                }
                 servMenuStateCurrent = servMenuStateNew;
             }
             break;
@@ -683,7 +702,14 @@ void factoryInternalMenuOptionChange(int selMenu)
             if (modeCalibration == VOLUMEN_PACIENTE)
             {
                 Serial.print("Salida Calibracion \n");
-                servMenuStateNew = SERV_MAIN_MENU;
+                if (ServiceMode == FACTORY)
+                {
+                    servMenuStateNew = SERV_MAFA_MENU;
+                }
+                else if (ServiceMode == SITE)
+                {
+                    servMenuStateNew = SERV_MAIN_MENU;
+                }
                 servMenuStateCurrent = servMenuStateNew;
             }
 
@@ -789,7 +815,14 @@ void factoryInternalMenuOptionChange(int selMenu)
             if ((modeCalibration == PRESION_CAMARA) || (modeCalibration == PRESION_BOLSA) || (modeCalibration == PRESION_PACIENTE))
             {
                 Serial.print("Salida Calibracion \n");
-                servMenuStateNew = SERV_MAIN_MENU;
+                if (ServiceMode == FACTORY)
+                {
+                    servMenuStateNew = SERV_MAFA_MENU;
+                }
+                else if (ServiceMode == SITE)
+                {
+                    servMenuStateNew = SERV_MAIN_MENU;
+                }
                 servMenuStateCurrent = servMenuStateNew;
             }
 
@@ -952,7 +985,14 @@ void factoryInternalMenuOptionChange(int selMenu)
             if ((modeCalibration == FLUJO_INSPIRATORIO) || (modeCalibration == FLUJO_ESPIRATORIO))
             {
                 Serial.print("Salida Calibracion \n");
-                servMenuStateNew = SERV_MAIN_MENU;
+                if (ServiceMode == FACTORY)
+                {
+                    servMenuStateNew = SERV_MAFA_MENU;
+                }
+                else if (ServiceMode == SITE)
+                {
+                    servMenuStateNew = SERV_MAIN_MENU;
+                }
                 servMenuStateCurrent = servMenuStateNew;
             }
             break;
@@ -973,7 +1013,6 @@ void factoryInternalMenuOptionChange(int selMenu)
         Serial.println("Menu fabrica seleccionado");
     }
 }
-
 
 /** ****************************************************************************
  ** ************ END OF THE CODE ***********************************************

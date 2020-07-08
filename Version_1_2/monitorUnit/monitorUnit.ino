@@ -23,14 +23,21 @@
 */
 
 // the setup function runs once when you press reset or power the board
-void setup() {
+void setup()
+{
   // initialize digital pin LED_BUILTIN as an output.
   pinMode(19, OUTPUT);
-  delay(100);
-  digitalWrite(19, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(1000);
+  digitalWrite(19, HIGH); // turn the LED on (HIGH is the voltage level)
 }
 
 // the loop function runs over and over again forever
-void loop() {
-                      // wait for a second
+void loop()
+{
+  // wait for a second
+
+  digitalWrite(19, HIGH); // sets the pin on
+  delayMicroseconds(70);  // pauses for 50 microseconds
+  digitalWrite(19, LOW);  // sets the pin off
+  delayMicroseconds(30);  // pauses for 50 microseconds
 }

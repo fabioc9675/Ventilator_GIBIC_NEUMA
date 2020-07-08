@@ -1,96 +1,74 @@
 /*
-  Name:		configurationUnit.ino
-  Created:	4/3/2020 11:40:24
-  Author:	GIBIC UdeA
-*/
+ * File:   configurationUnit.h
+ * Author: GIBIC UdeA
+ *
+ * Created on July 4, 2020, 13:41 PM
+ */
 
+/** ****************************************************************************
+ ** ************ INCLUDES ******************************************************
+ ** ****************************************************************************/
+#include <Arduino.h>
+#include <Esp.h>
 #include <nvs_flash.h>
 #include <stdio.h>
 #include <Wire.h>
 #include "LiquidCrystal_I2C.h"
 
+#include "initializer.h"
+#include "timer.h"
+#include "encoder.h"
+
+
+
+/** ****************************************************************************
+ ** ************ DEFINES *******************************************************
+ ** ****************************************************************************/
+
+//********DEFINICIONES CONDICIONES******
+#define TRUE 1
+#define FALSE 0
+
+
+/** ****************************************************************************
+ ** ************ EXTERN VARIABLES **********************************************
+ ** ****************************************************************************/
+
+
+
+
+
+
+
+/** ****************************************************************************
+ ** ************ VARIABLES *****************************************************
+ ** ****************************************************************************/
+// definicion de los core para ejecucion
+uint8_t taskCoreZero = 0;
+uint8_t taskCoreOne = 1;
+
+
+// manejadores para los semaforos binarios
+SemaphoreHandle_t xSemaphoreEncoder = NULL;
+SemaphoreHandle_t xSemaphoreTimer = NULL;
+
+
+// bandera de activacion de timer
+volatile uint8_t flagTimerInterrupt = false;
+
+volatile uint8_t flagAEncoder = false;
+volatile uint8_t flagBEncoder = false;
+volatile uint8_t flagSEncoder = false;
+
+
+extern hw_timer_t *timer;
+extern portMUX_TYPE timerMux;
+extern portMUX_TYPE mux;
+
+
 //LiquidCrystal_I2C lcd(0x27, 20, 4);
 LiquidCrystal_I2C lcd(0x3F, 20, 4);
 
-//********DEFINICIONES CONDICIONES******
-#define TRUE          1
-#define FALSE         0
-
-//************ DEFINICION DE VERSION *********************
-#define VERSION_1_2         TRUE
-
-//************COMPILACION CONDICIONAL***********
-#ifdef VERSION_1_0
-
-//********DEFINICION DE PINES***********
-#define A           18     //variable A a pin digital 2 (DT en modulo)
-#define B           19     //variable B a pin digital 4 (CLK en modulo)
-#define SW          5      //sw a pin digital 3 (SW en modulo)  
-
-#define BUZZER_BTN          12
-#define SILENCE_BTN         26  // Silenciar alarma cambiar
-#define SILENCE_LED			27  // Led Boton silencio
-#define STABILITY_BTN       25
-#define STABILITY_LED		34
-#define STANDBY				32  // Stabdby button
-#define STANDBY_LED			33  // Stabdby button
-
-#define LUMING      13  // Alarma luminosa
-#define LUMINR      14
-#define LUMINB      15
-#define BATTALARM   4
-
-#define LED         2
-
-#define ESP_INTR_FLAG_DEFAULT 0
-
-#define DEBOUNCE_ENC            50  // tiempo para realizar antirrebote
-#define DEBOUNCE_ENC_2          400  // tiempo para realizar antirrebote
-#define DEBOUNCE_ENC_OUT        300  // tiempo para realizar antirrebote
-#define DEBOUNCE_ENC_OUT_2      800  // tiempo para realizar antirrebote
-#define DEBOUNCE_ENC_SW         400  // tiempo para realizar antirrebote
-#define LOW_ATT_INT             50  // Interrupcion cada 10 ms
-
-#define ENCOD_INCREASE          1  // movimiento a la derecha, aumento
-#define ENCOD_DECREASE          2  // movimiento a la derecha, aumento
-#define ENCOD_COUNT             3  // cantidad de interrupciones antes de reconocer el conteo 
-
-#elif VERSION_1_2
-
-//********DEFINICION DE PINES***********
-#define A           19     //variable A a pin digital 2 (DT en modulo)
-#define B           18     //variable B a pin digital 4 (CLK en modulo)
-#define SW          5      //sw a pin digital 3 (SW en modulo)  
-
-#define BUZZER_BTN          12
-#define SILENCE_BTN         26  // Silenciar alarma cambiar
-#define SILENCE_LED      27  // Led Boton silencio
-#define STABILITY_BTN       34
-#define STABILITY_LED   25
-#define STANDBY       32  // Stabdby button
-#define STANDBY_LED     33  // Stabdby button
-
-#define LUMING      13  // Alarma luminosa
-#define LUMINR      14
-#define LUMINB      15
-#define BATTALARM   4
-
-#define LED         2
-
-#define ESP_INTR_FLAG_DEFAULT 0
-
-#define DEBOUNCE_ENC            50  // tiempo para realizar antirrebote
-#define DEBOUNCE_ENC_2          400  // tiempo para realizar antirrebote
-#define DEBOUNCE_ENC_OUT        300  // tiempo para realizar antirrebote
-#define DEBOUNCE_ENC_OUT_2      800  // tiempo para realizar antirrebote
-#define DEBOUNCE_ENC_SW         400  // tiempo para realizar antirrebote
-#define LOW_ATT_INT             50  // Interrupcion cada 10 ms
-
-#define ENCOD_INCREASE          1  // movimiento a la derecha, aumento
-#define ENCOD_DECREASE          2  // movimiento a la derecha, aumento
-#define ENCOD_COUNT             1  // cantidad de interrupciones antes de reconocer el conteo 
-
-#endif
 
 //**********VALORES MAXIMOS**********
 #define MENU_QUANTITY       4
@@ -262,14 +240,10 @@ byte stateMachine = STANDBY_STATE;
 byte batteryAlert = BATTERY_NO_ALARM;
 
 //creo el manejador para el semaforo como variable global
-SemaphoreHandle_t xSemaphoreEncoder = NULL;
-SemaphoreHandle_t xSemaphoreTimer = NULL;
+
 //xQueueHandle timer_queue = NULL;
 
-volatile uint8_t flagAEncoder = false;
-volatile uint8_t flagBEncoder = false;
-volatile uint8_t flagSEncoder = false;
-volatile uint8_t flagTimerInterrupt = false;
+
 
 volatile uint8_t flagSilenceInterrupt = false;
 volatile uint8_t flagStabilityInterrupt = false;
@@ -279,13 +253,8 @@ unsigned int temp = 0;
 bool flagFirst = false;
 bool flagEntre = false;
 
-// inicializacion del contador del timer
-hw_timer_t* timer = NULL;
-portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
-portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
 // definicion de interrupciones
-void IRAM_ATTR onTimer(void);  // funcion de interrupcion
 void IRAM_ATTR swInterrupt(void);
 void IRAM_ATTR encoderInterrupt_A(void);
 void IRAM_ATTR encoderInterrupt_B(void);
@@ -293,87 +262,19 @@ void IRAM_ATTR standbyButtonInterrupt(void);
 void IRAM_ATTR silenceButtonInterrupt(void);
 void IRAM_ATTR stabilityButtonInterrupt(void);
 
-// definicion de los core para ejecucion
-static uint8_t taskCoreZero = 0;
-static uint8_t taskCoreOne = 1;
+
 
 /************************************************************
  ********** FUNCIONES DE INICIALIZACION *********************
  ***********************************************************/
-void init_GPIO() {
-	//Encoder setup
-	pinMode(A, INPUT_PULLUP);    // A como entrada
-	pinMode(B, INPUT_PULLUP);    // B como entrada
-	pinMode(SW, INPUT_PULLUP);   // SW como entrada
-	pinMode(SILENCE_BTN, INPUT_PULLUP); // switch para el manejo de silencio
-	pinMode(STANDBY, INPUT_PULLUP);
-	pinMode(STABILITY_BTN, INPUT_PULLUP);
-	pinMode(BUZZER_BTN, OUTPUT);
-	pinMode(LUMINR, OUTPUT);
-	pinMode(LUMING, OUTPUT);
-	pinMode(LUMINB, OUTPUT);
-	pinMode(SILENCE_LED, OUTPUT);
-	pinMode(STANDBY_LED, OUTPUT);
-	pinMode(STABILITY_LED, OUTPUT);
 
-	pinMode(BATTALARM, INPUT);
 
-	attachInterrupt(digitalPinToInterrupt(A), encoderInterrupt_A, FALLING);
-	attachInterrupt(digitalPinToInterrupt(B), encoderInterrupt_B, FALLING);
-	attachInterrupt(digitalPinToInterrupt(SW), swInterrupt, RISING);
-	attachInterrupt(digitalPinToInterrupt(STANDBY), standbyButtonInterrupt, FALLING);
-	attachInterrupt(digitalPinToInterrupt(SILENCE_BTN), silenceButtonInterrupt, FALLING);
-	//attachInterrupt(digitalPinToInterrupt(STABILITY_BTN), stabilityButtonInterrupt, FALLING);
 
-	digitalWrite(STANDBY_LED, HIGH);
-	digitalWrite(STABILITY_LED, HIGH);
-	digitalWrite(LUMING, LOW);
-	pinMode(LED, OUTPUT);
-}
-
-void init_TIMER() {
-	// Configuracion del timer a 1 kHz
-	timer = timerBegin(0, 80, true);                // Frecuencia de reloj 80 MHz, prescaler de 80, frec 1 MHz
-	timerAttachInterrupt(timer, &onTimer, true);    // Attach onTimer function to our timer
-	timerAlarmWrite(timer, 1000, true);             // Interrupcion cada 1000 conteos del timer, es decir 100 Hz
-	timerAlarmEnable(timer);                        // Habilita interrupcion por timer
-}
 
 /* *********************************************************************
  * **** FUNCIONES DE ATENCION A INTERRUPCION ***************************
  * *********************************************************************/
- // Interrupcion por presion del switch
-void IRAM_ATTR swInterrupt(void) {
-	// da el semaforo para que quede libre para la tarea pulsador
-	portENTER_CRITICAL_ISR(&mux);
-	flagSEncoder = true;
-	xSemaphoreGiveFromISR(xSemaphoreEncoder, NULL);
-	portEXIT_CRITICAL_ISR(&mux);
-}
-
-// Interrupcion por encoder A
-void IRAM_ATTR encoderInterrupt_A(void) {
-	portENTER_CRITICAL_ISR(&mux);
-	flagAEncoder = true;
-	xSemaphoreGiveFromISR(xSemaphoreEncoder, NULL);
-	portEXIT_CRITICAL_ISR(&mux);
-}
-
-// Interrupcion por encoder B
-void IRAM_ATTR encoderInterrupt_B(void) {
-	portENTER_CRITICAL_ISR(&mux);
-	flagBEncoder = true;
-	xSemaphoreGiveFromISR(xSemaphoreEncoder, NULL);
-	portEXIT_CRITICAL_ISR(&mux);
-}
-
-// Interrupcion por timer
-void IRAM_ATTR onTimer(void) {
-	portENTER_CRITICAL_ISR(&timerMux);
-	flagTimerInterrupt = true;
-	xSemaphoreGiveFromISR(xSemaphoreTimer, NULL);
-	portEXIT_CRITICAL_ISR(&timerMux);
-}
+ 
 
 void IRAM_ATTR standbyButtonInterrupt() {
 	portENTER_CRITICAL_ISR(&mux);
@@ -408,8 +309,8 @@ void IRAM_ATTR stabilityButtonInterrupt(void) {
  ************************************************************/
 void task_timer(void* arg) {
 	int contms = 0;
-	uint8_t debounceENC = 0;
-	uint8_t debounceENC_2 = 0;
+	uint16_t debounceENC = 0;
+	uint16_t debounceENC_2 = 0;
 
 	while (1) {
 		// Se atiende la interrupcion del timer
@@ -1906,7 +1807,7 @@ void lcd_setup() {
 void setup()
 {
 	Serial.begin(115200);
-	Serial2.begin(115200);
+	Serial2.begin(115200, SERIAL_8N1, RXD2, TXD2);
 	Serial2.setTimeout(10);
 	init_GPIO();
 	
@@ -1934,7 +1835,7 @@ void setup()
 		} 
 	}
 
-	init_TIMER();
+	init_Timer();
 
 
 	// creo la tarea task_pulsador

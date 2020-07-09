@@ -113,22 +113,49 @@ extern "C"
 #define RXD2 16
 #define TXD2 17
 
-    /** ****************************************************************************
+// Valores maximos definidos para el firmware de configuracion
+#define MENU_QUANTITY 4
+#define MAX_FREC 30
+#define MIN_FREC 6
+#define MAX_PEEP 15
+#define MIN_PEEP 1
+#define MAX_RIE 40
+#define MIN_RIE 10 // se cambio de 20 a 10 para evitar relaciones negativas
+#define MAX_PRESION 40
+#define MAX_MAX_FR 60
+#define MIN_MAX_FR 5
+#define MAX_MAX_VE 50
+#define MIN_MAX_VE 1 // l/min
+#define MIN_PRESION 10
+#define MAX_TRIGGER 10
+#define MIN_TRIGGER 1
+#define MAX_FLUJO 40
+#define SILENCE_BTN_TIME 2 * 60 * 1000 / LOW_ATT_INT // tiempo, 2 minutos a 20 Hz
+#define SILENCE_BTN_BATTERY 30 * 60 * 1000 / LOW_ATT_INT
+#define ALARM_QUANTITY 9
+
+// Estados de alarmas por bateria
+#define BATTERY_NO_ALARM 0
+#define batteryAlarm 1
+#define batteryAlarm10min 2
+#define batteryAlarm5min 3
+
+  /** ****************************************************************************
  ** ************ VARIABLES *****************************************************
  ** ****************************************************************************/
 
-    /** ****************************************************************************
+  /** ****************************************************************************
  ** ************ FUNCTIONS *****************************************************
  ** ****************************************************************************/
-    void init_GPIO(void); // inicializacion de los pines del microcontrolador
+  void init_GPIO(void); // inicializacion de los pines del microcontrolador
 
-    /* *****************************************************************************
+  /* *****************************************************************************
  * *****************************************************************************
  * ******************** USO DE MODULO ADS **************************************
  * *****************************************************************************
  * *****************************************************************************/
 
-    /* *****************************************************************************
+  /* *****************************************************************************
  * *****************************************************************************
  * ***************** PROTOTYPE DEFINITION **************************************
  * *****************************************************************************

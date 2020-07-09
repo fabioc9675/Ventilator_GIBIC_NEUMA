@@ -17,7 +17,9 @@
 
 #include "initializer.h"
 #include "timer.h"
+#include "interruption.h"
 #include "encoder.h"
+#include "serialCONT.h"
 
 
 
@@ -33,16 +35,27 @@
 /** ****************************************************************************
  ** ************ EXTERN VARIABLES **********************************************
  ** ****************************************************************************/
+// definiciones para el timer
+extern hw_timer_t *timer;
+extern portMUX_TYPE timerMux;
+extern portMUX_TYPE mux;
 
+// Variable de estado del encoder
+extern unsigned int fl_StateEncoder ;
 
-
-
+// variables de menu
+extern volatile signed int menu;
 
 
 
 /** ****************************************************************************
  ** ************ VARIABLES *****************************************************
  ** ****************************************************************************/
+//LiquidCrystal_I2C lcd(0x27, 20, 4);
+LiquidCrystal_I2C lcd(0x3F, 20, 4);
+
+
+
 // definicion de los core para ejecucion
 uint8_t taskCoreZero = 0;
 uint8_t taskCoreOne = 1;
@@ -56,65 +69,86 @@ SemaphoreHandle_t xSemaphoreTimer = NULL;
 // bandera de activacion de timer
 volatile uint8_t flagTimerInterrupt = false;
 
+// bandera de activacion de encoder
 volatile uint8_t flagAEncoder = false;
 volatile uint8_t flagBEncoder = false;
 volatile uint8_t flagSEncoder = false;
 
-
-extern hw_timer_t *timer;
-extern portMUX_TYPE timerMux;
-extern portMUX_TYPE mux;
-
-
-//LiquidCrystal_I2C lcd(0x27, 20, 4);
-LiquidCrystal_I2C lcd(0x3F, 20, 4);
-
-
-//**********VALORES MAXIMOS**********
-#define MENU_QUANTITY       4
-#define MAX_FREC            30
-#define MIN_FREC            6
-#define MAX_PEEP			15
-#define MIN_PEEP			1
-#define MAX_RIE             40
-#define MIN_RIE				10  // se cambio de 20 a 10 para evitar relaciones negativas
-#define MAX_PRESION         40
-#define MAX_MAX_FR			60
-#define MIN_MAX_FR			5
-#define MAX_MAX_VE			50
-#define MIN_MAX_VE			1    // l/min
-#define MIN_PRESION			10
-#define MAX_TRIGGER			10
-#define MIN_TRIGGER			1
-#define MAX_FLUJO           40
-#define SILENCE_BTN_TIME        2*60*1000/LOW_ATT_INT  // tiempo, 2 minutos a 20 Hz
-#define SILENCE_BTN_BATTERY     30*60*1000/LOW_ATT_INT
-#define ALARM_QUANTITY		9
-
-// Definitions for menu operation
-#define MAIN_MENU           0	// Menu principal
-#define CONFIG_MENU         1	// Configuracion de frecuencias
-#define CONFIG_ALARM        2	// Configuracion Alarma
-#define VENT_MENU		    3	// Ventilation menu selection
-#define SERVICE_MENU		4   
+// banderas de botones de usuario
+volatile uint8_t flagStandbyInterrupt = true;   // inicia en modo standby
+volatile uint8_t flagSilenceInterrupt = false;
+volatile uint8_t flagStabilityInterrupt = false;
+volatile uint8_t flagBatterySilence = false;
+volatile uint8_t flagAlerta = false;
+volatile uint8_t flagBatteryAlert = false;
 
 
-#define ALE_PRES_DES        5	// desconexion del paciente
-#define ALE_OBSTRUCCION     6	// fallo OBSTRUCCION
-#define BATTERY             7	// Bateria
-#define CHECK_MENU          8	// Show in check state
-#define CONFIRM_MENU	    9
-#define CPAP_MENU           10
-#define ALE_PRES_PEEP       11	// Perdida de Peep
-#define ALE_BATTERY_10MIN	12
-#define ALE_BATTERY_5MIN	13
-#define ALE_GENERAL			14 
-#define ALE_FR_ALTA			15
-#define ALE_VE_ALTO			16
-#define ALE_PRES_PIP        17	// presion pico
-#define ALE_APNEA			18
+// banderas de cambio de valores 
+volatile uint8_t  flagFrecuencia = false;
+volatile uint8_t  flagPresion = false;
+volatile uint8_t  flagFlujo = false;
+volatile uint8_t  flagTrigger = false;
+volatile uint8_t  flagIE = false;
+volatile uint8_t  flagPeepMax = false;
+volatile uint8_t  flagSensibilityCPAP = false;
+volatile uint8_t  flagMode = false;
+volatile uint8_t  flagConfirm = false;
+volatile uint8_t  flagMinFR = false;
+volatile uint8_t  flagVE = false;
 
-#define MODE_CHANGE         19 // definicion para obligar al cambio entre StandBy y modo normal en el LCD
+
+// contadores de configuraciones en el menu de usuario
+String relacion_IE = "1:2.0";
+
+int newFrecRespiratoria = 12;
+int newRelacionIE = 20;
+int currentFrecRespiratoria = 12;
+int currentRelacionIE = 20;
+int trigger = 2;
+int PeepMax = 10;
+int maxPresion = 30;
+int maxFR = 30;
+int maxVE = 30;
+
+int batteryAlert = BATTERY_NO_ALARM;
+
+// Variables calculadas
+int frecRespiratoriaCalculada = 0;
+int I = 1;
+int E = 20;
+int calculatedE = E;
+int apneaTime = 20;
+
+
+// variables de introduccion a los menus de configuracion
+int optionConfigMenu = 0;
+int currentVentilationMode = 0;
+int optionVentMenu = 0;
+
+
+// variable de estado de menu
+volatile uint8_t  insideMenuFlag = false;
+
+
+// variables de estado de ventilacion
+int stateMachine = STANDBY_STATE;
+int newVentilationMode = 0;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 volatile bool flagDetachInterrupt_A = false;
 volatile bool flagDetachInterrupt_B = false;
@@ -136,13 +170,12 @@ unsigned int contSilenceBattery = 0;
 unsigned int contBattery = 0;
 unsigned int contStability = 0;
 unsigned int contBattery5min = 0;
-unsigned int fl_StateEncoder = 0;
 
-bool flagStandbyInterrupt = true;   // inicia en modo standby
+
 unsigned int contStandby = 0;
 
 // variables de menu
-volatile signed int menu = MAIN_MENU;
+
 volatile unsigned int menuImprimir = MAIN_MENU;
 int menuAlerta[ALARM_QUANTITY + 1] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 volatile unsigned int lineaAlerta = MAIN_MENU;
@@ -161,54 +194,39 @@ byte maxPresionAnte = 0;
 byte frecRespiratoriaAnte = 0;
 byte minFR_Ante = 0;
 byte minVE_Ante = 0;
-byte maxFR = 30;
-byte maxVE = 30;
-byte apneaTime = 20;
 
-bool flagAlerta = false;
-bool flagBatteryAlert = false;
+
+
+
 bool flagChange2AC = false;
 unsigned int contAlertas = 0;
 
 // Global al ser usada en loop e ISR (encoder)
-int currentRelacionIE = 20;
-int newRelacionIE = 20;
-String relacion_IE = "1:2.0";
-byte currentFrecRespiratoria = 12;
-byte newFrecRespiratoria = 12;
-byte frecRespiratoriaCalculada = 0;
-byte I = 1;
-byte E = 20;
-int calculatedE = E;
-byte maxPresion = 30;
-byte optionVentMenu = 0;
-byte optionConfigMenu = 0;
-byte trigger = 2;
+
+
+
+
+
+
+
+
+
+
 float maxFlujo = 4;
 
 // Banderas utilizadas en las interrupciones
-bool insideMenuFlag = false;
-bool flagPresion = false;
-bool flagFlujo = false;
-bool flagFrecuencia = false;
-bool flagTrigger = false;
-bool flagIE = false;
-bool flagPeepMax = false;
-bool flagSensibilityCPAP = false;
-bool flagMode = false;
-bool flagConfirm = false;
-bool flagMinFR = false;
-bool flagVE = false;
+
+
 int flagEncoder = 0;
 
-byte currentVentilationMode = 0;
-byte newVentilationMode = 0;
+
+
 
 byte currentVE = 0;
 byte newVE = 0;
 
 float Peep = 0;
-byte PeepMax = 10;
+
 float Ppico = 0;
 float Pcon = 0;
 unsigned int VT = 0;
@@ -224,20 +242,11 @@ int alerVE_Alto = 0;
 int currentBatteryAlert = 1;        // When is working with energy supply
 int newBatteryAlert = 1;
 
-// State Machine
-#define CHECK_STATE		0
-#define STANDBY_STATE	1
-#define PCMV_STATE		2
-#define AC_STATE		3
-#define CPAP_STATE		4
-#define FAILURE_STATE	5
-byte stateMachine = STANDBY_STATE;
 
-#define BATTERY_NO_ALARM      0
-#define batteryAlarm        1
-#define batteryAlarm10min   2
-#define batteryAlarm5min    3
-byte batteryAlert = BATTERY_NO_ALARM;
+
+
+
+
 
 //creo el manejador para el semaforo como variable global
 
@@ -245,9 +254,7 @@ byte batteryAlert = BATTERY_NO_ALARM;
 
 
 
-volatile uint8_t flagSilenceInterrupt = false;
-volatile uint8_t flagStabilityInterrupt = false;
-volatile uint8_t flagBatterySilence = false;
+
 
 unsigned int temp = 0;
 bool flagFirst = false;
@@ -255,9 +262,6 @@ bool flagEntre = false;
 
 
 // definicion de interrupciones
-void IRAM_ATTR swInterrupt(void);
-void IRAM_ATTR encoderInterrupt_A(void);
-void IRAM_ATTR encoderInterrupt_B(void);
 void IRAM_ATTR standbyButtonInterrupt(void);
 void IRAM_ATTR silenceButtonInterrupt(void);
 void IRAM_ATTR stabilityButtonInterrupt(void);
@@ -276,33 +280,7 @@ void IRAM_ATTR stabilityButtonInterrupt(void);
  * *********************************************************************/
  
 
-void IRAM_ATTR standbyButtonInterrupt() {
-	portENTER_CRITICAL_ISR(&mux);
-	detachInterrupt(digitalPinToInterrupt(STANDBY));
-	flagStandbyInterrupt = true;
-	portEXIT_CRITICAL_ISR(&mux);
-}
 
-// Interrupcion por button silence
-void IRAM_ATTR silenceButtonInterrupt(void) {
-	if (flagBatteryAlert == true && flagBatterySilence == false) {
-		portENTER_CRITICAL_ISR(&mux);
-		flagBatterySilence = true;
-		portEXIT_CRITICAL_ISR(&mux);
-	}
-	if (flagAlerta == true && flagSilenceInterrupt == false) {
-		portENTER_CRITICAL_ISR(&mux);
-		flagSilenceInterrupt = true;
-		portEXIT_CRITICAL_ISR(&mux);
-	}
-}
-
-void IRAM_ATTR stabilityButtonInterrupt(void) {
-	portENTER_CRITICAL_ISR(&mux);
-	flagStabilityInterrupt = true;
-	detachInterrupt(digitalPinToInterrupt(STABILITY_BTN));
-	portEXIT_CRITICAL_ISR(&mux);
-}
 
 /************************************************************
  ***** FUNCIONES DE ATENCION A INTERRUPCION TAREA TIMER *****
@@ -497,334 +475,9 @@ void task_Encoder(void* arg) {
 	}
 }
 
-/* ***************************************************************************
- * **** Ejecucion de incremento o decremento del encoder *********************
- * ***************************************************************************/
-void encoderRoutine() {
 
-	switch (fl_StateEncoder) {
-		// Incremento
-	case ENCOD_INCREASE:
-		if (insideMenuFlag == false) {
-			menu++;
-			if (menu < 0 || menu > MENU_QUANTITY - 1)
-				menu = 0;
-			//Serial.println("menu = " + String(menu));
-		}
-		else {
-			switch (menu) {
-			case CONFIG_MENU:
-				if (flagFrecuencia) {
-					newFrecRespiratoria++;
-					if (newFrecRespiratoria > MAX_FREC) {
-						newFrecRespiratoria = MAX_FREC;
-					}
-				}
-				else if (flagIE) {
-					newRelacionIE++;
-					if (newRelacionIE >= MAX_RIE) {
-						newRelacionIE = MAX_RIE;
-					}
-					if (newRelacionIE >= 10 && newRelacionIE < 0) {
-						newRelacionIE = 10;
-					}
-				}
-				else if (flagTrigger == true) {
-					trigger++;
-					if (trigger > MAX_TRIGGER) {
-						trigger = MAX_TRIGGER;
-					}
-				}
-				else if (flagPeepMax == true) {
-					PeepMax++;
-					if (PeepMax > MAX_PEEP) {
-						PeepMax = MAX_PEEP;
-					}
-				} 
-				else if (insideMenuFlag == true) {
-					optionConfigMenu++;
-					if (currentVentilationMode == 0) {
-						if (optionConfigMenu > 2) {
-							optionConfigMenu = 0;
-						}
-					}
-					else if (currentVentilationMode == 1) {
-						if (optionConfigMenu > 3) {
-							optionConfigMenu = 0;
-						}
-					}
-					else {
-						if (optionConfigMenu > 1) {
-							optionConfigMenu = 0;
-						}	
-					}
-				}	
-				break;
-			case CONFIG_ALARM:
-				if (flagPresion == true) {
-					maxPresion++;
-					if (maxPresion > MAX_PRESION) {
-						maxPresion = MAX_PRESION;
-					}
-				}
-				else if (flagMinFR == true) {
-					maxFR++;
-					if (maxFR > MAX_MAX_FR) {
-						maxFR = MAX_MAX_FR;
-					}	
-				}
-				else if (flagVE == true) {
-					maxVE++;
-					if (maxVE > MAX_MAX_VE) {
-						maxVE = MAX_MAX_VE;
-					}
-				}
-				else if (insideMenuFlag == true) {
-					optionConfigMenu++;
-					if (optionConfigMenu > 3) {
-						optionConfigMenu = 0;
-					}
-				}
-				break;
-			case VENT_MENU:
-				optionVentMenu++;
-				if (optionVentMenu > 3) {
-					optionVentMenu = 0;
-				}
-				break;
-			case CONFIRM_MENU:
-				flagConfirm = !flagConfirm;
-				break;
-			}
-		}
-		fl_StateEncoder = 0;
-		break;
-	// Decremento
-	case ENCOD_DECREASE:
-		if (insideMenuFlag == false) {
-			menu--;
-			if (menu < 0 || menu > MENU_QUANTITY - 1)
-				menu = MENU_QUANTITY - 1;
-		}
-		else {
-			switch (menu) {
-			case CONFIG_MENU:
-				if (flagFrecuencia) {
-					newFrecRespiratoria--;
-					if (newFrecRespiratoria < MIN_FREC) {
-						newFrecRespiratoria = MIN_FREC;
-					}
-				}
-				else if (flagIE) {
-					newRelacionIE --;
-					if (newRelacionIE <= -MIN_RIE) {
-						newRelacionIE = -MIN_RIE;
-					}
-					if (newRelacionIE < 10 && newRelacionIE > 0) {
-						newRelacionIE = 10;
-					}
-				}
-				else if (flagTrigger == true) {
-					trigger--;
-					if (trigger < MIN_TRIGGER) {
-						trigger = MIN_TRIGGER;
-					}
-				}
-				else if (flagPeepMax == true) {
-					PeepMax--;
-					if (PeepMax < MIN_PEEP) {
-						PeepMax = MIN_PEEP;
-					}
-				}
-				else if (insideMenuFlag == true) {
-					optionConfigMenu--;
-					if (currentVentilationMode == 0) {
-						if (optionConfigMenu > 2) {
-							optionConfigMenu = 2;
-						}
-					}
-					else if (currentVentilationMode == 1) {
-						if (optionConfigMenu > 3) {
-							optionConfigMenu = 3;
-						}
-					}
-					else {
-						if (optionConfigMenu > 1) {
-							optionConfigMenu = 1;
-						}
-					}
-					
-				}
-				break;
-			case CONFIG_ALARM:
-				if (flagPresion == true) {
-					maxPresion--;
-					if (maxPresion < MIN_PRESION) {
-						maxPresion = MIN_PRESION;
-					}
-				}
-				else if (flagMinFR == true) {
-					maxFR--;
-					if (maxFR > MAX_MAX_FR) {
-						maxFR = MIN_MAX_FR;
-					}
-				}
-				else if (flagVE == true) {
-					maxVE--;
-					if (maxVE > MAX_MAX_VE) {
-						maxVE = MIN_MAX_VE;
-					}
-				}
-				else if (insideMenuFlag == true) {
-					optionConfigMenu--;
-					if (optionConfigMenu > 3) {
-						optionConfigMenu = 3;
-					}
-				}
-				break;
-			case VENT_MENU:
-				optionVentMenu--;
-				if (optionVentMenu > 3) {
-					optionVentMenu = 3;
-				}
-				break;
-			case CONFIRM_MENU:
-				flagConfirm = !flagConfirm;
-				break;
-			}
-		}
-		fl_StateEncoder = 0;
-		break;
-	default:
-		fl_StateEncoder = 0;
-		break;
-	}
 
-	menuImprimir = menu;
-	lineaAlerta = menu;
-	flagAlreadyPrint = false;
 
-}
-
-/* ***************************************************************************
- * **** Ejecucion de tarea de Switch *****************************************
- * ***************************************************************************/
-void switchRoutine() {
-	// Serial.println("SW MENU");
-	switch (menu) {
-	case CONFIG_MENU:
-		if (optionConfigMenu == 0) {
-			if (insideMenuFlag == false) {
-				insideMenuFlag = true;
-			}
-			else {
-				insideMenuFlag = false;
-				menu = MAIN_MENU;
-				sendSerialData();
-			}
-		}
-		else if (currentVentilationMode == 2) {
-			if (optionConfigMenu == 1) {
-				flagPeepMax = !flagPeepMax;
-			}
-		}
-		else if(currentVentilationMode == 1){
-			if (optionConfigMenu == 1) {
-				flagTrigger = !flagTrigger;
-			}
-			if (optionConfigMenu == 2) {
-				flagFrecuencia = !flagFrecuencia;
-				currentFrecRespiratoria = newFrecRespiratoria;
-			}
-			if (optionConfigMenu == 3) {
-				flagIE = !flagIE;
-				currentRelacionIE = newRelacionIE;
-			}
-		}
-		else {
-			if (optionConfigMenu == 1) {
-				flagFrecuencia = !flagFrecuencia;
-				currentFrecRespiratoria = newFrecRespiratoria;
-			}
-			if (optionConfigMenu == 2) {
-				flagIE = !flagIE;
-				currentRelacionIE = newRelacionIE;
-			}
-		}
-		break;
-	case VENT_MENU:
-		if (optionVentMenu == 0) {
-			insideMenuFlag = !insideMenuFlag;
-		}
-		else if (optionVentMenu == 1) {
-			menu = CONFIG_MENU;
-			if (stateMachine != STANDBY_STATE) {
-				stateMachine = PCMV_STATE;
-			}
-			currentVentilationMode = 0;
-			optionVentMenu = 0;
-		}
-		else if (optionVentMenu == 2) {
-			menu = CONFIG_MENU;
-			if (stateMachine != STANDBY_STATE) {
-				stateMachine = AC_STATE;
-			}
-			currentVentilationMode = 1;
-			optionVentMenu = 0;
-		}
-		else if (optionVentMenu == 3) {
-			menu = CONFIG_MENU;
-			if (stateMachine != STANDBY_STATE) {
-				stateMachine = CPAP_STATE;
-			}
-			currentVentilationMode = 2;
-			optionVentMenu = 0;
-		}
-		break;
-	case CPAP_MENU:
-		menu = CONFIRM_MENU;
-		break;
-	case CONFIRM_MENU:
-		insideMenuFlag = !insideMenuFlag;
-		menu = CONFIG_MENU;
-		if (flagConfirm == true) {
-			flagConfirm = false;
-			currentFrecRespiratoria = newFrecRespiratoria;
-			currentRelacionIE = newRelacionIE;
-			currentVentilationMode = newVentilationMode;
-			sendSerialData();
-		}
-		else {
-			newFrecRespiratoria = currentFrecRespiratoria;
-			newRelacionIE = currentRelacionIE;
-			newVentilationMode = currentVentilationMode;
-		}
-		break;
-	case CONFIG_ALARM:
-		if (optionConfigMenu == 0) {
-			if (insideMenuFlag == false) {
-				insideMenuFlag = true;
-			}
-			else {
-				insideMenuFlag = false;
-				sendSerialData();
-			}
-		}
-		else if(optionConfigMenu == 1) {
-			flagPresion = !flagPresion;
-		}
-		else if (optionConfigMenu == 2) {
-			flagMinFR = !flagMinFR;
-		}
-		else if (optionConfigMenu == 3) {
-			flagVE = !flagVE;
-		}
-		break;
-	}
-	menuImprimir = menu;
-	lineaAlerta = menu;
-	flagAlreadyPrint = false;
-}
 
 /* ***************************************************************************
  * **** Atencion a interrupcion por buttons **********************************
@@ -1643,27 +1296,7 @@ void task_Receive(void* pvParameters) {
 	//   vTaskDelete(NULL);
 }
 
-// envio de datos por serial para configuracion
-void sendSerialData() {
-	if (currentRelacionIE > 0) {
-		relacion_IE = "1:" + String((float)currentRelacionIE / 10, 1);
-		I = 1;
-		E = (char)currentRelacionIE;
-	}
-	else {
-		relacion_IE = String(-(float)currentRelacionIE / 10, 1) + ":1";
-		I = (char)(-currentRelacionIE);
-		E = 1;
-	}
-	String dataToSend = String(currentFrecRespiratoria) + ',' + String(I) + ',' +
-		String(E) + ',' + String(maxPresion) + ',' + String(batteryAlert) + ',' +
-		String(flagStabilityInterrupt) + ',' + String(stateMachine) + ',' +
-		String(currentVentilationMode) + ',' + String(trigger) + ',' + 
-		String(PeepMax) + ',' + String(maxFR) + ',' + String(maxVE) + ',' +
-		String(apneaTime) + ';';
-	Serial2.print(dataToSend);
-	//Serial.println(stateMachine);
-}
+
 
 /* ***************************************************************************
  * **** Ejecucion de la rutina de refrescado de Display ++********************

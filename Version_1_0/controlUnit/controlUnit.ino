@@ -1,7 +1,7 @@
 /*
   Name:     controlUnit.ino
   Created:  6/5/2020 11:40:24
-  Author:   Helber Carvajal
+  Author:   GIBIC UdeA
 */
 
 #include <Arduino.h>
@@ -16,11 +16,11 @@
 #define FALSE         0
 
 //********DEFINICION DE VERSION*********
-#define VERSION_1_1       TRUE
+#define VERSION_1_2       TRUE
 
 // #define SERIAL_DEVICE     "9GF100007LJD00006"
 
-#define SERIAL_DEVICE     "1NEUMA0006"
+#define SERIAL_DEVICE     "1NEUMA0007"
 
 //********COMPILACION CONDICIONAL*******
 #ifdef VERSION_1_0
@@ -53,14 +53,29 @@
 #define ADC_FLOW_1      32  // ADC 1 // Sensor de flujo linea xx (pin ADC para presion 2)
 #define ADC_FLOW_2      33  // ADC 2 // Sensor de flujo linea xx (pin ADC para presion 3)  27, 35, 32
 
+#elif VERSION_1_2
+
+// Definiciones para controlar el shiel DFRobot quad motor driver
+// Definiciones para controlar el shiel DFRobot quad motor driver
+#define EV_INSPIRA      5   // out 3 // Valvula 3/2 de control de la via inspiratoria (pin 3 del shield, velocidad motor 1)
+#define EV_ESPIRA       4  // out 2 // Valvula 3/2 de control de presiones PCON y PEEP (pin 11 del shield, velocidad motor 2)
+#define EV_ESC_CAM      18   // out 1 // Valvula 3/2 de activaci�n de la camara (pin 6 del shield, velocidad motor 4)
+
+// Definiciones para el manejo del ADC
+#define ADC_PRESS_1     27  // ADC 6 // Sensor de presion xx (pin ADC para presion 1)
+#define ADC_PRESS_2     39  // ADC 5 // Sensor de presion xx (pin ADC para presion 2)
+#define ADC_PRESS_3     35  // ADC 4 // Sensor de presion via aerea del paciente (pin ADC para presion 3)
+#define ADC_FLOW_1      36  // ADC 1 // Sensor de flujo linea xx (pin ADC para presion 2)
+#define ADC_FLOW_2      34  // ADC 2 // Sensor de flujo linea xx (pin ADC para presion 3)  27, 35, 32
+
 #endif
 // Calibracion de los sensores de presion - coeficientes regresion lineal
-#define AMP1          0.073182
-#define OFFS1         -12.1276
-#define AMP2          0.028673
-#define OFFS2         -19.3990
-#define AMP3          0.028673
-#define OFFS3         -19.3990
+#define AMP_CAM_1          0.028673
+#define OFFS_CAM_1         -19.3990
+#define AMP_BAG_2          0.028673
+#define OFFS_BAG_2         -19.3990
+#define AMP_PAC_3          0.028673
+#define OFFS_PAC_3         -19.3990
 
 
 // Calibracion de los sensores de flujo - coeficientes regresion lineal
@@ -99,12 +114,12 @@
 // **********************************************************
 // Calibracion sensores Sitio
 // Calibracion de los sensores de presion - coeficientes regresion lineal
-#define AMP1_SITE          1.00
-#define OFFS1_SITE         0.00
-#define AMP2_SITE          1.00
-#define OFFS2_SITE         0.00
-#define AMP3_SITE          1.00
-#define OFFS3_SITE         0.00
+#define AMP_CAM_1_SITE          1.00
+#define OFFS_CAM_1_SITE         0.00
+#define AMP_BAG_2_SITE          1.00
+#define OFFS_BAG_2_SITE         0.00
+#define AMP_PAC_3_SITE          1.00
+#define OFFS_PAC_3_SITE         0.00
 
 // Calibracion de los sensores de flujo - coeficientes regresion lineal
 // Sensor de flujo Inspiratorio
@@ -125,7 +140,9 @@
 #define OFFS_FE_2_SITE     0.00         
 #define LIM_FE_2_SITE      1749         
 #define AMP_FE_3_SITE      1.00        
-#define OFFS_FE_3_SITE     0.00    
+#define OFFS_FE_3_SITE     0.00   
+
+#define VOL_SCALE_SITE     1.00         // Factor de escala para ajustar el volumen en sitio
 
 // Variables de control del protocolo
 #define RXD2 16
@@ -559,6 +576,7 @@ void init_MEMORY() {
 	lVoluSup = String("");
 	lVoluInf = String("");
 
+	RaspberryChain.reserve(512);
 	RaspberryChain = String("");
 
 }
@@ -715,9 +733,9 @@ void task_Adc(void* arg) {
 					CalPout = SPoutADC;
 
 					//- Conversion ADC-Presion de fabrica
-					SPinFACTORY = AMP1 * float(SPinADC) + OFFS1;
-					SPoutFACTORY = AMP2 * float(SPoutADC) + OFFS2;
-					SPpacFACTORY = AMP3 * float(SPpacADC) + OFFS3;// Presion de la via aerea
+					SPinFACTORY = AMP_CAM_1 * float(SPinADC) + OFFS_CAM_1;
+					SPoutFACTORY = AMP_BAG_2 * float(SPoutADC) + OFFS_BAG_2;
+					SPpacFACTORY = AMP_PAC_3 * float(SPpacADC) + OFFS_PAC_3;// Presion de la via aerea
 
 					// Conversion ADC Flujo Inspiratorio de fabrica, ajuste por tramos para linealizacion
 					if (SFinADC <= LIM_FI_1) {
@@ -744,9 +762,9 @@ void task_Adc(void* arg) {
 					// *********************************************************
 					// Conversion de valores de fabrica a valores de sitio 
 					//- Conversion ADC-Presion de fabrica
-					SPin = AMP1_SITE * float(SPinFACTORY) + OFFS1_SITE;
-					SPout = AMP2_SITE * float(SPoutFACTORY) + OFFS2_SITE;
-					SPpac = AMP3_SITE * float(SPpacFACTORY) + OFFS3_SITE;// Presion de la via aerea
+					SPin = AMP_CAM_1_SITE * float(SPinFACTORY) + OFFS_CAM_1_SITE;
+					SPout = AMP_BAG_2_SITE * float(SPoutFACTORY) + OFFS_BAG_2_SITE;
+					SPpac = AMP_PAC_3_SITE * float(SPpacFACTORY) + OFFS_PAC_3_SITE;// Presion de la via aerea
 
 					// Conversion ADC Flujo Inspiratorio de fabrica, ajuste por tramos para linealizacion
 					if (SFinADC <= LIM_FI_1_SITE) {
@@ -796,7 +814,7 @@ void task_Adc(void* arg) {
 					// Calculo de volumen
 					if (alerGeneral == 0) {
 						if ((flowTotalC <= FLOWLO_LIM) || (flowTotalC >= FLOWUP_LIM)) {
-							VtidalC = VtidalC + (flowTotalC * DELTA_T * FLOW_CONV * VOL_SCALE);
+							VtidalC = VtidalC + (flowTotalC * DELTA_T * FLOW_CONV * VOL_SCALE * VOL_SCALE_SITE);
 
 							if (VtidalC < 0) {
 								VtidalC = 0;
@@ -808,7 +826,7 @@ void task_Adc(void* arg) {
 
 						}
 						if ((flowTotalV <= FLOWLO_LIM) || (flowTotalV >= FLOWUP_LIM)) {
-							VtidalV = VtidalV + (flowTotalV * DELTA_T * FLOW_CONV * VOL_SCALE);
+							VtidalV = VtidalV + (flowTotalV * DELTA_T * FLOW_CONV * VOL_SCALE * VOL_SCALE_SITE);
 
 							if (VtidalV < 0) {
 								VtidalV = 0;
@@ -898,7 +916,7 @@ void task_Adc(void* arg) {
 					// SFpac = SFin - SFout;  // flujo del paciente
 					// if (alerGeneral == 0) {
 					// 	if ((flowTotalC <= FLOWLO_LIM) || (flowTotalC >= FLOWUP_LIM)) {
-					// 		VtidalC = VtidalC + (flowTotalC * DELTA_T * FLOW_CONV * VOL_SCALE);
+					// 		VtidalC = VtidalC + (flowTotalC * DELTA_T * FLOW_CONV * VOL_SCALE * VOL_SCALE_SITE);
 
 					// 		if (VtidalC < 0) {
 					// 			VtidalC = 0;
@@ -910,7 +928,7 @@ void task_Adc(void* arg) {
 
 					// 	}
 					// 	if ((flowTotalV <= FLOWLO_LIM) || (flowTotalV >= FLOWUP_LIM)) {
-					// 		VtidalV = VtidalV + (flowTotalV * DELTA_T * FLOW_CONV * VOL_SCALE);
+					// 		VtidalV = VtidalV + (flowTotalV * DELTA_T * FLOW_CONV * VOL_SCALE * VOL_SCALE_SITE);
 
 					// 		if (VtidalV < 0) {
 					// 			VtidalV = 0;

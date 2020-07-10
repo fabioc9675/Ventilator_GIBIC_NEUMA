@@ -88,7 +88,7 @@ void printFactoryMenu(void)
                  "1. Cambiar Serial del Equipo (" +
                  SerialID + ").\n"
                             "2. Flujo inspiratorio.\n"
-                            "3. Flujo expiratorio.\n"
+                            "3. Flujo espiratorio.\n"
                             "4. Presion Camara.\n"
                             "5. Presion Bolsa.\n"
                             "6. Presion Paciente.\n"
@@ -106,7 +106,7 @@ void printSiteMenu(void)
 {
     menuString = "\n\n*** Calibracion coeficientes de sitio ***\n"
                  "1. Flujo inspiratorio sitio.\n"
-                 "2. Flujo expiratorio sitio.\n"
+                 "2. Flujo espiratorio sitio.\n"
                  "3. Presion Camara sitio.\n"
                  "4. Presion Bolsa sitio.\n"
                  "5. Presion Paciente sitio.\n"

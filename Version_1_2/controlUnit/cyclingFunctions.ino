@@ -595,9 +595,9 @@ void cpapRoutine(void)
         }
 
         // limita el valor maximo de frecuencia a 35
-        if (frecRespiratoriaCalculada > 35)
+        if (frecRespiratoriaCalculada > 30)
         {
-            frecRespiratoriaCalculada = 35;
+            frecRespiratoriaCalculada = 30;
         }
 
         //Calculo de Peep
@@ -644,11 +644,11 @@ void cpapRoutine(void)
             flagAlarmFR_Alta = true;
             alerFR_Alta = 1;
         }
-        else if (frecRespiratoriaCalculada < minFR)
-        {
-            flagAlarmFR_Alta = true;
-            alerFR_Alta = 2;
-        }
+        // else if (frecRespiratoriaCalculada < minFR)
+        // {
+        //     flagAlarmFR_Alta = true;
+        //     alerFR_Alta = 2;
+        // }
         else
         {
             flagAlarmFR_Alta = false;
@@ -699,12 +699,12 @@ void cpapRoutine(void)
     {
         // Inicio de CPAP
     case CPAP_INIT:
-        frecRespiratoriaCalculada = 0;
+        // frecRespiratoriaCalculada = 0;
         VT = 0;
         VtidalV = 0;
         VtidalC = 0;
-        calculatedE = 0;
-        calculatedI = 0;
+        // calculatedE = 0;
+        // calculatedI = 0;
 
         PeepProximal = SPpac;
         PeepDistal = SPout;

@@ -23,8 +23,8 @@ extern volatile uint8_t flagTimerInterrupt;
 extern SemaphoreHandle_t xSemaphoreTimer;
 
 // variables de estado de ventilacion
-extern int stateMachine;
-extern int newVentilationMode;
+extern byte stateMachine;
+extern byte newVentilationMode;
 
 // variable de estado de menu
 extern volatile uint8_t insideMenuFlag;

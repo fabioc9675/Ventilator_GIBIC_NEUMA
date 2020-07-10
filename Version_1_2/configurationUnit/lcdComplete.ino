@@ -41,29 +41,25 @@ extern volatile unsigned int lineaAlerta;
 extern volatile uint8_t flagAlreadyPrint;
 
 // contadores de configuraciones en el menu de usuario
-extern int currentFrecRespiratoria;
-extern int currentRelacionIE;
-
-// contadores de configuraciones en el menu de usuario
 extern String relacion_IE;
-extern int newFrecRespiratoria;
+extern byte newFrecRespiratoria;
 extern int newRelacionIE;
-extern int currentFrecRespiratoria;
+extern byte currentFrecRespiratoria;
 extern int currentRelacionIE;
-extern int trigger;
-extern int PeepMax;
-extern int maxPresion;
-extern int maxFR;
-extern int maxVE;
+extern byte trigger;
+extern byte PeepMax;
+extern byte maxPresion;
+extern byte maxFR;
+extern byte maxVE;
 
 // Variables calculadas
-extern int frecRespiratoriaCalculada;
+extern byte frecRespiratoriaCalculada;
 extern int calculatedE;
-extern int I;
-extern int E;
+extern byte I;
+extern byte E;
 
 // variables de introduccion a los menus de configuracion
-extern int currentVentilationMode;
+extern byte currentVentilationMode;
 
 // Variables para menu actualizado
 extern float Peep;

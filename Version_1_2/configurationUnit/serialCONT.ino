@@ -21,8 +21,8 @@
 // Variable de estado del encoder
 extern unsigned int fl_StateEncoder;
 // variables de estado de ventilacion
-extern int stateMachine;
-extern int newVentilationMode;
+extern byte stateMachine;
+extern byte newVentilationMode;
 
 // variable de estado de menu
 extern volatile uint8_t insideMenuFlag;
@@ -45,29 +45,29 @@ extern volatile uint8_t flagVE;
 // contadores de configuraciones en el menu de usuario
 extern String relacion_IE;
 
-extern int newFrecRespiratoria;
+extern byte newFrecRespiratoria;
 extern int newRelacionIE;
-extern int currentFrecRespiratoria;
+extern byte currentFrecRespiratoria;
 extern int currentRelacionIE;
-extern int trigger;
-extern int PeepMax;
-extern int maxPresion;
-extern int maxFR;
-extern int maxVE;
+extern byte trigger;
+extern byte PeepMax;
+extern byte maxPresion;
+extern byte maxFR;
+extern byte maxVE;
 
-extern int batteryAlert;
+extern byte batteryAlert;
 
 // Variables calculadas
-extern int frecRespiratoriaCalculada;
-extern int I;
-extern int E;
+extern byte frecRespiratoriaCalculada;
+extern byte I;
+extern byte E;
 extern int calculatedE;
-extern int apneaTime;
+extern byte apneaTime;
 
 // variables de introduccion a los menus de configuracion
-extern int optionConfigMenu;
-extern int currentVentilationMode;
-extern int optionVentMenu;
+extern byte optionConfigMenu;
+extern byte currentVentilationMode;
+extern byte optionVentMenu;
 
 // Variables para iniciar impresion de datos en menu
 extern volatile unsigned int menuImprimir;

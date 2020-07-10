@@ -49,7 +49,7 @@ extern volatile signed int menu;
 /** ****************************************************************************
  ** ************ VARIABLES *****************************************************
  ** ****************************************************************************/
-//LiquidCrystal_I2C lcd(0x27, 20, 4);
+// LiquidCrystal_I2C lcd(0x27, 20, 4);
 LiquidCrystal_I2C lcd(0x3F, 20, 4);
 
 // definicion de los core para ejecucion
@@ -103,36 +103,36 @@ volatile uint8_t flagVE = false;
 // contadores de configuraciones en el menu de usuario
 String relacion_IE = "1:2.0";
 
-int newFrecRespiratoria = 12;
+byte newFrecRespiratoria = 12;
 int newRelacionIE = 20;
-int currentFrecRespiratoria = 12;
+byte currentFrecRespiratoria = 12;
 int currentRelacionIE = 20;
-int trigger = 2;
-int PeepMax = 10;
-int maxPresion = 30;
-int maxFR = 30;
-int maxVE = 30;
+byte trigger = 2;
+byte PeepMax = 10;
+byte maxPresion = 30;
+byte maxFR = 30;
+byte maxVE = 30;
 
-int batteryAlert = BATTERY_NO_ALARM;
+byte batteryAlert = BATTERY_NO_ALARM;
 
 // Variables calculadas
-int frecRespiratoriaCalculada = 0;
-int I = 1;
-int E = 20;
+byte frecRespiratoriaCalculada = 0;
+byte I = 1;
+byte E = 20;
 int calculatedE = E;
-int apneaTime = 20;
+byte apneaTime = 20;
 
 // variables de introduccion a los menus de configuracion
-int optionConfigMenu = 0;
-int currentVentilationMode = 0;
-int optionVentMenu = 0;
+byte optionConfigMenu = 0;
+byte currentVentilationMode = 0;
+byte optionVentMenu = 0;
 
 // variable de estado de menu
 volatile uint8_t insideMenuFlag = false;
 
 // variables de estado de ventilacion
-int stateMachine = STANDBY_STATE;
-int newVentilationMode = 0;
+byte stateMachine = STANDBY_STATE;
+byte newVentilationMode = 0;
 
 // variables de menu
 volatile unsigned int menuImprimir = MAIN_MENU;

@@ -37,10 +37,10 @@ extern volatile uint8_t flagAlerta;
 extern volatile uint8_t flagBatteryAlert;
 
 // variables de introduccion a los menus de configuracion
-extern int currentVentilationMode;
+extern byte currentVentilationMode;
 
 // variables de estado de ventilacion
-extern int stateMachine;
+extern byte stateMachine;
 
 // variables contadores de conido de silencio y alarmas
 extern unsigned int contSilence;

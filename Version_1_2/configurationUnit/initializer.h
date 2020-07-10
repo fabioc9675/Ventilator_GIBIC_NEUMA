@@ -29,7 +29,7 @@ extern "C"
  ** ****************************************************************************/
 //********DEFINICIONES DE HARDWARE******
 //********DEFINICION DE VERSION*********
-#define VERSION_1_0 TRUE
+#define VERSION_1_2 TRUE
 
 //********COMPILACION CONDICIONAL*******
 #ifdef VERSION_1_0

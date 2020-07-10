@@ -40,8 +40,8 @@ extern unsigned int contDetachS;
 // Variable de estado del encoder
 extern unsigned int fl_StateEncoder;
 // variables de estado de ventilacion
-extern int stateMachine;
-extern int newVentilationMode;
+extern byte stateMachine;
+extern byte newVentilationMode;
 
 // variable de estado de menu
 extern volatile uint8_t insideMenuFlag;
@@ -60,20 +60,20 @@ extern volatile uint8_t flagMinFR;
 extern volatile uint8_t flagVE;
 
 // contadores de configuraciones en el menu de usuario
-extern int newFrecRespiratoria;
+extern byte newFrecRespiratoria;
 extern int newRelacionIE;
-extern int currentFrecRespiratoria;
+extern byte currentFrecRespiratoria;
 extern int currentRelacionIE;
-extern int trigger;
-extern int PeepMax;
-extern int maxPresion;
-extern int maxFR;
-extern int maxVE;
+extern byte trigger;
+extern byte PeepMax;
+extern byte maxPresion;
+extern byte maxFR;
+extern byte maxVE;
 
 // variables de introduccion a los menus de configuracion
-extern int optionConfigMenu;
-extern int currentVentilationMode;
-extern int optionVentMenu;
+extern byte optionConfigMenu;
+extern byte currentVentilationMode;
+extern byte optionVentMenu;
 
 // Variables para iniciar impresion de datos en menu
 extern volatile unsigned int menuImprimir;
@@ -104,7 +104,7 @@ void encoderRoutine(void)
             menu++;
             if (menu < 0 || menu > MENU_QUANTITY - 1)
                 menu = 0;
-            //Serial.println("menu = " + String(menu));
+            // Serial.println("menu = " + String(menu));
         }
         else
         {

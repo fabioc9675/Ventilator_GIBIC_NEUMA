@@ -18,6 +18,25 @@
  ** ************ EXTERN VARIABLES **********************************************
  ** ****************************************************************************/
 // **********************************************************
+// Variables de manejo de semaforos
+extern SemaphoreHandle_t xSemaphoreEncoder;
+extern portMUX_TYPE mux;
+
+// bandera de activacion de encoder
+extern volatile uint8_t flagAEncoder;
+extern volatile uint8_t flagBEncoder;
+extern volatile uint8_t flagSEncoder;
+
+extern volatile uint8_t flagDetachInterrupt_A;
+extern volatile uint8_t flagDetachInterrupt_B;
+extern volatile uint8_t flagDetachInterrupt_A_B;
+extern volatile uint8_t flagDetachInterrupt_B_A;
+extern volatile uint8_t flagDetachInterrupt_S;
+
+extern unsigned int contDetachA;
+extern unsigned int contDetachB;
+extern unsigned int contDetachS;
+
 // Variable de estado del encoder
 extern unsigned int fl_StateEncoder;
 // variables de estado de ventilacion
@@ -66,6 +85,9 @@ extern volatile uint8_t flagAlreadyPrint;
  ** ****************************************************************************/
 // variables de menu
 volatile signed int menu = MAIN_MENU;
+
+unsigned int contRecogIntA = 0; // contador para reconocimiento del conteo del encoder
+unsigned int contRecogIntB = 0; // contador para reconocimiento del conteo del encoder
 
 /** ****************************************************************************
  ** ************ FUNCTIONS *****************************************************
@@ -477,6 +499,84 @@ void switchRoutine(void)
     menuImprimir = menu;
     lineaAlerta = menu;
     flagAlreadyPrint = false;
+}
+
+/****************************************************************************
+ ***** Atencion a interrupcion por encoder **********************************
+ ****************************************************************************/
+void task_Encoder(void *arg)
+{
+    while (1)
+    {
+        // Espero por la notificacion de la ISR por A
+        if (xSemaphoreTake(xSemaphoreEncoder, portMAX_DELAY) == pdTRUE)
+        {
+            if (flagAEncoder == true)
+            {
+                portENTER_CRITICAL(&mux);
+                flagAEncoder = false;
+                portEXIT_CRITICAL(&mux);
+
+                if ((digitalRead(B) == HIGH) && (digitalRead(A) == LOW))
+                {
+                    detachInterrupt(digitalPinToInterrupt(A));
+                    detachInterrupt(digitalPinToInterrupt(B));
+                    flagDetachInterrupt_A = true;
+                    flagDetachInterrupt_B_A = true;
+                    contDetachA = 0;
+                    fl_StateEncoder = ENCOD_INCREASE;
+                    // ejecucion de la tarea de incremento, esta funcion se coloca por sensibildad del encoder,
+                    // si se cambia por menor sensibilidad, solo necesitara ejecutar la funcion  encoderRoutine();
+                    contRecogIntA++;
+                    if (contRecogIntA == ENCOD_COUNT)
+                    {
+                        contRecogIntA = 0;
+                        encoderRoutine();
+                    }
+                }
+            }
+
+            if (flagBEncoder == true)
+            {
+                portENTER_CRITICAL(&mux);
+                flagBEncoder = false;
+                portEXIT_CRITICAL(&mux);
+
+                if ((digitalRead(A) == HIGH) && (digitalRead(B) == LOW))
+                {
+                    detachInterrupt(digitalPinToInterrupt(B));
+                    detachInterrupt(digitalPinToInterrupt(A));
+                    flagDetachInterrupt_B = true;
+                    flagDetachInterrupt_A_B = true;
+                    contDetachB = 0;
+                    fl_StateEncoder = ENCOD_DECREASE;
+                    // ejecucion de la tarea de decremento, esta funcion se coloca por sensibildad del encoder,
+                    // si se cambia por menor sensibilidad, solo necesitara ejecutar la funcion  encoderRoutine();
+                    contRecogIntB++;
+                    if (contRecogIntB == ENCOD_COUNT)
+                    {
+                        contRecogIntB = 0;
+                        encoderRoutine();
+                    }
+                }
+            }
+
+            if (flagSEncoder == true)
+            {
+                portENTER_CRITICAL(&mux);
+                flagSEncoder = false;
+                portEXIT_CRITICAL(&mux);
+
+                detachInterrupt(digitalPinToInterrupt(SW));
+                flagDetachInterrupt_S = true;
+                contDetachS = 0;
+                // ejecucion de la tarea de Switch
+                contRecogIntA = 0;
+                contRecogIntB = 0;
+                switchRoutine();
+            }
+        }
+    }
 }
 
 /** ****************************************************************************

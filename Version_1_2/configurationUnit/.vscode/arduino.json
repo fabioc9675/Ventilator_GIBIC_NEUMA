@@ -2,7 +2,7 @@
     "sketch": "configurationUnit.ino",
     "board": "esp32:esp32:esp32",
     "configuration": "PSRAM=disabled,PartitionScheme=default,CPUFreq=240,FlashMode=qio,FlashFreq=80,FlashSize=4M,UploadSpeed=921600,DebugLevel=none",
-    "port": "/dev/tty.wchusbserialfd130",
-    "output": "C:/Users/ASUS/Downloads/configurationUnitBuild",
-    "_output": "/Users/fing140323/Downloads/configurationUnitBuild"
+    "port": "/dev/tty.usbserial-AQ00VPQN",
+    "_output": "C:/Users/ASUS/Downloads/configurationUnitBuild",
+    "output": "/Users/fing140323/Downloads/configurationUnitBuild"
 }

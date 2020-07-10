@@ -74,6 +74,24 @@ extern volatile unsigned int menuImprimir;
 extern volatile unsigned int lineaAlerta;
 extern volatile uint8_t flagAlreadyPrint;
 
+// Variables para menu actualizado
+extern float Peep;
+extern float Ppico;
+extern float Pcon;
+extern byte currentVE;
+extern unsigned int VT;
+
+// variables de alerta
+extern int alerPresionPIP;
+extern int alerDesconexion;
+extern int alerObstruccion;
+extern int alerGeneral;
+extern int alerPresionPeep;
+extern int alerFR_Alta;
+extern int alerVE_Alto;
+
+extern byte newVE;
+
 /** ****************************************************************************
  ** ************ VARIABLES *****************************************************
  ** ****************************************************************************/
@@ -104,6 +122,65 @@ void sendSerialData(void)
                         String(apneaTime) + ';';
     Serial2.print(dataToSend);
     //Serial.println(stateMachine);
+}
+
+/* ***************************************************************************
+ * **** Ejecucion de la rutina de comunicacion por serial ********************
+ * ***************************************************************************/
+// Function to receive data from serial communication
+void task_Receive(void *pvParameters)
+{
+    // Clean Serial buffers
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    Serial.flush();
+    Serial2.flush();
+
+    while (1)
+    {
+        if (Serial2.available() > 5)
+        {
+            // if (Serial.available() > 5) {  // solo para pruebas
+            // Serial.println("Inside receiveData");
+            String dataIn = Serial2.readStringUntil(';');
+            // String dataIn = Serial.readStringUntil(';');  // solo para pruebas
+            int contComas = 0;
+            for (int i = 0; i < dataIn.length(); i++)
+            {
+                if (dataIn[i] == ',')
+                {
+                    contComas++;
+                }
+            }
+            String dataIn2[40];
+            for (int i = 0; i < contComas + 1; i++)
+            {
+                dataIn2[i] = dataIn.substring(0, dataIn.indexOf(','));
+                dataIn = dataIn.substring(dataIn.indexOf(',') + 1);
+            }
+            //cargue los datos aqui
+            //para entero
+            //contCiclos =dataIn2[0].toInt();
+            //para float
+            Ppico = dataIn2[0].toFloat();
+            Peep = dataIn2[1].toFloat();
+            Pcon = Ppico - Peep;
+            VT = dataIn2[2].toInt();
+            alerPresionPIP = dataIn2[3].toInt();
+            alerDesconexion = dataIn2[4].toInt();
+            alerObstruccion = dataIn2[5].toInt();
+            alerPresionPeep = dataIn2[6].toInt();
+            alerGeneral = dataIn2[7].toInt();
+            frecRespiratoriaCalculada = dataIn2[8].toInt();
+            calculatedE = dataIn2[9].toInt();
+            alerFR_Alta = dataIn2[10].toInt();
+            alerVE_Alto = dataIn2[11].toInt();
+            newVE = dataIn2[12].toInt();
+            Serial2.flush();
+            //Serial.flush();  // solo para pruebas
+        }
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+    //   vTaskDelete(NULL);
 }
 
 /** ****************************************************************************

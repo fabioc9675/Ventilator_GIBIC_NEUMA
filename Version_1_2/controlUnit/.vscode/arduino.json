@@ -2,7 +2,7 @@
     "sketch": "controlUnit.ino",
     "board": "esp32:esp32:esp32",
     "configuration": "PSRAM=disabled,PartitionScheme=default,CPUFreq=240,FlashMode=qio,FlashFreq=80,FlashSize=4M,UploadSpeed=921600,DebugLevel=none",
-    "port": "COM35",
-    "output": "C:/Users/ASUS/Downloads/controlUnitBuild",
-    "_output": "/Users/fing140323/Downloads/controlUnitBuild"
+    "port": "/dev/tty.usbserial-AQ00VPR3",
+    "_output": "C:/Users/ASUS/Downloads/controlUnitBuild",
+    "output": "/Users/fing140323/Downloads/controlUnitBuild"
 }

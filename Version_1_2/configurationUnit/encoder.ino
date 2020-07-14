@@ -512,6 +512,8 @@ void switchRoutine(void)
             flagVE = !flagVE;
         }
         break;
+
+        
     }
     menuImprimir = menu;
     lineaAlerta = menu;

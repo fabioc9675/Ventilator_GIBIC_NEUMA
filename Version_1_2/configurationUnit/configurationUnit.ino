@@ -99,6 +99,7 @@ volatile uint8_t flagMode = false;
 volatile uint8_t flagConfirm = false;
 volatile uint8_t flagMinFR = false;
 volatile uint8_t flagVE = false;
+volatile uint8_t flagLeakage = false;
 
 // contadores de configuraciones en el menu de usuario
 String relacion_IE = "1:2.0";

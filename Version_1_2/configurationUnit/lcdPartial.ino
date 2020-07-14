@@ -95,6 +95,7 @@ extern volatile uint8_t flagMode;
 extern volatile uint8_t flagConfirm;
 extern volatile uint8_t flagMinFR;
 extern volatile uint8_t flagVE;
+extern volatile uint8_t flagLeakage;
 
 /** ****************************************************************************
  ** ************ VARIABLES *****************************************************
@@ -553,25 +554,39 @@ void lcd_show_part(void)
         break;
 
     case SERVICE_MENU:
+
+        if (flowPac > -2 && flowPac < 2)
+        {
+            lcd.setCursor(0, 2);
+            lcd.print("Prueba OK, sin fugas");
+            //flagLeakage = true;
+        }
+        else
+        {
+            //if (flagLeakage == false) {
+            lcd.setCursor(0, 2);
+            lcd.print("Fugas en el circuito");
+            //}
+        }
         if (flowPacAnte != flowPac)
         {
-            lcd.setCursor(13, 2);
+            lcd.setCursor(6, 3);
             if (flowPac >= 0)
             {
                 lcd.print(' ');
             }
             else
             {
-                lcd.setCursor(14, 2);
+                lcd.setCursor(7, 3);
             }
             lcd.print(flowPac);
-            lcd.print("   ");
+            lcd.print(" ");
 
             flowPacAnte = flowPac;
         }
         if (presPacAnte != presPac)
         {
-            lcd.setCursor(14, 3);
+            lcd.setCursor(16, 3);
             if (presPac < 10)
             {
                 lcd.print(' ');

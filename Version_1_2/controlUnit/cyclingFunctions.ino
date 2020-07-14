@@ -236,7 +236,11 @@ void cycling(void)
         {
             flagAC = false;
             frecRespiratoriaCalculada = 60.0 / ((float)contCycling / 1000.0);
-            calculatedE = (int)((((60.0 / (float)frecRespiratoriaCalculada) / (float)inspirationTime) - 1) * currentI * 10);
+            calculatedE = (int)((((60.0 / (float)frecRespiratoriaCalculada) / (float)inspirationTime) - 1) * currentI * 10) + 1;
+            if (calculatedE < 10)
+            {
+                calculatedE = 10;
+            }
             contCycling = 0;
 
             //Calculo de Peep
@@ -339,7 +343,11 @@ void cycling(void)
         if ((contCycling >= int(((inspirationTime + expirationTime) * 1000))))
         {
             frecRespiratoriaCalculada = 60.0 / ((float)contCycling / 1000.0);
-            calculatedE = (int)((((60.0 / (float)frecRespiratoriaCalculada) / (float)inspirationTime) - 1) * currentI * 10);
+            calculatedE = (int)((((60.0 / (float)frecRespiratoriaCalculada) / (float)inspirationTime) - 1) * currentI * 10) + 1;
+            if (calculatedE < 10)
+            {
+                calculatedE = 10;
+            }
             contCycling = 0;
             //Calculo de Peep
             PeepProximal = SPpac;

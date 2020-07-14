@@ -151,6 +151,10 @@ float Pcon = 0;
 byte currentVE = 0;
 unsigned int VT = 0;
 byte newVE = 0;
+int presPac = 0;
+int flowPac = 0;
+int presPacAnte = 0;
+int flowPacAnte = 0;
 
 // variables de alerta
 int alerPresionPIP = 0;

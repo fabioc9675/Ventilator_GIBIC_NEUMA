@@ -67,6 +67,10 @@ extern float Ppico;
 extern float Pcon;
 extern byte currentVE;
 extern unsigned int VT;
+extern int presPac;
+extern int flowPac;
+extern int presPacAnte;
+extern int flowPacAnte;
 
 // banderas de cambio de valores
 extern volatile uint8_t flagConfirm;
@@ -268,8 +272,31 @@ void lcd_show_comp(void)
         lcd.setCursor(0, 1);
         lcd.print("                    ");
         lcd.setCursor(0, 2);
-        lcd.print("   PEEP CPAP =      ");
-        lcd.setCursor(14, 2);
+        lcd.print("  Flujo   =         ");
+        lcd.setCursor(13, 2);
+        if (flowPac >= 0)
+        {
+            lcd.print(' ');
+        }
+        else
+        {
+            lcd.setCursor(14, 2);
+        }
+        lcd.print(flowPac);
+        lcd.print("   ");
+
+        lcd.setCursor(0, 3);
+        lcd.print("  Presion =         ");
+        lcd.setCursor(14, 3);
+        if (presPac < 10)
+        {
+            lcd.print(' ');
+        }
+        lcd.print(presPac);
+
+        presPacAnte = presPac;
+        flowPacAnte = flowPac;
+
         break;
     default:
         lcd.setCursor(0, 0);

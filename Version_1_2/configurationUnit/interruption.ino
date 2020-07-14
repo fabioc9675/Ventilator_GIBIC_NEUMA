@@ -42,6 +42,26 @@ extern byte currentVentilationMode;
 // variables de estado de ventilacion
 extern byte stateMachine;
 
+// variables de menu
+extern volatile signed int menu;
+
+// variables de introduccion a los menus de configuracion
+extern byte optionConfigMenu;
+extern byte optionVentMenu;
+extern byte batteryAlert;
+
+// variable de estado de menu
+extern volatile uint8_t insideMenuFlag;
+
+// variables de menu
+extern volatile unsigned int menuImprimir;
+extern volatile unsigned int lineaAlerta;
+extern volatile uint8_t flagAlreadyPrint;
+
+// Variables para menu anterior
+extern volatile unsigned int menuAnterior;  // valor de menu anterior
+extern volatile unsigned int lineaAnterior; // valor de menu anterior
+
 // variables contadores de conido de silencio y alarmas
 extern unsigned int contSilence;
 extern unsigned int contSilenceBattery;
@@ -200,7 +220,21 @@ void standbyInterruptAttention(void)
             //Serial.println("I am on Cycling state");
             digitalWrite(STANDBY_LED, LOW);
             lineaAnterior = MODE_CHANGE;
+
             sendSerialData();
+
+            if (menu == SERVICE_MENU)
+            {
+                // menu = VENT_MENU;
+                menu = MAIN_MENU;
+                insideMenuFlag = false;
+                optionConfigMenu = 0;
+                optionVentMenu = 0;
+                menuImprimir = menu;
+                menuAnterior = VENT_MENU;
+                lineaAlerta = menu;
+                flagAlreadyPrint = false;
+            }
         }
         else if (stateMachine != STANDBY_STATE)
         {

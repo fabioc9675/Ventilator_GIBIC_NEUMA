@@ -68,6 +68,10 @@ extern float Pcon;
 extern byte currentVE;
 extern unsigned int VT;
 extern byte newVE;
+extern int presPac;
+extern int flowPac;
+extern int presPacAnte;
+extern int flowPacAnte;
 
 // banderas de cambio de valores
 extern volatile uint8_t flagConfirm;
@@ -546,6 +550,37 @@ void lcd_show_part(void)
         lcd.print("   PEEP CPAP =      ");
         lcd.setCursor(14, 2);
         lcd.print(String(Peep, 0));
+        break;
+
+    case SERVICE_MENU:
+        if (flowPacAnte != flowPac)
+        {
+            lcd.setCursor(13, 2);
+            if (flowPac >= 0)
+            {
+                lcd.print(' ');
+            }
+            else
+            {
+                lcd.setCursor(14, 2);
+            }
+            lcd.print(flowPac);
+            lcd.print("   ");
+
+            flowPacAnte = flowPac;
+        }
+        if (presPacAnte != presPac)
+        {
+            lcd.setCursor(14, 3);
+            if (presPac < 10)
+            {
+                lcd.print(' ');
+            }
+            lcd.print(presPac);
+
+            presPacAnte = presPac;
+        }
+
         break;
     }
     //Serial.println("I am in lcd_show()");

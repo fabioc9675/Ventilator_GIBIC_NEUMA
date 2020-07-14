@@ -133,7 +133,7 @@ void task_timer(void *arg)
                 contms++;
                 if (contms % 25 == 0)
                 {
-                    digitalWrite(LED, !digitalRead(LED));
+                    // digitalWrite(LED, !digitalRead(LED));
                 }
                 if (contms == 1000)
                 {

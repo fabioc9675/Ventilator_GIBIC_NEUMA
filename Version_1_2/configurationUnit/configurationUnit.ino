@@ -199,16 +199,14 @@ byte sensibilityCPAP = 0;
  * ***************************************************************************/
 void setup()
 {
+	init_GPIO();
 	Serial.begin(115200);
 	Serial2.begin(115200, SERIAL_8N1, RXD2, TXD2);
 	Serial2.setTimeout(10);
-	init_GPIO();
+	
+	vTaskDelay(100 / portTICK_PERIOD_MS);
 
 	// nvs_flash_init();
-
-	// se crea el semaforo binario
-	xSemaphoreEncoder = xSemaphoreCreateBinary();
-	xSemaphoreTimer = xSemaphoreCreateBinary();
 
 	// modo servicio de fabrica
 	if ((digitalRead(SILENCE_BTN) == LOW) && (digitalRead(STABILITY_BTN) == LOW))
@@ -230,6 +228,10 @@ void setup()
 		}
 	}
 
+	
+	// se crea el semaforo binario
+	xSemaphoreEncoder = xSemaphoreCreateBinary();
+	xSemaphoreTimer = xSemaphoreCreateBinary();
 	init_Timer();
 
 	// creo la tarea task_pulsador

@@ -767,6 +767,18 @@ void standbyRoutine(void)
         contCycling = 0; // detiene el contador de ciclado
     }
 
+    flagAlarmPatientDesconnection = false;
+    flagAlarmObstruccion = false;
+    flagAlarmFR_Alta = false;
+    flagAlarmVE_Alto = false;
+    alerDesconexion = 0;
+    alerObstruccion = 0;
+    alerFR_Alta = 0;
+    alerVE_Alto = 0;
+    alerPresionPIP = 0;
+    alerPeep = 0;
+    alerGeneral = 0;
+
     digitalWrite(EV_INSPIRA, LOW); //Piloto conectado a presion de bloqueo -> Libera valvula piloteada y permite el paso de aire
     digitalWrite(EV_ESC_CAM, LOW); //Piloto conectado a Camara -> Despresuriza la camara y permite el llenado de la bolsa
     digitalWrite(EV_ESPIRA, LOW);  //Piloto conectado a PEEP -> Limita la presion de la via aerea a la PEEP configurada

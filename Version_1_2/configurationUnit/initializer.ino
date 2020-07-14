@@ -56,7 +56,7 @@ void init_GPIO(void)
     digitalWrite(STANDBY_LED, HIGH);
     digitalWrite(STABILITY_LED, HIGH);
     digitalWrite(LUMING, LOW);
-    pinMode(LED, OUTPUT);
+    // pinMode(LED, OUTPUT);
 }
 
 /** ****************************************************************************

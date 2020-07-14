@@ -139,6 +139,7 @@ uint8_t flagPpacSitePrintCalibration = false;
 
 // banderas de estados de ventilacion
 uint8_t flagAC = false;
+int flagToACBackUp = false;
 
 // Variables maquina de estados de modos ventilatorios
 int currentStateMachine = STANDBY_STATE;

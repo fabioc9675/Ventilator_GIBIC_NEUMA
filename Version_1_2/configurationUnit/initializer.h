@@ -75,8 +75,8 @@ extern "C"
 #ifdef VERSION_1_2
 
 //********DEFINICION DE PINES***********
-#define A 19 //variable A a pin digital 2 (DT en modulo)
-#define B 18 //variable B a pin digital 4 (CLK en modulo)
+#define A 18 //variable A a pin digital 2 (DT en modulo)
+#define B 19 //variable B a pin digital 4 (CLK en modulo)
 #define SW 5 //sw a pin digital 3 (SW en modulo)
 
 #define BUZZER_BTN 12

@@ -37,7 +37,7 @@ extern float Peep_AC;       // medicion de Peep en el modo asistido controlado
 extern float PeepProximal;  // medicion realizada con sensor distal a paciente
 extern float PeepDistal;    // medicion realizada con sensor distal a paciente
 extern float flowZero;      // medicion del flujo cero para la grafica de volumen
-extern float dPpac; // Derivada de SPpac
+extern float dPpac;         // Derivada de SPpac
 
 extern float SPin;  // Senal filtrada de presion en la camara
 extern float SPout; // Senal filtrada de presion en la bolsa
@@ -82,6 +82,7 @@ extern int newE;
 
 // banderas de estados de ventilacion
 extern uint8_t flagAC;
+extern int flagToACBackUp;
 
 /** ****************************************************************************
  ** ************ VARIABLES *****************************************************
@@ -568,175 +569,191 @@ void cpapRoutine(void)
         stateFrecCPAP = CPAP_INIT;
         alerFR_Alta = 0;
     }
-    contCycling = 0;
-    digitalWrite(EV_INSPIRA, LOW); //Piloto conectado a presion de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
-    digitalWrite(EV_ESC_CAM, LOW); //Piloto conectado a PEEP -> Limita la presion de la via aerea a la PEEP configurada
-    digitalWrite(EV_ESPIRA, LOW);  //Piloto conectado a ambiente -> Despresuriza la camara y permite el llenado de la bolsa
 
-    if ((SFpac > COMP_FLOW_MAX_CPAP) && ((dFlow) > COMP_DEL_F_MAX_CPAP) && (stateFrecCPAP != CPAP_INSPIRATION))
-    { // inicio de la inspiracion
-        // Inicializa Maquina de estados para que inicie en CPAP
-        stateFrecCPAP = CPAP_INSPIRATION;
+    if (currentStateMachine == CPAP_STATE)
+    {
+        contCycling = 0;
+        digitalWrite(EV_INSPIRA, LOW); //Piloto conectado a presion de bloqueo -> Bloquea valvula piloteada y restringe el paso de aire
+        digitalWrite(EV_ESC_CAM, LOW); //Piloto conectado a PEEP -> Limita la presion de la via aerea a la PEEP configurada
+        digitalWrite(EV_ESPIRA, LOW);  //Piloto conectado a ambiente -> Despresuriza la camara y permite el llenado de la bolsa
 
-        // Calculo de la frecuecnia respiratoria en CPAP
-        frecCalcCPAP = 60.0 / ((float)contFrecCPAP / 1000.0);
-        frecRespiratoriaCalculada = (int)frecCalcCPAP;
+        if ((SFpac > COMP_FLOW_MAX_CPAP) && ((dFlow) > COMP_DEL_F_MAX_CPAP) && (stateFrecCPAP != CPAP_INSPIRATION))
+        { // inicio de la inspiracion
+            // Inicializa Maquina de estados para que inicie en CPAP
+            stateFrecCPAP = CPAP_INSPIRATION;
 
-        // Calculo de la relacion IE en CPAP
-        if (contInsCPAP < contEspCPAP)
-        {
-            calculatedI = 1;
-            calculatedE = int(10 * ((float)contEspCPAP / 1000.0) / ((60.0 / (float)frecCalcCPAP) - ((float)contEspCPAP) / 1000.0));
-        }
-        else if (contEspCPAP < contInsCPAP)
-        {
-            calculatedE = 1;
-            calculatedI = int(10 * ((float)contInsCPAP / 1000.0) / ((60.0 / (float)frecCalcCPAP) - ((float)contInsCPAP) / 1000.0));
-        }
+            // Calculo de la frecuecnia respiratoria en CPAP
+            frecCalcCPAP = 60.0 / ((float)contFrecCPAP / 1000.0);
+            if (frecCalcCPAP < 50)
+            {
+                frecRespiratoriaCalculada = (int)frecCalcCPAP;
+            }
 
-        // limita el valor maximo de frecuencia a 35
-        if (frecRespiratoriaCalculada > 30)
-        {
-            frecRespiratoriaCalculada = 30;
-        }
+            // Calculo de la relacion IE en CPAP
+            if (contInsCPAP < contEspCPAP)
+            {
+                calculatedI = 1;
+                calculatedE = int(10.0 * ((float)contEspCPAP / 1000.0) / ((60.0 / (float)frecCalcCPAP) - ((float)contEspCPAP) / 1000.0));
+            }
+            else if (contEspCPAP < contInsCPAP)
+            {
+                calculatedE = 10;
+                calculatedI = int(10.0 * ((float)contInsCPAP / 1000.0) / ((60.0 / (float)frecCalcCPAP) - ((float)contInsCPAP) / 1000.0));
+            }
 
-        //Calculo de Peep
-        PeepProximal = SPpac;
-        PeepDistal = SPout;
-        /* *******************************************************************
+            // limita el valor maximo de frecuencia a 35
+
+            if (frecRespiratoriaCalculada > 35)
+            {
+                frecRespiratoriaCalculada = 35;
+            }
+
+            currentVE = (int)((VT * frecRespiratoriaCalculada) / 100.0); // calculo de la ventilacion minuto
+
+            //Calculo de Peep
+            PeepProximal = SPpac;
+            PeepDistal = SPout;
+            /* *******************************************************************
 		  * *** Aqui se debe verificar cual es el valor de Peep a utlizar *****
 		  * *******************************************************************/
-        Peep = PeepProximal; // Peep como la presion en la via aerea al final de la espiracion
-        if (Peep < newPeepMax)
-        {
-            alerPeep = 1;
-        }
-        else
-        {
-            alerPeep = 0;
-        }
+            Peep = PeepProximal; // Peep como la presion en la via aerea al final de la espiracion
+            if (Peep < newPeepMax)
+            {
+                alerPeep = 1;
+            }
+            else
+            {
+                alerPeep = 0;
+            }
 
-        //Ajuste del valor de volumen
-        VtidalV = 0;
-        VtidalC = 0;
-        // flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
-        contFrecCPAP = 0;
-        contEspCPAP = 0;
-        contInsCPAP = 0;
+            //Ajuste del valor de volumen
+            VtidalV = 0;
+            VtidalC = 0;
+            // flowZero = SFin - SFout; // nivel cero de flujo para calculo de volumen
+            contFrecCPAP = 0;
+            contEspCPAP = 0;
+            contInsCPAP = 0;
 
-        //Asignacion de valores maximos y minimos de presion
-        pmin = UmbralPpmin;       //asigna la presion minima encontrada en todo el periodo
-        pmax = UmbralPpico;       //asigna la presion maxima encontrada en todo el periodo
-        flmin = UmbralFmin;       //asigna el flujo minimo encontrada en todo el periodo
-        flmax = UmbralFmax;       //asigna el flujo maximo encontrada en todo el periodo
-        vmin = UmbralVmin;        //asigna el volumen minimo encontrada en todo el periodo
-        vmax = UmbralVmax;        //asigna el volumen maximo encontrada en todo el periodo
-        UmbralPpmin = 100;        //Reinicia el umbral minimo de presion del paciente
-        UmbralPpico = -100;       //Reinicia el umbral maximo de presion del paciente
-        UmbralPpicoDistal = -100; //Reinicia el umbral maximo de presion del paciente
-        UmbralFmin = 100;         //Reinicia el umbral minimo de flujo del paciente
-        UmbralFmax = -100;        //Reinicia el umbral maximo de flujo del paciente
-        UmbralVmin = 100;         //Reinicia el umbral minimo de volumen del paciente
-        UmbralVmax = -100;        //Reinicia el umbral maximo de volumen del paciente
+            //Asignacion de valores maximos y minimos de presion
+            pmin = UmbralPpmin;       //asigna la presion minima encontrada en todo el periodo
+            pmax = UmbralPpico;       //asigna la presion maxima encontrada en todo el periodo
+            flmin = UmbralFmin;       //asigna el flujo minimo encontrada en todo el periodo
+            flmax = UmbralFmax;       //asigna el flujo maximo encontrada en todo el periodo
+            vmin = UmbralVmin;        //asigna el volumen minimo encontrada en todo el periodo
+            vmax = UmbralVmax;        //asigna el volumen maximo encontrada en todo el periodo
+            UmbralPpmin = 100;        //Reinicia el umbral minimo de presion del paciente
+            UmbralPpico = -100;       //Reinicia el umbral maximo de presion del paciente
+            UmbralPpicoDistal = -100; //Reinicia el umbral maximo de presion del paciente
+            UmbralFmin = 100;         //Reinicia el umbral minimo de flujo del paciente
+            UmbralFmax = -100;        //Reinicia el umbral maximo de flujo del paciente
+            UmbralVmin = 100;         //Reinicia el umbral minimo de volumen del paciente
+            UmbralVmax = -100;        //Reinicia el umbral maximo de volumen del paciente
 
-        if (frecRespiratoriaCalculada > maxFR)
-        {
-            flagAlarmFR_Alta = true;
-            alerFR_Alta = 1;
+            if (frecRespiratoriaCalculada > maxFR)
+            {
+                flagAlarmFR_Alta = true;
+                alerFR_Alta = 1;
+            }
+            // else if (frecRespiratoriaCalculada < minFR)
+            // {
+            //     flagAlarmFR_Alta = true;
+            //     alerFR_Alta = 2;
+            // }
+            else
+            {
+                flagAlarmFR_Alta = false;
+                alerFR_Alta = 0;
+            }
         }
-        // else if (frecRespiratoriaCalculada < minFR)
-        // {
-        //     flagAlarmFR_Alta = true;
-        //     alerFR_Alta = 2;
-        // }
-        else
-        {
-            flagAlarmFR_Alta = false;
-            alerFR_Alta = 0;
-        }
-    }
-    if ((SFpac < COMP_FLOW_MIN_CPAP) && ((dFlow) < COMP_DEL_F_MIN_CPAP) && (stateFrecCPAP != CPAP_ESPIRATION))
-    { // si inicia la espiracion
-        stateFrecCPAP = CPAP_ESPIRATION;
+        if ((SFpac < COMP_FLOW_MIN_CPAP) && ((dFlow) < COMP_DEL_F_MIN_CPAP) && (stateFrecCPAP != CPAP_ESPIRATION))
+        { // si inicia la espiracion
+            stateFrecCPAP = CPAP_ESPIRATION;
 
-        //Calculo de PIP
-        PpicoProximal = SPpac;
-        PpicoDistal = SPout;
-        /* *******************************************************************
+            //Calculo de PIP
+            PpicoProximal = SPpac;
+            PpicoDistal = SPout;
+            /* *******************************************************************
 		  * *** Aqui se debe verificar cual es el valor de Ppico a utlizar *****
 		  * *******************************************************************/
-        Ppico = PpicoProximal; // PIP como la presion en la via aerea al final de la espiracion
+            Ppico = PpicoProximal; // PIP como la presion en la via aerea al final de la espiracion
 
-        //Medicion de Volumen circulante
-        if (VtidalC >= 0)
-        {
-            VTidProm[2] = VtidalC;
+            //Medicion de Volumen circulante
+            if (VtidalC >= 0)
+            {
+                VTidProm[2] = VtidalC;
+            }
+            else
+            {
+                VTidProm[2] = 0;
+            }
+            // promediado del Vtidal
+            for (int i = 2; i >= 1; i--)
+            {
+                VTidProm[2 - i] = VTidProm[2 - i + 1];
+            }
+            //- Inicializacion
+            SVtidal = 0;
+            //- Actualizacion
+            for (int i = 0; i <= 2; i++)
+            {
+                SVtidal = SVtidal + VTidProm[i];
+                // frecRespiratoriaCalculada = frecRespiratoriaCalculada + FreqProm[i];
+            }
+            //- Calculo promedio
+            VT = SVtidal / 3;
+            // frecRespiratoriaCalculada = (int) (frecRespiratoriaCalculada / 3);
         }
-        else
-        {
-            VTidProm[2] = 0;
-        }
-        // promediado del Vtidal
-        for (int i = 2; i >= 1; i--)
-        {
-            VTidProm[2 - i] = VTidProm[2 - i + 1];
-        }
-        //- Inicializacion
-        SVtidal = 0;
-        //- Actualizacion
-        for (int i = 0; i <= 2; i++)
-        {
-            SVtidal = SVtidal + VTidProm[i];
-            // frecRespiratoriaCalculada = frecRespiratoriaCalculada + FreqProm[i];
-        }
-        //- Calculo promedio
-        VT = SVtidal / 3;
-        // frecRespiratoriaCalculada = (int) (frecRespiratoriaCalculada / 3);
-    }
 
-    // Maquina de estados para identificar la Inspiracion y la espiracion
-    switch (stateFrecCPAP)
-    {
-        // Inicio de CPAP
-    case CPAP_INIT:
-        // frecRespiratoriaCalculada = 0;
-        VT = 0;
-        VtidalV = 0;
-        VtidalC = 0;
-        // calculatedE = 0;
-        // calculatedI = 0;
+        // Maquina de estados para identificar la Inspiracion y la espiracion
+        switch (stateFrecCPAP)
+        {
+            // Inicio de CPAP
+        case CPAP_INIT:
+            frecRespiratoriaCalculada = 0;
+            VT = 0;
+            VtidalV = 0;
+            VtidalC = 0;
+            // calculatedE = 0;
+            // calculatedI = 0;
+            flagToACBackUp = 0;
 
-        PeepProximal = SPpac;
-        PeepDistal = SPout;
-        /* *******************************************************************
+            PeepProximal = SPpac;
+            PeepDistal = SPout;
+            /* *******************************************************************
 		  * *** Aqui se debe verificar cual es el valor de Peep a utlizar *****
 		  * *******************************************************************/
-        Peep = PeepProximal; // Peep como la presion en la via aerea al final de la espiracion
-        break;
-        // Ciclo Inspiratorio
-    case CPAP_INSPIRATION:
-        contFrecCPAP++; // Se incrementan los contadore para el calculo de frecuencia y relacion IE
-        contInsCPAP++;
-        break;
-        // Ciclo Espiratorio
-    case CPAP_ESPIRATION:
-        contFrecCPAP++;
-        contEspCPAP++;
-        break;
-    default:
-        break;
-    }
+            Peep = PeepProximal; // Peep como la presion en la via aerea al final de la espiracion
+            break;
+            // Ciclo Inspiratorio
+        case CPAP_INSPIRATION:
+            contFrecCPAP++; // Se incrementan los contadore para el calculo de frecuencia y relacion IE
+            contInsCPAP++;
+            break;
+            // Ciclo Espiratorio
+        case CPAP_ESPIRATION:
+            contFrecCPAP++;
+            contEspCPAP++;
+            break;
+        default:
+            break;
+        }
 
-    if ((contFrecCPAP > ((apneaTime * 1000) - 5000)) && (stateFrecCPAP != CPAP_INIT))
-    {
-        flagAlarmFR_Alta = true;
-        alerFR_Alta = 2;
-        frecRespiratoriaCalculada = 0;
-    }
-    if ((contFrecCPAP > apneaTime * 1000) && (stateFrecCPAP != CPAP_INIT))
-    {
-        newStateMachine = AC_STATE;
-        newVentilationMode = 1; // A/C Ventilation Mode
+        if ((contFrecCPAP > ((apneaTime * 1000) - 5000)) && (stateFrecCPAP != CPAP_INIT))
+        {
+            flagAlarmFR_Alta = true;
+            alerFR_Alta = 2;
+            frecRespiratoriaCalculada = 0;
+        }
+        if ((contFrecCPAP > (apneaTime * 1000) - 500) && (stateFrecCPAP != CPAP_INIT))
+        {
+            flagToACBackUp = 1;
+        }
+        if ((contFrecCPAP > apneaTime * 1000) && (stateFrecCPAP != CPAP_INIT))
+        {
+            newStateMachine = AC_STATE;
+            flagToACBackUp = 0;
+            newVentilationMode = 1; // A/C Ventilation Mode
+        }
     }
 }
 

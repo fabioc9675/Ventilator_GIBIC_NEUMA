@@ -160,6 +160,7 @@ int alerGeneral = 0;
 int alerPresionPeep = 0;
 int alerFR_Alta = 0;
 int alerVE_Alto = 0;
+volatile uint8_t flagToACBackUp = 0;
 
 // Variables para menu anterior
 volatile unsigned int menuAnterior = CONFIRM_MENU;	// valor de menu anterior

@@ -41,6 +41,7 @@ extern volatile uint8_t flagMode;
 extern volatile uint8_t flagConfirm;
 extern volatile uint8_t flagMinFR;
 extern volatile uint8_t flagVE;
+extern volatile uint8_t flagToACBackUp;
 
 // contadores de configuraciones en el menu de usuario
 extern String relacion_IE;
@@ -175,6 +176,7 @@ void task_Receive(void *pvParameters)
             alerFR_Alta = dataIn2[10].toInt();
             alerVE_Alto = dataIn2[11].toInt();
             newVE = dataIn2[12].toInt();
+            flagToACBackUp = dataIn2[13].toInt();
             Serial2.flush();
             //Serial.flush();  // solo para pruebas
         }

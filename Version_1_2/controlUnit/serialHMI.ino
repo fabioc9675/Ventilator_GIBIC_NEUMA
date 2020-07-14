@@ -73,6 +73,7 @@ extern int alerFR_Alta;
 extern int alerVE_Alto;
 extern int estabilidad;
 extern int PeepEstable;
+extern int flagToACBackUp;
 
 /** ****************************************************************************
  ** ************ VARIABLES *****************************************************
@@ -174,10 +175,12 @@ void task_sendSerialData(void *arg)
                             String(alerPresionPIP) + ',' + String(alerDesconexion) + ',' +
                             String(alerObstruccion) + ',' + String(alerPeep) + ',' + String(alerGeneral) + ',' +
                             String(int(frecRespiratoriaCalculada)) + ',' + String(int(calculatedE)) + ',' +
-                            String(int(alerFR_Alta)) + ',' + String(int(alerVE_Alto)) + ',' + String(currentVE) + ';';
+                            String(int(alerFR_Alta)) + ',' + String(int(alerVE_Alto)) + ',' + String(currentVE) + ',' + String(flagToACBackUp) + ';';
 
         // Serial.print(dataToSend);  // solo para pruebas
         Serial2.print(dataToSend);
+
+        // flagToACBackUp = false;
 
         vTaskDelay(200 / portTICK_PERIOD_MS); // update each 200 ms
     }

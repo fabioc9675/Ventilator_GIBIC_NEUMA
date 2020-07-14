@@ -124,6 +124,7 @@ extern int alerGeneral;
 extern int alerPresionPeep;
 extern int alerFR_Alta;
 extern int alerVE_Alto;
+extern volatile uint8_t flagToACBackUp;
 
 /** ****************************************************************************
  ** ************ VARIABLES *****************************************************
@@ -142,7 +143,6 @@ unsigned int contAlertas = 0;
 volatile uint8_t flagFirst = false;
 volatile uint8_t flagEntre = false;
 unsigned int temp = 0;
-
 
 /** ****************************************************************************
  ** ************ FUNCTIONS *****************************************************
@@ -398,19 +398,22 @@ void alarmMonitoring(void)
         else if ((alerFR_Alta == 2))
         {
             menuAlerta[6] = ALE_APNEA;
-            if (stateMachine != STANDBY_STATE && flagChange2AC == false)
+            if ((stateMachine != STANDBY_STATE) && (flagChange2AC == false) && (flagToACBackUp == 1))
             {
                 flagChange2AC = true;
                 stateMachine = AC_STATE;
                 insideMenuFlag = false;
                 flagPeepMax = false;
                 optionConfigMenu = 0;
-                menu = VENT_MENU;
+                // menu = VENT_MENU;
+                menu = MAIN_MENU;
                 menuImprimir = menu;
+                menuAnterior = VENT_MENU;
                 lineaAlerta = menu;
                 flagAlreadyPrint = false;
+                currentVentilationMode = 1;
             }
-            currentVentilationMode = 1;
+
             flagAlerta = true;
         }
         else
@@ -489,138 +492,149 @@ void alarmMonitoring(void)
     }
 }
 
-
-
-
 /* ***************************************************************************
  * **** Ejecucion de la rutina de refrescado de Display ++********************
  * ***************************************************************************/
-void task_Display(void* pvParameters) {
-	String taskMessage = "LCD Task one running on core ";
-	taskMessage = taskMessage + xPortGetCoreID();
-	// Serial.println(taskMessage);
+void task_Display(void *pvParameters)
+{
+    String taskMessage = "LCD Task one running on core ";
+    taskMessage = taskMessage + xPortGetCoreID();
+    // Serial.println(taskMessage);
 
-	lcd_setup(); // inicializacion de LCD
-	lcd.setCursor(0, 0);
+    lcd_setup(); // inicializacion de LCD
+    lcd.setCursor(0, 0);
 
-	while (true) {
-		/* *************************************************
+    while (true)
+    {
+        /* *************************************************
 		 * **** Analisis de los estados de alarma **********
 		 * ************************************************/
-		if (flagAlerta == true || flagBatteryAlert == true) {
-			if (flagBatteryAlert == true) {
-				contSilenceBattery++;
-			}
-			menuAlerta[0] = menu;
-			contAlertas++;
-			
-			if (contAlertas == 3) {
-				
-				/*Serial.println(String(menuAlerta[0]) + ',' + String(menuAlerta[1]) + ',' +
+        if (flagAlerta == true || flagBatteryAlert == true)
+        {
+            if (flagBatteryAlert == true)
+            {
+                contSilenceBattery++;
+            }
+            menuAlerta[0] = menu;
+            contAlertas++;
+
+            if (contAlertas == 3)
+            {
+
+                /*Serial.println(String(menuAlerta[0]) + ',' + String(menuAlerta[1]) + ',' +
 					String(menuAlerta[2]) + ',' + String(menuAlerta[3]) + ',' +
 					String(menuAlerta[4]) + ',' + String(menuAlerta[5]));
 				Serial.println(temp);*/
-				flagFirst = false;
-				flagEntre = false;
-				for (int i = 0; i < ALARM_QUANTITY + 1; i++) {
-					if ((menuAlerta[i] != 0) && (i > temp) && (flagFirst == false)) {
-						flagFirst = true;
-						flagEntre = true;
-						temp = i;
-					}
-					if (flagEntre == false && i == ALARM_QUANTITY) {
-						temp = 0;
-					}
-				}
+                flagFirst = false;
+                flagEntre = false;
+                for (int i = 0; i < ALARM_QUANTITY + 1; i++)
+                {
+                    if ((menuAlerta[i] != 0) && (i > temp) && (flagFirst == false))
+                    {
+                        flagFirst = true;
+                        flagEntre = true;
+                        temp = i;
+                    }
+                    if (flagEntre == false && i == ALARM_QUANTITY)
+                    {
+                        temp = 0;
+                    }
+                }
 
-				//if (flagSilenceInterrupt == false || flagBatterySilence == false) {
-				digitalWrite(BUZZER_BTN, LOW);
-				//}
-				if (flagAlerta == true) {
-					digitalWrite(LUMINR, HIGH);
-				}
-				//digitalWrite(LUMING, HIGH);
-				//digitalWrite(LUMINB, HIGH);
-				digitalWrite(SILENCE_LED, HIGH);
-			}
-			else if (contAlertas == 10) {
-				lineaAlerta = menuAlerta[temp];
-				flagAlreadyPrint = false;
-				if ((!flagSilenceInterrupt && flagAlerta) || (!flagBatterySilence && flagBatteryAlert)) {
-					digitalWrite(BUZZER_BTN, HIGH);
-				}
-				else {
-					digitalWrite(BUZZER_BTN, LOW);
-				}
-				digitalWrite(LUMINR, LOW);
-				digitalWrite(SILENCE_LED, LOW);
-			}
-			else if (contAlertas == 13) {
-				digitalWrite(BUZZER_BTN, LOW);
-				digitalWrite(SILENCE_LED, HIGH);
-				if (flagAlerta == true) {
-					digitalWrite(LUMINR, HIGH);
-				}
-			}
-			else if (contAlertas >= 20) {
-				lineaAlerta = menu;
-				flagAlreadyPrint = false;
-				if ((!flagSilenceInterrupt && flagAlerta) || (!flagBatterySilence && flagBatteryAlert)) {
-					digitalWrite(BUZZER_BTN, HIGH);
-				}
-				else {
-					digitalWrite(BUZZER_BTN, LOW);
-				}
-				digitalWrite(LUMINR, LOW);
-				digitalWrite(SILENCE_LED, LOW);
-				contAlertas = 0;
-			}
-		}
-		else {
-			contAlertas++;
-			if (contAlertas == 10) {
-				lineaAlerta = menu;
-				flagAlreadyPrint = false;
-				digitalWrite(LUMINR, LOW);
-				//digitalWrite(LUMING, LOW);
-				digitalWrite(SILENCE_LED, LOW);
-				digitalWrite(BUZZER_BTN, LOW);
-				contSilence = 0;
-				flagSilenceInterrupt = false;
-			}
-			else if (contAlertas >= 20) {
-				lineaAlerta = menu;
-				flagAlreadyPrint = false;
-				contAlertas = 0;
-			}
-		}
+                //if (flagSilenceInterrupt == false || flagBatterySilence == false) {
+                digitalWrite(BUZZER_BTN, LOW);
+                //}
+                if (flagAlerta == true)
+                {
+                    digitalWrite(LUMINR, HIGH);
+                }
+                //digitalWrite(LUMING, HIGH);
+                //digitalWrite(LUMINB, HIGH);
+                digitalWrite(SILENCE_LED, HIGH);
+            }
+            else if (contAlertas == 10)
+            {
+                lineaAlerta = menuAlerta[temp];
+                flagAlreadyPrint = false;
+                if ((!flagSilenceInterrupt && flagAlerta) || (!flagBatterySilence && flagBatteryAlert))
+                {
+                    digitalWrite(BUZZER_BTN, HIGH);
+                }
+                else
+                {
+                    digitalWrite(BUZZER_BTN, LOW);
+                }
+                digitalWrite(LUMINR, LOW);
+                digitalWrite(SILENCE_LED, LOW);
+            }
+            else if (contAlertas == 13)
+            {
+                digitalWrite(BUZZER_BTN, LOW);
+                digitalWrite(SILENCE_LED, HIGH);
+                if (flagAlerta == true)
+                {
+                    digitalWrite(LUMINR, HIGH);
+                }
+            }
+            else if (contAlertas >= 20)
+            {
+                lineaAlerta = menu;
+                flagAlreadyPrint = false;
+                if ((!flagSilenceInterrupt && flagAlerta) || (!flagBatterySilence && flagBatteryAlert))
+                {
+                    digitalWrite(BUZZER_BTN, HIGH);
+                }
+                else
+                {
+                    digitalWrite(BUZZER_BTN, LOW);
+                }
+                digitalWrite(LUMINR, LOW);
+                digitalWrite(SILENCE_LED, LOW);
+                contAlertas = 0;
+            }
+        }
+        else
+        {
+            contAlertas++;
+            if (contAlertas == 10)
+            {
+                lineaAlerta = menu;
+                flagAlreadyPrint = false;
+                digitalWrite(LUMINR, LOW);
+                //digitalWrite(LUMING, LOW);
+                digitalWrite(SILENCE_LED, LOW);
+                digitalWrite(BUZZER_BTN, LOW);
+                contSilence = 0;
+                flagSilenceInterrupt = false;
+            }
+            else if (contAlertas >= 20)
+            {
+                lineaAlerta = menu;
+                flagAlreadyPrint = false;
+                contAlertas = 0;
+            }
+        }
 
-		/* ****************************************************************
+        /* ****************************************************************
 		 * **** Actualizacion de valores en pantalla LCD ******************
 		 * ***************************************************************/
-		if(flagService == false){
-			if ((menuAnterior != menuImprimir) && (flagAlreadyPrint == false)) {
-				lcd.clear();
-				lineaAnterior = MODE_CHANGE;
-				lcd_show_comp();
-			}
-			else {
-				lcd_show_part();
-			}
-		}
-		// delay de 100 ms en la escritura del LCD
-		vTaskDelay(100 / portTICK_PERIOD_MS);
-	}
+        if (flagService == false)
+        {
+            if ((menuAnterior != menuImprimir) && (flagAlreadyPrint == false))
+            {
+                lcd.clear();
+                lineaAnterior = MODE_CHANGE;
+                lcd_show_comp();
+            }
+            else
+            {
+                lcd_show_part();
+            }
+        }
+        // delay de 100 ms en la escritura del LCD
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
 }
-
-
-
-
-
-
-
-
-
 
 /** ****************************************************************************
  ** ************ END OF THE CODE ***********************************************

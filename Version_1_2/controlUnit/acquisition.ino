@@ -620,10 +620,10 @@ void task_Adc(void *arg)
                     {
                         UmbralPpico = SPpac;
                     }
-                    if (UmbralPpicoDistal < SPout)
-                    {
-                        UmbralPpicoDistal = SPout;
-                    }
+                    // if (UmbralPpicoDistal < SPout)
+                    // {
+                    //     UmbralPpicoDistal = SPout;
+                    // }
 
                     // Calculo Flujos maximos y minimos en la via aerea
                     if (UmbralFmin > SFpac)

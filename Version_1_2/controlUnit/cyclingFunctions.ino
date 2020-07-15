@@ -190,6 +190,7 @@ void cycling(void)
                 Ppico = 0; // Lo limita a 0
             }
             Ppico = int(round(Ppico));
+            UmbralPpicoDistal = SPout;
 
             //Mediciones de presion del sistema
             Pin_max = SPin;   //Presion maxima de la camara
@@ -244,10 +245,22 @@ void cycling(void)
             contCycling = 0;
 
             //Calculo de Peep
-            PeepProximal = SPpac + newTrigger; // Peep como la presion en la via aerea al final de la espiracion
+            PeepProximal = Peep_AC; // Peep como la presion en la via aerea al final de la espiracion
             PeepDistal = SPout;
 
-            Peep = Peep_AC;
+            /* *******************************************************************
+			 * *** Aqui se debe verificar cual es el valor de Peep a utlizar *****
+			 * *******************************************************************/
+            if ((PeepDistal - PeepProximal) > 2)
+            {
+                Peep = PeepDistal; // PIP como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = true;
+            }
+            else
+            {
+                Peep = PeepProximal; // Peep como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = false;
+            }
 
             if (Peep < 0)
             {             // Si el valor de Peep es negativo
@@ -301,7 +314,12 @@ void cycling(void)
             flmax = UmbralFmax; //asigna el flujo maximo encontrada en todo el periodo
             vmin = UmbralVmin;  //asigna el volumen minimo encontrada en todo el periodo
             vmax = UmbralVmax;  //asigna el volumen maximo encontrada en todo el periodo
-            Ppico = pmax;
+            // Ppico = pmax;
+            //Calculo de PIP
+            PpicoProximal = pmax;
+            PpicoDistal = UmbralPpicoDistal;
+            // PpicoDistal = SPout;
+
             UmbralPpmin = 100;  //Reinicia el umbral minimo de presion del paciente
             UmbralPpico = -100; //Reinicia el umbral maximo de presion del paciente
             UmbralFmin = 100;   //Reinicia el umbral minimo de flujo del paciente
@@ -309,13 +327,19 @@ void cycling(void)
             UmbralVmin = 100;   //Reinicia el umbral minimo de volumen del paciente
             UmbralVmax = -100;  //Reinicia el umbral maximo de volumen del paciente
 
-            //Calculo de PIP
-            PpicoProximal = pmax;
-            PpicoDistal = UmbralPpicoDistal;
             /* *******************************************************************
 			  * *** Aqui se debe verificar cual es el valor de Ppico a utlizar *****
 			  * *******************************************************************/
-            Ppico = PpicoProximal; // PIP como la presion en la via aerea al final de la espiracion
+            if ((PpicoProximal < 2) && (PpicoDistal - PpicoProximal - 10) > 4)
+            {
+                Ppico = PpicoDistal - 10; // PIP como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = true;
+            }
+            else
+            {
+                Ppico = PpicoProximal; // PIP como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = false;
+            }
 
             //Metodo de exclusion de alarmas
             if (Ppico > 3 && Peep > 1)
@@ -355,7 +379,16 @@ void cycling(void)
             /* *******************************************************************
 			 * *** Aqui se debe verificar cual es el valor de Peep a utlizar *****
 			 * *******************************************************************/
-            Peep = PeepProximal; // Peep como la presion en la via aerea al final de la espiracion
+            if ((PeepDistal - PeepProximal) > 2)
+            {
+                Peep = PeepDistal; // PIP como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = true;
+            }
+            else
+            {
+                Peep = PeepProximal; // Peep como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = false;
+            }
 
             if (Peep < 0)
             {             // Si el valor de Peep es negativo
@@ -402,12 +435,18 @@ void cycling(void)
             Pout_min = SPout; //Presion minima de la bolsa
 
             //Asignacion de valores maximos y minimos de presion
-            pmin = UmbralPpmin;       //asigna la presion minima encontrada en todo el periodo
-            pmax = UmbralPpico;       //asigna la presion maxima encontrada en todo el periodo
-            flmin = UmbralFmin;       //asigna el flujo minimo encontrada en todo el periodo
-            flmax = UmbralFmax;       //asigna el flujo maximo encontrada en todo el periodo
-            vmin = UmbralVmin;        //asigna el volumen minimo encontrada en todo el periodo
-            vmax = UmbralVmax;        //asigna el volumen maximo encontrada en todo el periodo
+            pmin = UmbralPpmin; //asigna la presion minima encontrada en todo el periodo
+            pmax = UmbralPpico; //asigna la presion maxima encontrada en todo el periodo
+            flmin = UmbralFmin; //asigna el flujo minimo encontrada en todo el periodo
+            flmax = UmbralFmax; //asigna el flujo maximo encontrada en todo el periodo
+            vmin = UmbralVmin;  //asigna el volumen minimo encontrada en todo el periodo
+            vmax = UmbralVmax;  //asigna el volumen maximo encontrada en todo el periodo
+            // Ppico = pmax;
+            //Calculo de PIP
+            PpicoProximal = pmax;
+            PpicoDistal = UmbralPpicoDistal;
+            // PpicoDistal = SPout;
+
             UmbralPpmin = 100;        //Reinicia el umbral minimo de presion del paciente
             UmbralPpico = -100;       //Reinicia el umbral maximo de presion del paciente
             UmbralPpicoDistal = -100; //Reinicia el umbral maximo de presion del paciente
@@ -416,13 +455,19 @@ void cycling(void)
             UmbralVmin = 100;         //Reinicia el umbral minimo de volumen del paciente
             UmbralVmax = -100;        //Reinicia el umbral maximo de volumen del paciente
 
-            //Calculo de PIP
-            PpicoProximal = pmax;
-            PpicoDistal = UmbralPpicoDistal;
             /* *******************************************************************
 			  * *** Aqui se debe verificar cual es el valor de Ppico a utlizar *****
 			  * *******************************************************************/
-            Ppico = PpicoProximal; // PIP como la presion en la via aerea al final de la espiracion
+            if ((PpicoProximal < 2) && (PpicoDistal - PpicoProximal - 10) > 4)
+            {
+                Ppico = PpicoDistal - 10; // PIP como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = true;
+            }
+            else
+            {
+                Ppico = PpicoProximal; // PIP como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = false;
+            }
 
             //Metodo de exclusion de alarmas
             if (Ppico > 2 && Peep > 2)
@@ -522,14 +567,12 @@ void alarmsDetection(void)
         }
 
         // Alarma por obstruccion
-        if ((Vout_Ins >= 0.5 * Vin_Ins) && (Peep < 3))
+        if (((Vout_Ins >= 0.5 * Vin_Ins) && (Peep < 3) || (flagAlarmObstruccion == true)))
         {
-            flagAlarmObstruccion = true;
             alerObstruccion = 1;
         }
         else
         {
-            flagAlarmObstruccion = false;
             alerObstruccion = 0;
         }
 
@@ -624,7 +667,20 @@ void cpapRoutine(void)
             /* *******************************************************************
 		  * *** Aqui se debe verificar cual es el valor de Peep a utlizar *****
 		  * *******************************************************************/
-            Peep = PeepProximal; // Peep como la presion en la via aerea al final de la espiracion
+            /* *******************************************************************
+			 * *** Aqui se debe verificar cual es el valor de Peep a utlizar *****
+			 * *******************************************************************/
+            if ((PeepDistal - PeepProximal) > 2)
+            {
+                Peep = PeepDistal; // PIP como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = true;
+            }
+            else
+            {
+                Peep = PeepProximal; // Peep como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = false;
+            }
+
             if (Peep < newPeepMax)
             {
                 alerPeep = 1;
@@ -681,9 +737,18 @@ void cpapRoutine(void)
             PpicoProximal = SPpac;
             PpicoDistal = SPout;
             /* *******************************************************************
-		  * *** Aqui se debe verificar cual es el valor de Ppico a utlizar *****
-		  * *******************************************************************/
-            Ppico = PpicoProximal; // PIP como la presion en la via aerea al final de la espiracion
+			  * *** Aqui se debe verificar cual es el valor de Ppico a utlizar *****
+			  * *******************************************************************/
+            if ((PpicoProximal < 2) && (PpicoDistal - PpicoProximal - 10) > 4)
+            {
+                Ppico = PpicoDistal - 10; // PIP como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = true;
+            }
+            else
+            {
+                Ppico = PpicoProximal; // PIP como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = false;
+            }
 
             //Medicion de Volumen circulante
             if (VtidalC >= 0)

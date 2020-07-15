@@ -242,6 +242,10 @@ void cycling(void)
             {
                 calculatedE = 10;
             }
+            else if (calculatedE > 90)
+            {
+                calculatedE = 90;
+            }
             contCycling = 0;
 
             //Calculo de Peep
@@ -371,6 +375,10 @@ void cycling(void)
             if (calculatedE < 10)
             {
                 calculatedE = 10;
+            }
+            else if (calculatedE > 90)
+            {
+                calculatedE = 90;
             }
             contCycling = 0;
             //Calculo de Peep
@@ -650,6 +658,14 @@ void cpapRoutine(void)
             {
                 calculatedE = 10;
                 calculatedI = int(10.0 * ((float)contInsCPAP / 1000.0) / ((60.0 / (float)frecCalcCPAP) - ((float)contInsCPAP) / 1000.0));
+            }
+            if (calculatedE < 10)
+            {
+                calculatedE = 10;
+            }
+            else if (calculatedE > 90)
+            {
+                calculatedE = 90;
             }
 
             // limita el valor maximo de frecuencia a 35

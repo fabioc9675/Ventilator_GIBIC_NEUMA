@@ -575,7 +575,7 @@ void alarmsDetection(void)
         }
 
         // Alarma por obstruccion
-        if (((Vout_Ins >= 0.5 * Vin_Ins) && (Peep < 3) || (flagAlarmObstruccion == true)))
+        if (((Vout_Ins >= 0.5 * Vin_Ins) && (Peep < 3)) || (flagAlarmObstruccion == true))
         {
             alerObstruccion = 1;
         }

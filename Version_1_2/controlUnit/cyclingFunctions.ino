@@ -627,6 +627,7 @@ void cpapRoutine(void)
         PeepEstable = 0;
         stateFrecCPAP = CPAP_INIT;
         alerFR_Alta = 0;
+        contFrecCPAP = 0; // reinicio del contador de frecuencia en CPAP
     }
 
     if (currentStateMachine == CPAP_STATE)
@@ -805,6 +806,7 @@ void cpapRoutine(void)
             // calculatedE = 0;
             // calculatedI = 0;
             flagToACBackUp = 0;
+            contFrecCPAP = 0;
 
             PeepProximal = SPpac;
             PeepDistal = SPout;
@@ -841,6 +843,7 @@ void cpapRoutine(void)
         {
             newStateMachine = AC_STATE;
             flagToACBackUp = 0;
+            contFrecCPAP = 0; // reinicio del contador de frecuencia en CPAP
             newVentilationMode = 1; // A/C Ventilation Mode
         }
     }

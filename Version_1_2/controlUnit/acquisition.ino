@@ -57,6 +57,7 @@ extern uint8_t flagFlowSitePrintCalibration;
 extern uint8_t flagPcamSitePrintCalibration;
 extern uint8_t flagPbagSitePrintCalibration;
 extern uint8_t flagPpacSitePrintCalibration;
+extern volatile uint8_t flagAlarmObstruccion;
 
 // variables de operacion de calibracion
 extern uint8_t servMenuStateCurrent;
@@ -120,6 +121,9 @@ extern float Peep;          // valor medido de Peep
 extern float Peep_AC;       // medicion de Peep en el modo asistido controlado
 extern float PeepProximal;  // medicion realizada con sensor distal a paciente
 extern float PeepDistal;    // medicion realizada con sensor distal a paciente
+extern float PcontDistal;   // Presion control distal
+extern float PcontProximal; // Presion control PcontProximal
+extern int ratioPcont;      // Ratio de comparacion de las presiones control
 
 extern float SPinADC;  //Senal filtrada de presion en la camara
 extern float SPoutADC; //Senal filtrada de presion en la bolsa
@@ -893,6 +897,16 @@ void task_Raspberry(void *arg)
                 {
                     contSendData = 0;
                     Serial.println(RaspberryChain);
+
+                    // Serial.print(PcontProximal);
+                    // Serial.print(',');
+                    // Serial.print(PcontDistal);
+                    // Serial.print(',');
+                    // Serial.print(ratioPcont);
+                    // Serial.print(',');
+                    // Serial.print(flagAlarmObstruccion);
+                    // Serial.print(',');
+                    // Serial.println(alerObstruccion);
                 }
             }
             else

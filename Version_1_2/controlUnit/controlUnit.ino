@@ -224,6 +224,9 @@ float Peep_AC = 0;       // medicion de Peep en el modo asistido controlado
 float PeepProximal = 0;  // medicion realizada con sensor distal a paciente
 float PeepDistal = 0;    // medicion realizada con sensor distal a paciente
 float flowZero = 0;      // medicion del flujo cero para la grafica de volumen
+float PcontDistal = 0;   // Presion control distal
+float PcontProximal = 0; // Presion control PcontProximal
+int ratioPcont = 0;      // Ratio de comparacion de las presiones control
 
 float SPinADC = 0;  //Senal filtrada de presion en la camara
 float SPoutADC = 0; //Senal filtrada de presion en la bolsa

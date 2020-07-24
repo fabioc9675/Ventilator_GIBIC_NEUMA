@@ -208,15 +208,15 @@ void lcd_show_part(void)
             lcd.print(String(VT));
             if (VT < 10)
             {
-                lcd.print("    ");
+                lcd.print("   ");
             }
             else if (VT < 100)
             {
-                lcd.print("   ");
-            }
-            else if (VT < 9999)
-            {
                 lcd.print("  ");
+            }
+            else if (VT < 1000)
+            {
+                lcd.print(' ');
             }
             VTAnte = VT;
             // Serial.println("Changed VT");
@@ -226,11 +226,17 @@ void lcd_show_part(void)
         lcd.setCursor(0, 0);
         if (optionConfigMenu == 0 && insideMenuFlag == true)
         {
-            lcd.write(126);
+            if (lineaAlerta == CONFIG_MENU)
+            {
+                lcd.write(126);
+            }
         }
         else
         {
-            lcd.print(' ');
+            if (lineaAlerta == CONFIG_MENU)
+            {
+                lcd.print(' ');
+            }
         }
         if (currentVentilationMode == 1)
         { // A/C Mode
@@ -398,11 +404,17 @@ void lcd_show_part(void)
         lcd.setCursor(0, 0);
         if (optionVentMenu == 0 && insideMenuFlag == true)
         {
-            lcd.write(126);
+            if (lineaAlerta == VENT_MENU)
+            {
+                lcd.write(126);
+            }
         }
         else
         {
-            lcd.print(' ');
+            if (lineaAlerta == VENT_MENU)
+            {
+                lcd.print(' ');
+            }
         }
         lcd.setCursor(0, 2);
         if (optionVentMenu == 1)
@@ -436,11 +448,17 @@ void lcd_show_part(void)
         lcd.setCursor(0, 0);
         if (optionConfigMenu == 0 && insideMenuFlag == true)
         {
-            lcd.write(126);
+            if (lineaAlerta == CONFIG_ALARM)
+            {
+                lcd.write(126);
+            }
         }
         else
         {
-            lcd.print(' ');
+            if (lineaAlerta == CONFIG_ALARM)
+            {
+                lcd.print(' ');
+            }
         }
         lcd.setCursor(0, 2);
         if (optionConfigMenu == 1)

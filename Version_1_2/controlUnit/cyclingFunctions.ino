@@ -29,18 +29,19 @@ extern int currentVentilationMode;
 extern int newVentilationMode;
 
 // variables de calculo de parametros ventilatorios
-extern float Ppico;         // valor medido de Ppico
-extern float PpicoProximal; // medicion realizada con sensor distal a paciente
-extern float PpicoDistal;   // medicion realizada con sensor distal a paciente
-extern float Peep;          // valor medido de Peep
-extern float Peep_AC;       // medicion de Peep en el modo asistido controlado
-extern float PeepProximal;  // medicion realizada con sensor distal a paciente
-extern float PeepDistal;    // medicion realizada con sensor distal a paciente
-extern float flowZero;      // medicion del flujo cero para la grafica de volumen
-extern float dPpac;         // Derivada de SPpac
-extern float PcontDistal;   // Presion control distal
-extern float PcontProximal; // Presion control PcontProximal
-extern int ratioPcont;      // Ratio de comparacion de las presiones control
+extern float Ppico;          // valor medido de Ppico
+extern float PpicoProximal;  // medicion realizada con sensor distal a paciente
+extern float PpicoDistal;    // medicion realizada con sensor distal a paciente
+extern float Peep;           // valor medido de Peep
+extern float Peep_AC;        // medicion de Peep en el modo asistido controlado
+extern float Peep_AC_Distal; // medicion de Peep en el modo asistido controlado
+extern float PeepProximal;   // medicion realizada con sensor distal a paciente
+extern float PeepDistal;     // medicion realizada con sensor distal a paciente
+extern float flowZero;       // medicion del flujo cero para la grafica de volumen
+extern float dPpac;          // Derivada de SPpac
+extern float PcontDistal;    // Presion control distal
+extern float PcontProximal;  // Presion control PcontProximal
+extern int ratioPcont;       // Ratio de comparacion de las presiones control
 
 extern float SPin;  // Senal filtrada de presion en la camara
 extern float SPout; // Senal filtrada de presion en la bolsa
@@ -285,7 +286,7 @@ void cycling(void)
 
             //Calculo de Peep
             PeepProximal = Peep_AC; // Peep como la presion en la via aerea al final de la espiracion
-            PeepDistal = SPout;
+            PeepDistal = Peep_AC_Distal;
             //Calculo de PIP
             PpicoProximal = pmax;
             PpicoDistal = UmbralPpicoDistal;

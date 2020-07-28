@@ -29,15 +29,19 @@ extern int currentVentilationMode;
 extern int newVentilationMode;
 
 // variables de calculo de parametros ventilatorios
-extern float Ppico;         // valor medido de Ppico
-extern float PpicoProximal; // medicion realizada con sensor distal a paciente
-extern float PpicoDistal;   // medicion realizada con sensor distal a paciente
-extern float Peep;          // valor medido de Peep
-extern float Peep_AC;       // medicion de Peep en el modo asistido controlado
-extern float PeepProximal;  // medicion realizada con sensor distal a paciente
-extern float PeepDistal;    // medicion realizada con sensor distal a paciente
-extern float flowZero;      // medicion del flujo cero para la grafica de volumen
-extern float dPpac;         // Derivada de SPpac
+extern float Ppico;          // valor medido de Ppico
+extern float PpicoProximal;  // medicion realizada con sensor distal a paciente
+extern float PpicoDistal;    // medicion realizada con sensor distal a paciente
+extern float Peep;           // valor medido de Peep
+extern float Peep_AC;        // medicion de Peep en el modo asistido controlado
+extern float Peep_AC_Distal; // medicion de Peep en el modo asistido controlado
+extern float PeepProximal;   // medicion realizada con sensor distal a paciente
+extern float PeepDistal;     // medicion realizada con sensor distal a paciente
+extern float flowZero;       // medicion del flujo cero para la grafica de volumen
+extern float dPpac;          // Derivada de SPpac
+extern float PcontDistal;    // Presion control distal
+extern float PcontProximal;  // Presion control PcontProximal
+extern int ratioPcont;       // Ratio de comparacion de las presiones control
 
 extern float SPin;  // Senal filtrada de presion en la camara
 extern float SPout; // Senal filtrada de presion en la bolsa
@@ -190,6 +194,7 @@ void cycling(void)
                 Ppico = 0; // Lo limita a 0
             }
             Ppico = int(round(Ppico));
+            UmbralPpicoDistal = SPout;
 
             //Mediciones de presion del sistema
             Pin_max = SPin;   //Presion maxima de la camara
@@ -236,37 +241,17 @@ void cycling(void)
         {
             flagAC = false;
             frecRespiratoriaCalculada = 60.0 / ((float)contCycling / 1000.0);
-            calculatedE = (int)((((60.0 / (float)frecRespiratoriaCalculada) / (float)inspirationTime) - 1) * currentI * 10);
+            calculatedE = (int)((((60.0 / (float)frecRespiratoriaCalculada) / (float)inspirationTime) - 1) * currentI * 10) + 1;
+            if (calculatedE < 10)
+            {
+                calculatedE = 10;
+            }
+            else if (calculatedE > 90)
+            {
+                calculatedE = 90;
+            }
             contCycling = 0;
 
-            //Calculo de Peep
-            PeepProximal = SPpac + newTrigger; // Peep como la presion en la via aerea al final de la espiracion
-            PeepDistal = SPout;
-
-            Peep = Peep_AC;
-
-            if (Peep < 0)
-            {             // Si el valor de Peep es negativo
-                Peep = 0; // Lo limita a 0
-            }
-            Peep = int(round(Peep_AC));
-
-            if (estabilidad)
-            {
-                PeepEstable = Peep;
-                estabilidad = 0;
-            }
-            else
-            {
-                if (Peep <= PeepEstable - 1.5)
-                {
-                    alerPeep = 1;
-                }
-                else
-                {
-                    alerPeep = 0;
-                }
-            }
             //Ajuste del valor de volumen
             VtidalV = 0;
             VtidalC = 0;
@@ -297,7 +282,16 @@ void cycling(void)
             flmax = UmbralFmax; //asigna el flujo maximo encontrada en todo el periodo
             vmin = UmbralVmin;  //asigna el volumen minimo encontrada en todo el periodo
             vmax = UmbralVmax;  //asigna el volumen maximo encontrada en todo el periodo
-            Ppico = pmax;
+            // Ppico = pmax;
+
+            //Calculo de Peep
+            PeepProximal = Peep_AC; // Peep como la presion en la via aerea al final de la espiracion
+            PeepDistal = Peep_AC_Distal;
+            //Calculo de PIP
+            PpicoProximal = pmax;
+            PpicoDistal = UmbralPpicoDistal;
+            // PpicoDistal = SPout;
+
             UmbralPpmin = 100;  //Reinicia el umbral minimo de presion del paciente
             UmbralPpico = -100; //Reinicia el umbral maximo de presion del paciente
             UmbralFmin = 100;   //Reinicia el umbral minimo de flujo del paciente
@@ -305,13 +299,53 @@ void cycling(void)
             UmbralVmin = 100;   //Reinicia el umbral minimo de volumen del paciente
             UmbralVmax = -100;  //Reinicia el umbral maximo de volumen del paciente
 
-            //Calculo de PIP
-            PpicoProximal = pmax;
-            PpicoDistal = UmbralPpicoDistal;
+            /* *********************************************************************
+             * **** Calculo de la PControl proximal y distal ***********************
+             * *********************************************************************/
+            PcontDistal = float(PpicoDistal - PeepDistal - OFFSET_PRESION); // Pcontrol distal
+            PcontProximal = float(PpicoProximal - PeepProximal);            // Pcontrol proximal
+
+            ratioPcont = int(100.0 * ((float(PcontProximal)) / (float(PcontDistal))));
+
             /* *******************************************************************
-			  * *** Aqui se debe verificar cual es el valor de Ppico a utlizar *****
+			  * *** Aqui se debe verificar cual es el valor de Ppico y PEEP a utlizar *****
 			  * *******************************************************************/
-            Ppico = PpicoProximal; // PIP como la presion en la via aerea al final de la espiracion
+            if ((ratioPcont < REFERENCE_RATIO))
+            {
+                Ppico = PpicoDistal - OFFSET_PRESION; // PIP como la presion en la via aerea al final de la espiracion
+                Peep = PeepDistal;                    // PIP como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = true;
+            }
+            else
+            {
+                Ppico = PpicoProximal; // PIP como la presion en la via aerea al final de la espiracion
+                Peep = PeepProximal;   // Peep como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = false;
+            }
+
+            // Verificacion de alarma de estabilidad de PEEP
+            if (Peep < 0)
+            {             // Si el valor de Peep es negativo
+                Peep = 0; // Lo limita a 0
+            }
+            Peep = int(round(Peep_AC));
+
+            if (estabilidad)
+            {
+                PeepEstable = Peep;
+                estabilidad = 0;
+            }
+            else
+            {
+                if (Peep <= PeepEstable - 1.5)
+                {
+                    alerPeep = 1;
+                }
+                else
+                {
+                    alerPeep = 0;
+                }
+            }
 
             //Metodo de exclusion de alarmas
             if (Ppico > 3 && Peep > 1)
@@ -339,37 +373,17 @@ void cycling(void)
         if ((contCycling >= int(((inspirationTime + expirationTime) * 1000))))
         {
             frecRespiratoriaCalculada = 60.0 / ((float)contCycling / 1000.0);
-            calculatedE = (int)((((60.0 / (float)frecRespiratoriaCalculada) / (float)inspirationTime) - 1) * currentI * 10);
+            calculatedE = (int)((((60.0 / (float)frecRespiratoriaCalculada) / (float)inspirationTime) - 1) * currentI * 10) + 1;
+            if (calculatedE < 10)
+            {
+                calculatedE = 10;
+            }
+            else if (calculatedE > 90)
+            {
+                calculatedE = 90;
+            }
             contCycling = 0;
-            //Calculo de Peep
-            PeepProximal = SPpac;
-            PeepDistal = SPout;
-            /* *******************************************************************
-			 * *** Aqui se debe verificar cual es el valor de Peep a utlizar *****
-			 * *******************************************************************/
-            Peep = PeepProximal; // Peep como la presion en la via aerea al final de la espiracion
 
-            if (Peep < 0)
-            {             // Si el valor de Peep es negativo
-                Peep = 0; // Lo limita a 0
-            }
-            Peep = int(round(Peep));
-            if (estabilidad)
-            {
-                PeepEstable = Peep;
-                estabilidad = 0;
-            }
-            else
-            {
-                if (Peep <= PeepEstable - 1.5)
-                {
-                    alerPeep = 1;
-                }
-                else
-                {
-                    alerPeep = 0;
-                }
-            }
             //Ajuste del valor de volumen
             VtidalV = 0;
             VtidalC = 0;
@@ -394,12 +408,22 @@ void cycling(void)
             Pout_min = SPout; //Presion minima de la bolsa
 
             //Asignacion de valores maximos y minimos de presion
-            pmin = UmbralPpmin;       //asigna la presion minima encontrada en todo el periodo
-            pmax = UmbralPpico;       //asigna la presion maxima encontrada en todo el periodo
-            flmin = UmbralFmin;       //asigna el flujo minimo encontrada en todo el periodo
-            flmax = UmbralFmax;       //asigna el flujo maximo encontrada en todo el periodo
-            vmin = UmbralVmin;        //asigna el volumen minimo encontrada en todo el periodo
-            vmax = UmbralVmax;        //asigna el volumen maximo encontrada en todo el periodo
+            pmin = UmbralPpmin; //asigna la presion minima encontrada en todo el periodo
+            pmax = UmbralPpico; //asigna la presion maxima encontrada en todo el periodo
+            flmin = UmbralFmin; //asigna el flujo minimo encontrada en todo el periodo
+            flmax = UmbralFmax; //asigna el flujo maximo encontrada en todo el periodo
+            vmin = UmbralVmin;  //asigna el volumen minimo encontrada en todo el periodo
+            vmax = UmbralVmax;  //asigna el volumen maximo encontrada en todo el periodo
+            // Ppico = pmax;
+
+            //Calculo de Peep
+            PeepProximal = SPpac;
+            PeepDistal = SPout;
+            //Calculo de PIP
+            PpicoProximal = pmax;
+            PpicoDistal = UmbralPpicoDistal;
+            // PpicoDistal = SPout;
+
             UmbralPpmin = 100;        //Reinicia el umbral minimo de presion del paciente
             UmbralPpico = -100;       //Reinicia el umbral maximo de presion del paciente
             UmbralPpicoDistal = -100; //Reinicia el umbral maximo de presion del paciente
@@ -408,13 +432,52 @@ void cycling(void)
             UmbralVmin = 100;         //Reinicia el umbral minimo de volumen del paciente
             UmbralVmax = -100;        //Reinicia el umbral maximo de volumen del paciente
 
-            //Calculo de PIP
-            PpicoProximal = pmax;
-            PpicoDistal = UmbralPpicoDistal;
+            /* *********************************************************************
+             * **** Calculo de la PControl proximal y distal ***********************
+             * *********************************************************************/
+            PcontDistal = float(PpicoDistal - PeepDistal - OFFSET_PRESION); // Pcontrol distal
+            PcontProximal = float(PpicoProximal - PeepProximal);            // Pcontrol proximal
+
+            ratioPcont = int(100.0 * ((float(PcontProximal)) / (float(PcontDistal))));
+
             /* *******************************************************************
-			  * *** Aqui se debe verificar cual es el valor de Ppico a utlizar *****
+			  * *** Aqui se debe verificar cual es el valor de Ppico y PEEP a utlizar *****
 			  * *******************************************************************/
-            Ppico = PpicoProximal; // PIP como la presion en la via aerea al final de la espiracion
+            if ((ratioPcont < REFERENCE_RATIO))
+            {
+                Ppico = PpicoDistal - OFFSET_PRESION; // PIP como la presion en la via aerea al final de la espiracion
+                Peep = PeepDistal;                    // PIP como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = true;
+            }
+            else
+            {
+                Ppico = PpicoProximal; // PIP como la presion en la via aerea al final de la espiracion
+                Peep = PeepProximal;   // Peep como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = false;
+            }
+
+            // Verificacion de alarma de estabilidad de PEEP
+            if (Peep < 0)
+            {             // Si el valor de Peep es negativo
+                Peep = 0; // Lo limita a 0
+            }
+            Peep = int(round(Peep));
+            if (estabilidad)
+            {
+                PeepEstable = Peep;
+                estabilidad = 0;
+            }
+            else
+            {
+                if (Peep <= PeepEstable - 1.5)
+                {
+                    alerPeep = 1;
+                }
+                else
+                {
+                    alerPeep = 0;
+                }
+            }
 
             //Metodo de exclusion de alarmas
             if (Ppico > 2 && Peep > 2)
@@ -514,14 +577,12 @@ void alarmsDetection(void)
         }
 
         // Alarma por obstruccion
-        if ((Vout_Ins >= 0.5 * Vin_Ins) && (Peep < 3))
+        if (((Vout_Ins >= 0.5 * Vin_Ins) && (Peep < 3)) || (flagAlarmObstruccion == true))
         {
-            flagAlarmObstruccion = true;
             alerObstruccion = 1;
         }
         else
         {
-            flagAlarmObstruccion = false;
             alerObstruccion = 0;
         }
 
@@ -568,6 +629,7 @@ void cpapRoutine(void)
         PeepEstable = 0;
         stateFrecCPAP = CPAP_INIT;
         alerFR_Alta = 0;
+        contFrecCPAP = 0; // reinicio del contador de frecuencia en CPAP
     }
 
     if (currentStateMachine == CPAP_STATE)
@@ -600,6 +662,14 @@ void cpapRoutine(void)
                 calculatedE = 10;
                 calculatedI = int(10.0 * ((float)contInsCPAP / 1000.0) / ((60.0 / (float)frecCalcCPAP) - ((float)contInsCPAP) / 1000.0));
             }
+            if (calculatedE < 10)
+            {
+                calculatedE = 10;
+            }
+            else if (calculatedE > 90)
+            {
+                calculatedE = 90;
+            }
 
             // limita el valor maximo de frecuencia a 35
 
@@ -613,10 +683,29 @@ void cpapRoutine(void)
             //Calculo de Peep
             PeepProximal = SPpac;
             PeepDistal = SPout;
+
+            /* *********************************************************************
+             * **** Calculo de la PControl proximal y distal ***********************
+             * *********************************************************************/
+            PcontDistal = float(PpicoDistal - PeepDistal - OFFSET_PRESION); // Pcontrol distal
+            PcontProximal = float(PpicoProximal - PeepProximal);            // Pcontrol proximal
+
+            ratioPcont = int(100.0 * ((float(PcontProximal)) / (float(PcontDistal))));
+
             /* *******************************************************************
-		  * *** Aqui se debe verificar cual es el valor de Peep a utlizar *****
-		  * *******************************************************************/
-            Peep = PeepProximal; // Peep como la presion en la via aerea al final de la espiracion
+			 * *** Aqui se debe verificar cual es el valor de Peep a utlizar *****
+			 * *******************************************************************/
+            if ((ratioPcont < REFERENCE_RATIO))
+            {
+                Peep = PeepDistal; // PIP como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = true;
+            }
+            else
+            {
+                Peep = PeepProximal; // Peep como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = false;
+            }
+
             if (Peep < newPeepMax)
             {
                 alerPeep = 1;
@@ -672,10 +761,28 @@ void cpapRoutine(void)
             //Calculo de PIP
             PpicoProximal = SPpac;
             PpicoDistal = SPout;
+
+            /* *********************************************************************
+             * **** Calculo de la PControl proximal y distal ***********************
+             * *********************************************************************/
+            PcontDistal = float(PpicoDistal - PeepDistal - OFFSET_PRESION); // Pcontrol distal
+            PcontProximal = float(PpicoProximal - PeepProximal);            // Pcontrol proximal
+
+            ratioPcont = int(100.0 * ((float(PcontProximal)) / (float(PcontDistal))));
+
             /* *******************************************************************
-		  * *** Aqui se debe verificar cual es el valor de Ppico a utlizar *****
-		  * *******************************************************************/
-            Ppico = PpicoProximal; // PIP como la presion en la via aerea al final de la espiracion
+			  * *** Aqui se debe verificar cual es el valor de Ppico a utlizar *****
+			  * *******************************************************************/
+            if ((ratioPcont < REFERENCE_RATIO))
+            {
+                Ppico = PpicoDistal - OFFSET_PRESION; // PIP como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = true;
+            }
+            else
+            {
+                Ppico = PpicoProximal; // PIP como la presion en la via aerea al final de la espiracion
+                flagAlarmObstruccion = false;
+            }
 
             //Medicion de Volumen circulante
             if (VtidalC >= 0)
@@ -716,6 +823,7 @@ void cpapRoutine(void)
             // calculatedE = 0;
             // calculatedI = 0;
             flagToACBackUp = 0;
+            contFrecCPAP = 0;
 
             PeepProximal = SPpac;
             PeepDistal = SPout;
@@ -752,6 +860,7 @@ void cpapRoutine(void)
         {
             newStateMachine = AC_STATE;
             flagToACBackUp = 0;
+            contFrecCPAP = 0;       // reinicio del contador de frecuencia en CPAP
             newVentilationMode = 1; // A/C Ventilation Mode
         }
     }

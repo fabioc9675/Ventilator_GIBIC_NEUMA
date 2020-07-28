@@ -57,6 +57,7 @@ extern uint8_t flagFlowSitePrintCalibration;
 extern uint8_t flagPcamSitePrintCalibration;
 extern uint8_t flagPbagSitePrintCalibration;
 extern uint8_t flagPpacSitePrintCalibration;
+extern volatile uint8_t flagAlarmObstruccion;
 
 // variables de operacion de calibracion
 extern uint8_t servMenuStateCurrent;
@@ -113,13 +114,17 @@ extern float VTidProm[3];
 extern float FreqProm[3];
 
 // variables de calculo de parametros ventilatorios
-extern float Ppico;         // valor medido de Ppico
-extern float PpicoProximal; // medicion realizada con sensor distal a paciente
-extern float PpicoDistal;   // medicion realizada con sensor distal a paciente
-extern float Peep;          // valor medido de Peep
-extern float Peep_AC;       // medicion de Peep en el modo asistido controlado
-extern float PeepProximal;  // medicion realizada con sensor distal a paciente
-extern float PeepDistal;    // medicion realizada con sensor distal a paciente
+extern float Ppico;          // valor medido de Ppico
+extern float PpicoProximal;  // medicion realizada con sensor distal a paciente
+extern float PpicoDistal;    // medicion realizada con sensor distal a paciente
+extern float Peep;           // valor medido de Peep
+extern float Peep_AC;        // medicion de Peep en el modo asistido controlado
+extern float Peep_AC_Distal; // medicion de Peep en el modo asistido controlado
+extern float PeepProximal;   // medicion realizada con sensor distal a paciente
+extern float PeepDistal;     // medicion realizada con sensor distal a paciente
+extern float PcontDistal;    // Presion control distal
+extern float PcontProximal;  // Presion control PcontProximal
+extern int ratioPcont;       // Ratio de comparacion de las presiones control
 
 extern float SPinADC;  //Senal filtrada de presion en la camara
 extern float SPoutADC; //Senal filtrada de presion en la bolsa
@@ -313,6 +318,12 @@ float SPpac1 = 0;
 float SPpac2 = 0;
 float SPpac3 = 0;
 float SPpac4 = 0;
+
+float SPout0 = 0;
+float SPout1 = 0;
+float SPout2 = 0;
+float SPout3 = 0;
+float SPout4 = 0;
 
 /** ****************************************************************************
  ** ************ FUNCTIONS *****************************************************
@@ -537,6 +548,14 @@ void task_Adc(void *arg)
                     SPpac3 = SPpac4;
                     SPpac4 = SPpac;
                     dPpac = SPpac4 - SPpac0;
+
+                    // Calculo de SPout retardado
+                    SPout0 = SPout1;
+                    SPout1 = SPout2;
+                    SPout2 = SPout3;
+                    SPout3 = SPout4;
+                    SPout4 = SPout;
+
                     //Serial.println(String(SPpac) + ';' + String(10*dPpac));
                     if (currentStateMachineCycling == INSPIRATION_CYCLING)
                     {
@@ -564,9 +583,14 @@ void task_Adc(void *arg)
                             if (dPpac > DERIVATE_DO_THRESHOLD && dPpac < DERIVATE_UP_THRESHOLD)
                             { // dP/dt
                                 Peep_AC = SPpac1;
+                                Peep_AC_Distal = SPout1;
                                 if (Peep_AC < 0)
                                 {                // Si el valor de Peep es negativo
                                     Peep_AC = 0; // Lo limita a 0
+                                }
+                                if (Peep_AC_Distal < 0)
+                                {
+                                    Peep_AC_Distal = 0; // Lo limita a 0
                                 }
                             }
                             if (dPpac < DERIVATE_LO_THRESHOLD)
@@ -620,10 +644,10 @@ void task_Adc(void *arg)
                     {
                         UmbralPpico = SPpac;
                     }
-                    if (UmbralPpicoDistal < SPout)
-                    {
-                        UmbralPpicoDistal = SPout;
-                    }
+                    // if (UmbralPpicoDistal < SPout)
+                    // {
+                    //     UmbralPpicoDistal = SPout;
+                    // }
 
                     // Calculo Flujos maximos y minimos en la via aerea
                     if (UmbralFmin > SFpac)
@@ -893,6 +917,16 @@ void task_Raspberry(void *arg)
                 {
                     contSendData = 0;
                     Serial.println(RaspberryChain);
+
+                    // Serial.print(PcontProximal);
+                    // Serial.print(',');
+                    // Serial.print(PcontDistal);
+                    // Serial.print(',');
+                    // Serial.print(ratioPcont);
+                    // Serial.print(',');
+                    // Serial.print(flagAlarmObstruccion);
+                    // Serial.print(',');
+                    // Serial.println(alerObstruccion);
                 }
             }
             else

@@ -175,7 +175,8 @@ void task_sendSerialData(void *arg)
                             String(alerPresionPIP) + ',' + String(alerDesconexion) + ',' +
                             String(alerObstruccion) + ',' + String(alerPeep) + ',' + String(alerGeneral) + ',' +
                             String(int(frecRespiratoriaCalculada)) + ',' + String(int(calculatedE)) + ',' +
-                            String(int(alerFR_Alta)) + ',' + String(int(alerVE_Alto)) + ',' + String(currentVE) + ',' + String(flagToACBackUp) + ';';
+                            String(int(alerFR_Alta)) + ',' + String(int(alerVE_Alto)) + ',' + String(currentVE) + ',' + 
+                            String(flagToACBackUp) + ',' + String(int(SPpac)) + ',' + String(int(SFpac)) + ';';
 
         // Serial.print(dataToSend);  // solo para pruebas
         Serial2.print(dataToSend);

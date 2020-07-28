@@ -99,6 +99,7 @@ volatile uint8_t flagMode = false;
 volatile uint8_t flagConfirm = false;
 volatile uint8_t flagMinFR = false;
 volatile uint8_t flagVE = false;
+volatile uint8_t flagLeakage = false;
 
 // contadores de configuraciones en el menu de usuario
 String relacion_IE = "1:2.0";
@@ -151,6 +152,10 @@ float Pcon = 0;
 byte currentVE = 0;
 unsigned int VT = 0;
 byte newVE = 0;
+int presPac = 0;
+int flowPac = 0;
+int presPacAnte = 0;
+int flowPacAnte = 0;
 
 // variables de alerta
 int alerPresionPIP = 0;

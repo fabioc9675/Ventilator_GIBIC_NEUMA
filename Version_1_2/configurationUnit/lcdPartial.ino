@@ -68,6 +68,10 @@ extern float Pcon;
 extern byte currentVE;
 extern unsigned int VT;
 extern byte newVE;
+extern int presPac;
+extern int flowPac;
+extern int presPacAnte;
+extern int flowPacAnte;
 
 // banderas de cambio de valores
 extern volatile uint8_t flagConfirm;
@@ -91,6 +95,7 @@ extern volatile uint8_t flagMode;
 extern volatile uint8_t flagConfirm;
 extern volatile uint8_t flagMinFR;
 extern volatile uint8_t flagVE;
+extern volatile uint8_t flagLeakage;
 
 /** ****************************************************************************
  ** ************ VARIABLES *****************************************************
@@ -203,15 +208,15 @@ void lcd_show_part(void)
             lcd.print(String(VT));
             if (VT < 10)
             {
-                lcd.print("    ");
+                lcd.print("   ");
             }
             else if (VT < 100)
             {
-                lcd.print("   ");
-            }
-            else if (VT < 9999)
-            {
                 lcd.print("  ");
+            }
+            else if (VT < 1000)
+            {
+                lcd.print(' ');
             }
             VTAnte = VT;
             // Serial.println("Changed VT");
@@ -221,11 +226,17 @@ void lcd_show_part(void)
         lcd.setCursor(0, 0);
         if (optionConfigMenu == 0 && insideMenuFlag == true)
         {
-            lcd.write(126);
+            if (lineaAlerta == CONFIG_MENU)
+            {
+                lcd.write(126);
+            }
         }
         else
         {
-            lcd.print(' ');
+            if (lineaAlerta == CONFIG_MENU)
+            {
+                lcd.print(' ');
+            }
         }
         if (currentVentilationMode == 1)
         { // A/C Mode
@@ -393,11 +404,17 @@ void lcd_show_part(void)
         lcd.setCursor(0, 0);
         if (optionVentMenu == 0 && insideMenuFlag == true)
         {
-            lcd.write(126);
+            if (lineaAlerta == VENT_MENU)
+            {
+                lcd.write(126);
+            }
         }
         else
         {
-            lcd.print(' ');
+            if (lineaAlerta == VENT_MENU)
+            {
+                lcd.print(' ');
+            }
         }
         lcd.setCursor(0, 2);
         if (optionVentMenu == 1)
@@ -431,11 +448,17 @@ void lcd_show_part(void)
         lcd.setCursor(0, 0);
         if (optionConfigMenu == 0 && insideMenuFlag == true)
         {
-            lcd.write(126);
+            if (lineaAlerta == CONFIG_ALARM)
+            {
+                lcd.write(126);
+            }
         }
         else
         {
-            lcd.print(' ');
+            if (lineaAlerta == CONFIG_ALARM)
+            {
+                lcd.print(' ');
+            }
         }
         lcd.setCursor(0, 2);
         if (optionConfigMenu == 1)
@@ -546,6 +569,51 @@ void lcd_show_part(void)
         lcd.print("   PEEP CPAP =      ");
         lcd.setCursor(14, 2);
         lcd.print(String(Peep, 0));
+        break;
+
+    case SERVICE_MENU:
+
+        if (flowPac > -2 && flowPac < 2)
+        {
+            lcd.setCursor(0, 2);
+            lcd.print("Prueba OK, sin fugas");
+            //flagLeakage = true;
+        }
+        else
+        {
+            //if (flagLeakage == false) {
+            lcd.setCursor(0, 2);
+            lcd.print("Fugas en el circuito");
+            //}
+        }
+        if (flowPacAnte != flowPac)
+        {
+            lcd.setCursor(6, 3);
+            if (flowPac >= 0)
+            {
+                lcd.print(' ');
+            }
+            else
+            {
+                lcd.setCursor(7, 3);
+            }
+            lcd.print(flowPac);
+            lcd.print(" ");
+
+            flowPacAnte = flowPac;
+        }
+        if (presPacAnte != presPac)
+        {
+            lcd.setCursor(16, 3);
+            if (presPac < 10)
+            {
+                lcd.print(' ');
+            }
+            lcd.print(presPac);
+
+            presPacAnte = presPac;
+        }
+
         break;
     }
     //Serial.println("I am in lcd_show()");

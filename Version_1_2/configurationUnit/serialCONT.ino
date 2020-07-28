@@ -81,6 +81,10 @@ extern float Ppico;
 extern float Pcon;
 extern byte currentVE;
 extern unsigned int VT;
+extern int presPac;
+extern int flowPac;
+extern int presPacAnte;
+extern int flowPacAnte;
 
 // variables de alerta
 extern int alerPresionPIP;
@@ -177,6 +181,8 @@ void task_Receive(void *pvParameters)
             alerVE_Alto = dataIn2[11].toInt();
             newVE = dataIn2[12].toInt();
             flagToACBackUp = dataIn2[13].toInt();
+            presPac = dataIn2[14].toInt();
+            flowPac = dataIn2[15].toInt();
             Serial2.flush();
             //Serial.flush();  // solo para pruebas
         }

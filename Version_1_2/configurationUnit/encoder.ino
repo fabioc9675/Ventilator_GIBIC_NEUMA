@@ -95,6 +95,19 @@ unsigned int contRecogIntB = 0; // contador para reconocimiento del conteo del e
 // Ejecucion de incremento o decremento del encoder
 void encoderRoutine(void)
 {
+
+    int menuQuantity = 0;
+
+    // verificacion
+    if ((stateMachine == STANDBY_STATE) || (stateMachine == SERVICE_STATE))
+    {
+        menuQuantity = MENU_QUANTITY;
+    }
+    else
+    {
+        menuQuantity = MENU_QUANTITY - 1;
+    }
+
     switch (fl_StateEncoder)
     {
         // Incremento
@@ -102,8 +115,10 @@ void encoderRoutine(void)
         if (insideMenuFlag == false)
         {
             menu++;
-            if (menu < 0 || menu > MENU_QUANTITY - 1)
+            if (menu < 0 || menu > menuQuantity)
+            {
                 menu = 0;
+            }
             // Serial.println("menu = " + String(menu));
         }
         else
@@ -226,8 +241,10 @@ void encoderRoutine(void)
         if (insideMenuFlag == false)
         {
             menu--;
-            if (menu < 0 || menu > MENU_QUANTITY - 1)
-                menu = MENU_QUANTITY - 1;
+            if (menu < 0 || menu > menuQuantity)
+            {
+                menu = menuQuantity;
+            }
         }
         else
         {
@@ -495,6 +512,8 @@ void switchRoutine(void)
             flagVE = !flagVE;
         }
         break;
+
+        
     }
     menuImprimir = menu;
     lineaAlerta = menu;

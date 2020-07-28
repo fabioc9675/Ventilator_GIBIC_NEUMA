@@ -36,7 +36,7 @@ extern "C"
 #define CONFIG_MENU 1  // Configuracion de frecuencias
 #define CONFIG_ALARM 2 // Configuracion Alarma
 #define VENT_MENU 3    // Ventilation menu selection
-#define SERVICE_MENU 4
+#define SERVICE_MENU 4  // modo servicio, prueba de figas
 
 #define ALE_PRES_DES 5    // desconexion del paciente
 #define ALE_OBSTRUCCION 6 // fallo OBSTRUCCION
@@ -61,6 +61,7 @@ extern "C"
 #define AC_STATE 3
 #define CPAP_STATE 4
 #define FAILURE_STATE 5
+#define SERVICE_STATE 6
 
   /** ****************************************************************************
  ** ************ VARIABLES *****************************************************

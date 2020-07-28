@@ -54,6 +54,10 @@ extern "C"
 #define CPAP_INSPIRATION 2       // Entra en modo inspiratorio
 #define CPAP_ESPIRATION 3        // Entra en modo espiratorio
 
+// Definiciones para la determinacion de la obstruccion y las presiones de Back Up
+#define OFFSET_PRESION 10 // se define un offset entre las ppico distal y proximal
+#define REFERENCE_RATIO 40 // valor de referencia para entrar en modo backup
+
    /** ****************************************************************************
  ** ************ VARIABLES *****************************************************
  ** ****************************************************************************/

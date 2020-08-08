@@ -14,7 +14,7 @@
 #define FALSE 0
 
 //********DEFINICION DISPOSITIVO********
-#define SERIAL_DEVICE "1NEUMA0011"
+#define SERIAL_DEVICE "1NEUMA0002"
 #define SERIAL_LENGTH 10
 
 // Definiciones para el manejo del ADC
@@ -50,34 +50,34 @@
  * **** VARIABLES DE CALIBRACION A GUARDAR ***********************
  * ***************************************************************/
 // Calibracion de los sensores de presion - coeficientes regresion lineal
-#define AMP_CAM_1_W     0.027422
-#define OFFS_CAM_1_W    -23.6727
-#define AMP_BAG_2_W     0.028991
-#define OFFS_BAG_2_W    -25.5002
-#define AMP_PAC_3_W     0.029904
-#define OFFS_PAC_3_W    -26.0300
+#define AMP_CAM_1_W          0.029550
+#define OFFS_CAM_1_W         -20.8454
+#define AMP_BAG_2_W          0.029550
+#define OFFS_BAG_2_W         -20.8454
+#define AMP_PAC_3_W          0.029550
+#define OFFS_PAC_3_W         -20.8454
 
 
 // Calibracion de los sensores de flujo - coeficientes regresion lineal
 // Sensor de flujo Inspiratorio
-#define AMP_FI_1_W      0.138100         
-#define OFFS_FI_1_W     -253.684200         
-#define LIM_FI_1_W      1732         
-#define AMP_FI_2_W      0.670400         
-#define OFFS_FI_2_W     -1175.418400         
-#define LIM_FI_2_W      1775         
-#define AMP_FI_3_W      0.138100         
-#define OFFS_FI_3_W     -230.659100         
+#define AMP_FI_1_W      0.071300         
+#define OFFS_FI_1_W     -136.275100         
+#define LIM_FI_1_W      1701         
+#define AMP_FI_2_W      0.424300         
+#define OFFS_FI_2_W     -736.964600         
+#define LIM_FI_2_W      1772         
+#define AMP_FI_3_W      0.071300         
+#define OFFS_FI_3_W     -111.314500         
 
 // Sensor de flujo Espiratorio
-#define AMP_FE_1_W      0.131500         
-#define OFFS_FE_1_W     -235.505100         
-#define LIM_FE_1_W      1681         
-#define AMP_FE_2_W      0.910200         
-#define OFFS_FE_2_W     -1544.391100         
-#define LIM_FE_2_W      1713         
-#define AMP_FE_3_W      0.131500         
-#define OFFS_FE_3_W     -210.694300 
+#define AMP_FE_1_W      0.076400         
+#define OFFS_FE_1_W     -145.708800         
+#define LIM_FE_1_W      1712         
+#define AMP_FE_2_W      0.625000         
+#define OFFS_FE_2_W     -1084.750000         
+#define LIM_FE_2_W      1760         
+#define AMP_FE_3_W      0.076400         
+#define OFFS_FE_3_W     -119.374400     
 
 // variable para ajustar el nivel cero de flujo y calcular el volumen
 #define VOL_SCALE_W          1.00 // Factor de escala para ajustar el volumen
@@ -351,7 +351,7 @@ void init_Memory(void)
   // Carga del Serial del equipo
   SerialID = readString(eeprom_values::SERIAL_ADDR);
   
-  if (SerialID[1] != 'N')
+  if (SerialID[1] != 'n')
   {
     writeString(eeprom_values::SERIAL_ADDR, SERIAL_DEVICE);
     SerialID = readString(eeprom_values::SERIAL_ADDR);

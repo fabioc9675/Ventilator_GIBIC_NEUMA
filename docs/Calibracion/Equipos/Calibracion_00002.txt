@@ -9,24 +9,24 @@
 
 // Calibracion de los sensores de flujo - coeficientes regresion lineal
 // Sensor de flujo Inspiratorio
-#define AMP_FI_1_W      0.077100         
-#define OFFS_FI_1_W     -146.012000         
-#define LIM_FI_1_W      1702         
-#define AMP_FI_2_W      0.484000         
-#define OFFS_FI_2_W     -838.755400         
-#define LIM_FI_2_W      1764         
-#define AMP_FI_3_W      0.077100         
-#define OFFS_FI_3_W     -121.125700         
+#define AMP_FI_1_W      0.071300         
+#define OFFS_FI_1_W     -136.275100         
+#define LIM_FI_1_W      1701         
+#define AMP_FI_2_W      0.424300         
+#define OFFS_FI_2_W     -736.964600         
+#define LIM_FI_2_W      1772         
+#define AMP_FI_3_W      0.071300         
+#define OFFS_FI_3_W     -111.314500         
 
 // Sensor de flujo Espiratorio
-#define AMP_FE_1_W      0.076100         
-#define OFFS_FE_1_W     -144.637500         
-#define LIM_FE_1_W      1706         
-#define AMP_FE_2_W      0.686800         
-#define OFFS_FE_2_W     -1186.094700         
-#define LIM_FE_2_W      1749         
-#define AMP_FE_3_W      0.076100         
-#define OFFS_FE_3_W     -118.318600    
+#define AMP_FE_1_W      0.076400         
+#define OFFS_FE_1_W     -145.708800         
+#define LIM_FE_1_W      1712         
+#define AMP_FE_2_W      0.625000         
+#define OFFS_FE_2_W     -1084.750000         
+#define LIM_FE_2_W      1760         
+#define AMP_FE_3_W      0.076400         
+#define OFFS_FE_3_W     -119.374400      
 
 
 // variable para ajustar el nivel cero de flujo y calcular el volumen

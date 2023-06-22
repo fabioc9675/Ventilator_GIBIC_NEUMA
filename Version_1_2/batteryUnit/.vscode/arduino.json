@@ -1,5 +1,0 @@
-{
-    "sketch": "batteryUnit.ino",
-    "board": "arduino:avr:leonardo",
-    "port": "COM31"
-}
